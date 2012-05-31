@@ -10,15 +10,26 @@ package particle_track;
  */
 public class Particle {
     
+    // horizontal position
     private double[] xy = new double[2];
     private int elem;
+    private double[][] nrList = new double[5][2];
+    // vertical position
+    private double z;
+    private int depLayer;
+    // settlement details
+    private double age;
     private boolean arrived;
     private boolean viable;
     
+    // create a new particle at a defined location, at the water surface
     public Particle(double xstart, double ystart)
     {
         this.xy[0] = xstart;
         this.xy[1] = ystart;
+        this.z = 0;
+        this.depLayer = 0;
+        this.age = 0;
         this.arrived = false;
         this.viable = false;
     }
@@ -32,7 +43,6 @@ public class Particle {
         this.xy[0] = x;
         this.xy[1] = y;
     }
-    
     public void setElem(int elem)
     {
         this.elem = elem;
@@ -41,6 +51,110 @@ public class Particle {
     {
         return this.elem;
     }
+    public void setNrList(double[][] uvnode)
+    {
+        this.nrList = nearestCentroidList(this.xy[0], this.xy[1], uvnode);
+    }
+    public double[][] getNrList()
+    {
+        return this.nrList;
+    }
+    
+    public double getZ()
+    {
+        return this.z;
+    }
+    public void setZ(double z)
+    {
+        this.z = z;
+    }
+    public int getDepthLayer()
+    {
+        return this.depLayer;
+    }
+    public void setDepthLayer(int dep)
+    {
+        this.depLayer = dep;
+    }
+    
+    /** Set particle depth in the water column based on its defined behaviour and
+     *  the time
+     * 1 - passive, stay on surface
+     * 2 - passive, stay on bottom (layer 10)
+     * 3 - passive, stay in mid layer (layer 5)
+     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18
+     * 5 - rapid drop (1->10) at hour 6, then gradually move back up
+     * 6 - top during flood tides, mid during ebb (local)
+     * 7 - mid during flood tides, bed during ebb (local)
+     * 8 - top during flood tides, bed during ebb (local)
+     * MORE...? "homing" ability
+     */
+    public void setDepthLayer(int behaviour, String tideState)
+    {
+        switch (behaviour)
+        {
+            case 1: this.depLayer = 1; break;
+            case 2: this.depLayer = 5; break;
+            case 3: this.depLayer = 10; break;
+            case 6: 
+                if (tideState.equalsIgnoreCase("flood"))
+                {
+                    this.depLayer = 0;
+                } else
+                {
+                    this.depLayer = 5;
+                }
+                break;
+            case 7: 
+                if (tideState.equalsIgnoreCase("flood"))
+                {
+                    this.depLayer = 5;
+                } else
+                {
+                    this.depLayer = 9;
+                }
+                break;
+            case 8: 
+                if (tideState.equalsIgnoreCase("flood"))
+                {
+                    this.depLayer = 0;
+                } else
+                {
+                    this.depLayer = 9;
+                }
+                break;
+        }
+        //return 0;
+    }
+   
+    /** put particle in the correct depth layer, based upon
+     * its z position, and
+     * 
+     * @param localDepth  element bathymetry value
+     * @param layers 
+     */
+    public void setLayerFromDepth(double localDepth, double[] layers)
+    {
+        int depNearest = 0;
+        double dZmin = 1000;
+        for (int i = 0; i < layers.length; i++)
+        {
+            if (Math.abs(this.z - localDepth*layers[i]) < dZmin)
+            {
+                depNearest = i;
+            }
+        }
+        System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
+        this.setDepthLayer(depNearest);
+    }
+    
+    public double verticalDiffusion()
+    {
+        double vertDiff = 0;
+        return vertDiff;
+    }
+    
+    
     public void setViable(boolean viable)
     {
         this.viable = viable;
@@ -64,9 +178,15 @@ public class Particle {
         return uv;
     }
     
+    public double[] smagorinskyDiffusionVelocity(int node, int[] neighbours, double u, double v, double[][] uvnode)
+    {
+        double[] uv = new double[2];
+        return uv;
+    }
+    
     public static int nearestCentroid(double x, double y, double[][] uvnode)
     {
-        int nearest = 0;
+        int nearest = -1;
         double dist=10000000;
     
         for (int i = 0; i < uvnode.length; i++)
@@ -80,10 +200,75 @@ public class Particle {
         }
         return nearest;
     }
+    public static double[][] nearestCentroidList(double x, double y, double[][] uvnode)
+    {
+        double[][] nearestList = new double[5][2];
+        int nearest = -1;
+        double dist=10000000;
+    
+        for (int i = 0; i < uvnode.length; i++)
+        {
+            double distnew = Math.sqrt((x-uvnode[i][0])*(x-uvnode[i][0])+(y-uvnode[i][1])*(y-uvnode[i][1]));
+            if (distnew<dist)
+            {
+                dist=distnew;
+                nearest=i;
+                // Shift everything along one element
+                nearestList[4][0]=nearestList[3][0];
+                nearestList[4][1]=nearestList[3][1];
+                nearestList[3][0]=nearestList[2][0];
+                nearestList[3][1]=nearestList[2][1];
+                nearestList[2][0]=nearestList[1][0];
+                nearestList[2][1]=nearestList[1][1];             
+                nearestList[1][0]=nearestList[0][0];
+                nearestList[1][1]=nearestList[0][1];
+
+                nearestList[0][0]=i;
+                nearestList[0][1]=dist;              
+            }
+        }
+        return nearestList;
+    }
+    
+    public double[] velocityFromNearestList(int tt,double u[][],double v[][])
+    {
+        double[] velocity = new double[2];
+        double[] weights = new double[this.nrList.length];
+        double usum=0,vsum=0,sum=0;
+        for (int i = 0; i < this.nrList.length; i++)
+        {
+            if (this.nrList[i][1]!=0)
+            {
+                weights[i]=1/(this.nrList[i][1]*this.nrList[i][1]);
+            }
+            else
+            {
+                weights[i]=1;
+            }
+        
+            usum=usum+weights[i]*u[tt][(int)this.nrList[i][0]*10+this.depLayer];
+            usum=usum+weights[i]*v[tt][(int)this.nrList[i][0]*10+this.depLayer];
+            sum=sum+weights[i];
+        }
+        usum=usum/sum;
+        vsum=vsum/sum;
+        velocity[0]=usum;
+        velocity[1]=vsum;
+        return velocity;
+    }
+    
+    public void increaseAge(double increment)
+    {
+        this.age+=increment;
+    }
+    public double getAge()
+    {
+        return this.age;
+    }
     
     public static int whichElement(double x, double y, int[] elems, double[][] nodexy, int[][] trinodes)
     {
-        int which = 0;
+        int which = -1;
         int res = 0;
         for (int i = 0; i < elems.length; i++)
         {
@@ -92,15 +277,17 @@ public class Particle {
             
             for (int j = 0; j < 3; j++)
             {
-                 xt[j]=nodexy[trinodes[elems[i]][j]-1][0];
-                 yt[j]=nodexy[trinodes[elems[i]][j]-1][1];
+                //int elem=elems[i];
+                
+                 xt[j]=nodexy[trinodes[elems[i]][j]][0];
+                 yt[j]=nodexy[trinodes[elems[i]][j]][1];
             }
             // check whether (x,y) lies within this
             //fprintf('check %d\n', possibleElems(i));
             
             double f1 = (y-yt[0])*(xt[1]-xt[0]) - (x-xt[0])*(yt[1]-yt[0]);
             double f2 = (y-yt[2])*(xt[0]-xt[2]) - (x-xt[2])*(yt[0]-yt[2]);
-            double f3 = (y-yt[2])*(xt[2]-xt[1]) - (x-xt[1])*(yt[2]-yt[1]);
+            double f3 = (y-yt[1])*(xt[2]-xt[1]) - (x-xt[1])*(yt[2]-yt[1]);
             if(f1*f3 >= 0.0 && f3*f2 >= 0.0) 
             {
                 res = 1;
@@ -114,12 +301,5 @@ public class Particle {
 
         }
         return which;
-    }
-    
-    
-    public static int setParticleDepth(int behaviour, int time)
-    {
-        return 0;
-    }
-    
+    }    
 }
