@@ -18,6 +18,7 @@ package particle_track;
 //import ucar.ma2.InvalidRangeException;
 
 import java.io.*;
+//import java.util.Date;
 import edu.cornell.lassp.houle.RngPack.*;
 import uk.ac.ed.s0676158.math.BoxMueller;
 
@@ -34,6 +35,9 @@ public class Particle_track {
         // TODO code application logic here
     
         System.out.println("Starting particle tracking program\n");
+        
+        //System.out.println(new Date().toString());
+        long startTime = System.currentTimeMillis();
         
         RanMT ran = new RanMT(System.currentTimeMillis());
            
@@ -137,6 +141,10 @@ public class Particle_track {
          */
         int behaviour=8;
         
+        boolean timeInterpolate = false;
+        boolean spatialInterpolate = false;
+        double D_h = 0.1;
+        
         if (args.length > 0)
         {
             try 
@@ -150,11 +158,20 @@ public class Particle_track {
                 thresh=Integer.parseInt(args[6]);
                 viabletime=Integer.parseInt(args[7]);
                 behaviour=Integer.parseInt(args[8]);
-                System.out.println("nparts = "+nparts+"\nsettlement threshold distance = "+thresh+"\nviabletime = "+viabletime);
+                if (args[9].equalsIgnoreCase("true"))
+                {
+                    timeInterpolate = true;
+                }
+                if (args[10].equalsIgnoreCase("true"))
+                {
+                    spatialInterpolate = true;
+                }
+                D_h = Double.parseDouble(args[11]);
+                System.out.println("nparts = "+nparts+"\nsettlement threshold distance = "+thresh+"\nviabletime = "+viabletime+" D_h = "+D_h);
             }
             catch (IndexOutOfBoundsException e)
             {
-                System.err.println("Incorrect number of input parameters");
+                System.err.println("Incorrect number of input parameters, found "+args.length);
             }
         }
   
@@ -225,10 +242,10 @@ public class Particle_track {
             //System.out.printf("PARTICLE %d\n",i);
 
             //startid[i]=(int)(startlocs.length*ran.raw());
-            startid[i]=i%startlocs.length;
+            //startid[i]=i%startlocs.length;
             //System.out.printf("%d", startlocs.length);
             //behaviour=6;
-
+            startid[i]=5;
             xstart[i]=startlocs[startid[i]][1];
             ystart[i]=startlocs[startid[i]][2];
             //System.out.printf("start location %d = %d %.4e %.4e\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i]);
@@ -371,8 +388,7 @@ public class Particle_track {
                             // Set velocity array here first and fill with the right values. Need an array with velocity "now" 
                             // and one with velocity at "next" time step, to be populated before go to time interpolation bit 
                             // (which should happen last, after any possible spatial interpolation).
-                            boolean timeInterpolate = true;
-                            boolean spatialInterpolate = true;
+                            
 
                             double water_U = 0;
                             double water_V = 0;
@@ -398,6 +414,11 @@ public class Particle_track {
                             }
                             else if (spatialInterpolate == true)
                             {
+                                // the values set just here are NOT used, just printed for comparison
+                                water_U = u[tt][elemPart*10+dep];
+                                water_V = v[tt][elemPart*10+dep];
+                                //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,water_U,water_V);
+                                
                                 particles[i].setNrList(uvnode);
                                 double[] vel = particles[i].velocityFromNearestList(tt,u,v);
                                 water_U = vel[0];
@@ -432,21 +453,24 @@ public class Particle_track {
                             //[water_U,water_V]=calc_vel1(particles(i),[uchunk vchunk]);
                             // 3. Calculate diffusion    
                             //rand('twister',sum(100*clock)); %resets it to a different state each time.
-                            double diff_X = Math.sqrt(0.5*dt);// /(double)stepsPerStep);
-                            double diff_Y = Math.sqrt(0.5*dt);// /(double)stepsPerStep);    //+/- is random so direction doesn't matter
-                            diff_X=0; diff_Y=0;
+                            double diff_X = Math.sqrt(6*D_h*dt/(double)stepsPerStep);// /(double)stepsPerStep);
+                            double diff_Y = Math.sqrt(6*D_h*dt/(double)stepsPerStep);// /(double)stepsPerStep);    //+/- is random so direction doesn't matter
+                            //diff_X=0; diff_Y=0;
                             double[] behave_uv = particles[i].behaveVelocity(behaviour);
                             // 4. update particle location
-                            double ran1 = BoxMueller.bmTransform(ran.raw(),ran.raw());
-                            double ran2 = BoxMueller.bmTransform(ran.raw(),ran.raw());
-                            //System.out.println("random numbers (box-mueller transform): "+diff_X+" "+ran1+" "+ran2);
+                            //double ran1 = BoxMueller.bmTransform(ran.raw(),ran.raw());
+                            //double ran2 = BoxMueller.bmTransform(ran.raw(),ran.raw());
+                            double ran1 = 2.0*ran.raw()-1.0;
+                            double ran2 = 2.0*ran.raw()-1.0;
+                            //System.out.println("D_h = "+D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
+                            //System.out.println("Distances travelled: X "+dt*water_U+" "+diff_X*ran1+" Y "+dt*water_U+" "+diff_Y*ran2);
                             double newlocx=particles[i].getLocation()[0]+dt*water_U+dt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
                             double newlocy=particles[i].getLocation()[1]+dt*water_V+dt*behave_uv[1]+diff_Y*ran2;
 
                             //double newlocx=particles[i].getLocation()[0]+diff_X*ran1; // simplest possible "Euler"
                             //double newlocy=particles[i].getLocation()[1]+diff_Y*ran2;
 
-                            if (i == 0)
+                            if (i == 4)
                             {                               
                                 particle1Velocity[calcCount][0]=time;
                                 particle1Velocity[calcCount][1]=Math.sqrt(water_U*water_U+water_V*water_V);
@@ -586,6 +610,10 @@ public class Particle_track {
         writeDoubleArrayToFile(particle1Velocity,"particle1velocity.out");
         writeDoubleArrayToFile(particle1Location,"particle1location.out");
 
+        //System.out.println(new Date().toString());
+        long endTime = System.currentTimeMillis();
+        System.out.println("Elapsed time = "+(endTime-startTime)/1000.0);
+        
         // scale psteps
 //        tot_psteps=tmax*nparts;
 //        double[] psteps2 = new double[N];
@@ -600,15 +628,15 @@ public class Particle_track {
         int nsites = 9;
         double startlocs[][]= new double[nsites][3];
         
-        startlocs[0][0]=1; startlocs[0][0]=357420; startlocs[0][2]=6217200; 
-        startlocs[1][0]=2; startlocs[1][0]=361834; startlocs[1][2]=6223063;
-        startlocs[2][0]=3; startlocs[2][0]=353078; startlocs[2][2]=6206339;
-        startlocs[3][0]=4; startlocs[3][0]=354246; startlocs[3][2]=6194759; 
-        startlocs[4][0]=5; startlocs[4][0]=352745; startlocs[4][2]=6201735;
-        startlocs[5][0]=6; startlocs[5][0]=348880; startlocs[5][2]=6199380;
-        startlocs[6][0]=7; startlocs[6][0]=354969; startlocs[6][2]=6193169;
-        startlocs[7][0]=8; startlocs[7][0]=348606; startlocs[7][2]=6204475;
-        startlocs[8][0]=9; startlocs[8][0]=352401; startlocs[8][2]=6190933;
+        startlocs[0][0]=1; startlocs[0][1]=357420; startlocs[0][2]=6217200; 
+        startlocs[1][0]=2; startlocs[1][1]=361834; startlocs[1][2]=6223063;
+        startlocs[2][0]=3; startlocs[2][1]=353078; startlocs[2][2]=6206339;
+        startlocs[3][0]=4; startlocs[3][1]=354246; startlocs[3][2]=6194759; 
+        startlocs[4][0]=5; startlocs[4][1]=352745; startlocs[4][2]=6201735;
+        startlocs[5][0]=6; startlocs[5][1]=348880; startlocs[5][2]=6199380;
+        startlocs[6][0]=7; startlocs[6][1]=354969; startlocs[6][2]=6193169;
+        startlocs[7][0]=8; startlocs[7][1]=348606; startlocs[7][2]=6204475;
+        startlocs[8][0]=9; startlocs[8][1]=352401; startlocs[8][2]=6190933;
         // non-fishfarms
 //        double startlocs[][]=[354500 6188000; 
 //            355200 6192000;

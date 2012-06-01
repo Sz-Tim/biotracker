@@ -229,6 +229,27 @@ public class Particle {
         }
         return nearestList;
     }
+        // sets the nearestList (NrList) to be identical to the list of elements which neighbour the element that the particle is actually in
+    public void setNrListToNeighbourCells(int[][] neighbours, double[][] uvnode)
+    {      
+        // distance to elem
+        int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
+        this.nrList[0][0] = elem;
+        this.nrList[0][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[elem][0],uvnode[elem][1]);
+        
+        // distance to neighbouring elems
+        this.nrList[1][0] = neighbours[elem][0];
+        this.nrList[1][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][0]][0],uvnode[neighbours[elem][0]][1]);
+        
+        this.nrList[2][0] = neighbours[elem][0];
+        this.nrList[2][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][1]][0],uvnode[neighbours[elem][1]][1]);
+        
+        this.nrList[3][0] = neighbours[elem][0];
+        this.nrList[3][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][2]][0],uvnode[neighbours[elem][2]][1]);
+        
+        this.nrList[4][0] = 0;
+        this.nrList[4][1] = 1000000;     
+    }
     
     public double[] velocityFromNearestList(int tt,double u[][],double v[][])
     {
@@ -245,15 +266,16 @@ public class Particle {
             {
                 weights[i]=1;
             }
-        
+            //System.out.printf("elem %d dist %.4f weight %.4f --- vel = %.4f %.4f\n",(int)this.nrList[i][0],this.nrList[i][1],weights[i],u[tt][(int)this.nrList[i][0]*10+this.depLayer],v[tt][(int)this.nrList[i][0]*10+this.depLayer]);
             usum=usum+weights[i]*u[tt][(int)this.nrList[i][0]*10+this.depLayer];
-            usum=usum+weights[i]*v[tt][(int)this.nrList[i][0]*10+this.depLayer];
+            vsum=vsum+weights[i]*v[tt][(int)this.nrList[i][0]*10+this.depLayer];
             sum=sum+weights[i];
         }
         usum=usum/sum;
         vsum=vsum/sum;
         velocity[0]=usum;
         velocity[1]=vsum;
+        //System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
         return velocity;
     }
     
@@ -301,5 +323,12 @@ public class Particle {
 
         }
         return which;
-    }    
+    }
+    
+    public static double distanceEuclid(double x1, double y1, double x2, double y2)
+    {
+        double dist = Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
+        return dist;
+    }
+    
 }
