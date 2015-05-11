@@ -314,7 +314,7 @@ public class Particle {
             int numLayers = 10;
             if (reducedFile==true)
             {
-                numLayers = 2;
+                numLayers = 1;
             }
             //System.out.printf("tt %d i %d",tt,i);
             //System.out.printf(" --- elem %d dist %.4f weight %.4f --- vel = %.4f %.4f\n",(int)this.nrList[i][0],this.nrList[i][1],weights[i],u[tt][(int)this.nrList[i][0]*numLayers+this.depLayer],v[tt][(int)this.nrList[i][0]*numLayers+this.depLayer]);

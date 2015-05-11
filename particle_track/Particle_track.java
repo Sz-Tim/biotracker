@@ -5,6 +5,7 @@
 package particle_track;
 
 import java.io.*;
+import java.util.*;
 import edu.cornell.lassp.houle.RngPack.*;
 
 /**
@@ -45,6 +46,7 @@ public class Particle_track {
         
         // This actually isn't used, except in the case of defaulting on location
         String basedir = "C:\\Users\\sa01ta\\Documents\\particle_track\\";
+        String scriptdir =  "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
         if (cluster==true)
         {
             basedir = "/home/sa01ta/particle_track/";
@@ -101,8 +103,9 @@ public class Particle_track {
             stepsPerStep=200;
             thresh=500;
             viabletime=0;
-            location="minch";
-            timeInterpolate = false;
+            //viabletime=1000000000;
+            location="minch_continuous";
+            timeInterpolate = true;
             spatialInterpolate = true;
             
             habitat=args[0];
@@ -178,7 +181,7 @@ public class Particle_track {
             N = 1593;
             M = 943;
         } 
-        else if (location.equalsIgnoreCase("minch"))
+        else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous"))
         {
             N = 79244;
             M = 46878;            
@@ -212,7 +215,7 @@ public class Particle_track {
         else if (location.equalsIgnoreCase("minch_continuous"))
         {
             datadir = "D:\\dima_data\\minch_continuous\\";
-            datadir2 = "D:\\dima_data\\minch_continuous\\";
+            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
             System.out.println("DATA DIRECTORY = "+datadir2);
         }
         else
@@ -274,6 +277,10 @@ public class Particle_track {
         System.out.println("dt = "+dt+" dev_perstep = "+dev_perstep);
 
         System.out.println("behaviour = "+behaviour);
+        if (timeInterpolate==true)
+        {
+            System.out.println("WARNING: time interpolation not operational in last record of each file");
+        }
 
         // load array of start node IDs (as stored by matlab)
         double startlocs[][] = new double[10][3];
@@ -286,9 +293,10 @@ public class Particle_track {
             startlocs = setupStartLocationsFyneFarms();
         }
         // North Minch fish farm locations
-        else if (location.equalsIgnoreCase("minch"))
+        else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous"))
         {
-            String sitedir="C:\\Users\\sa01ta\\Documents\\westcoast_tracking_summary\\habitat_sites\\sites_to_use\\";
+            //String sitedir="C:\\Users\\sa01ta\\Documents\\westcoast_tracking_summary\\habitat_sites\\sites_to_use\\";
+            String sitedir="C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\site_locations\\";
             if (cluster==true)
             {
                 sitedir=basedir+"minch_sites/";
@@ -301,7 +309,8 @@ public class Particle_track {
             }
             else if (habitat.equalsIgnoreCase("fishfarm"))
             {
-                startlocs = readFileDoubleArray(sitedir+"140124_ms_site_utm_area.dat",122,4," ",true);                
+                //startlocs = readFileDoubleArray(sitedir+"140124_ms_site_utm_area.dat",122,4," ",true); 
+                startlocs = readFileDoubleArray(sitedir+"150508_ms_site_utm_FMA.dat",122,4," ",true);
             }
             else if (habitat.equalsIgnoreCase("nephrops"))
             {
@@ -309,7 +318,12 @@ public class Particle_track {
             }
             else if (habitat.equalsIgnoreCase("spill"))
             {
-                startlocs = readFileDoubleArray(sitedir+"150408_spill_utm.dat",2,4," ",true);
+                sitedir="C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\site_locations\\";
+                startlocs = readFileDoubleArray(sitedir+"150408_spill_utm_10vary.dat",16,4," ",true);
+                //startlocs = setupStartLocationsSpill(uvnode, 36301);
+                viabletime=(lastday+1)*recordsPerFile*dt*3600;
+                System.out.println("ignoring input viable time, set to "+viabletime);
+                
             }
             else
             {
@@ -352,8 +366,8 @@ public class Particle_track {
         //int tot_psteps=nparts*nrecords;
 
         // an array to save the number of "particle-timesteps" in each cell
-        int[][] pstepsImmature= new int[N][2];
-        int[][] pstepsMature= new int[N][2];
+        double[][] pstepsImmature= new double[N][2];
+        double[][] pstepsMature= new double[N][2];
         
    
         for (int i = 0; i < N; i++)
@@ -373,29 +387,22 @@ public class Particle_track {
         //System.out.println("hello");
         for (int i = 0; i < nparts; i++)
         {
-
             //startid[i]=(int)(startlocs.length*ran.raw());
             startid[i]=i%startlocs.length;
-            
             xstart[i]=startlocs[startid[i]][1];
             ystart[i]=startlocs[startid[i]][2];
-            
 
             // this boundary location is not actually in the mesh/an element, so set
             // new particle location to centre of nearest element.
             int closest=Particle.nearestCentroid(xstart[i],ystart[i],uvnode);
-
-            //System.out.printf("start location %d = %d %.4e %.4e %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest);
-            
-            //xstart[i]=uvnode[closest][0];
-            //ystart[i]=uvnode[closest][1];
-            
             startElem[i]=Particle.whichElement(xstart[i],ystart[i],allelems,nodexy,trinodes);
-//            if (startElem[i]<0)
-//            {
-                //System.out.println(xstart[i]+" "+ystart[i]+" "+startElem[i]+" "+closest);
-//            }
-            System.out.printf("start location %d = %d %.4e %.4e %d %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest,startElem[i]);
+            if (startElem[i]<0)
+            {
+                xstart[i]=uvnode[closest][0];
+                ystart[i]=uvnode[closest][1];
+                startElem[i]=closest;
+            }
+            //System.out.printf("start location %d = %d %.4e %.4e %d %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest,startElem[i]);
         }
 
         // setup particles
@@ -437,6 +444,23 @@ public class Particle_track {
         
         int printCount=0;
         
+        // Initial value for br set - this particular one is only used in case of "spill" habitat (identical to that file list)
+        BufferedReader br = new BufferedReader(new FileReader("C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\150408_spill_list1.dat"));
+        if (location.equalsIgnoreCase("minch_continuous")) {
+            if (habitat.equalsIgnoreCase("spill")){
+                br = new BufferedReader(new FileReader("150408_spill_list1.dat"));
+            }
+            // Doing a minch_continuous run but using whatever set of files is appropriate for the desired period
+            else
+            {
+                br = new BufferedReader(new FileReader("filelist.dat"));
+            }
+        }
+        // Marking and reseting fails for some reason; use bash head command instead in submitting script
+        //br.mark(0);
+        //System.out.println("filelist top line: "+br.readLine());
+        //br.reset();
+
         // default, run loop forwards
         for (int fnum = firstday; fnum <= lastday; fnum++)
         // alternatively, run loop backwards
@@ -451,22 +475,32 @@ public class Particle_track {
             
             int depthLayers = 1;
             
-            String ufile = datadir+"u_"+fnum+".dat";
-            String vfile = datadir+"v_"+fnum+".dat";
+            // maintain backward compatability with previous number reading
+            String filenums = ""+fnum;
+            if (location.equalsIgnoreCase("minch_continuous"))
+            {
+                filenums = br.readLine();
+            }        
+                        
+            String ufile = datadir+"u_"+filenums+".dat";
+            String vfile = datadir+"v_"+filenums+".dat";
             //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-            String elfile = datadir+"el_"+fnum+".dat";
+            String elfile = datadir+"el_"+filenums+".dat";
+            
+            System.out.println(ufile+" "+vfile+" "+elfile);
+            
             //String sfile = datadir+"\\s_"+fnum+".dat";
             double[][] u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",false);
             double[][] v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",false);
             //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
             double[][] el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
             //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
-            //String ufile1 = "D:\\"+datadir+"\\u_"+(fnum+1)+".dat";
-            //String vfile1 = "D:\\"+datadir+"\\v_"+(fnum+1)+".dat";
-            //String elfile1 = "D:\\"+datadir+"\\el_"+(fnum+1)+".dat";
-            //double[][] u1 = readFileDoubleArray(ufile1,recordsPerFile,N*10," ",false);
-            //double[][] v1 = readFileDoubleArray(vfile1,recordsPerFile,N*10," ",false);
-            //double[][] el1 = readFileDoubleArray(elfile1,recordsPerFile,M*10," ",false);
+            String ufile1 = datadir+"\\u_"+(fnum+1)+".dat";
+            String vfile1 = datadir+"\\v_"+(fnum+1)+".dat";
+            String elfile1 = datadir+"\\el_"+(fnum+1)+".dat";
+            double[][] u1 = readFileDoubleArray(ufile1,recordsPerFile,N*10," ",false);
+            double[][] v1 = readFileDoubleArray(vfile1,recordsPerFile,N*10," ",false);
+            double[][] el1 = readFileDoubleArray(elfile1,recordsPerFile,M*10," ",false);
 
             
             int firsttime=0;
@@ -506,7 +540,8 @@ public class Particle_track {
                         particleLocsToFile(particles,nparts,0,"particlelocations_t"+tt+".out");
                     }
                 
-                nfreeparts = (int)Math.min(nparts,nfreeparts+Math.floor((double)nparts/25.0));
+                //nfreeparts = (int)Math.min(nparts,nfreeparts+Math.floor((double)nparts/25.0));
+                nfreeparts = nparts;
 //                System.out.println("\nTotal number of free particles now = "+nfreeparts);
 //                for (int i = 0; i < nparts; i++)
 //                {
@@ -516,12 +551,14 @@ public class Particle_track {
                 for (int st = 0; st < stepsPerStep; st++)
                 {
                     //System.out.print(",");
+                    //System.out.println("nfreeparts = "+nfreeparts);
                     for (int i = 0; i < nfreeparts; i++)
                     {
                         particles[i].increaseAge(dt/3600.0);
                         //System.out.printf("PARTICLE %d \n",i);
                         if (particles[i].getArrived()==false)
                         {
+                            //System.out.println("particle able to move");
                             int elemPart = particles[i].getElem();
                             //System.out.printf("%d\n",elemPart);
                             // set the depth layer for the particle based on tide state
@@ -757,6 +794,7 @@ public class Particle_track {
                             if (particles[i].getAge()>viabletime/3600.0)
                             //if (time>viabletime)
                             {
+                                System.out.println("Particle became viable");
                                 //if (ran.raw()<dev_perstep)
                                 //{
                                     particles[i].setViable(true);
@@ -766,9 +804,9 @@ public class Particle_track {
                                     //System.out.println(time+" "+particles[i].getAge());
                                     //System.out.println("I can settle");
                                 //}
-                                pstepsMature[elemPart][1]++;
+                                pstepsMature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
                             } else {
-                                pstepsImmature[elemPart][1]++;
+                                pstepsImmature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
                             }
                             
                             // check whether the particle has gone within a certain range of one of the boundary nodes
@@ -857,8 +895,8 @@ public class Particle_track {
         System.out.printf("\nelement search counts: %d %d %d %d %d\n",count0,count1,count2,count3,count4);
         System.out.printf("transport distances: min = %.4e, max = %.4e\n", minDistTrav, maxDistTrav);
 
-        writeIntegerArrayToFile(pstepsImmature,"pstepsImmature"+suffix+".out");
-        writeIntegerArrayToFile(pstepsMature,"pstepsMature"+suffix+".out");
+        writeDoubleArrayToFile(pstepsImmature,"pstepsImmature"+suffix+".out");
+        writeDoubleArrayToFile(pstepsMature,"pstepsMature"+suffix+".out");
         writeIntegerArrayToFile(particle_info,"particle_info"+suffix+".out");
         writeDoubleArrayToFile(settle_density,"settle_density"+suffix+".out");
         particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
@@ -899,6 +937,14 @@ public class Particle_track {
         // "hypothetical" fishfarm used for SAMS newsletter
         //fishfarms(1,1)=351000;
         //fishfarms(1,2)=6195000;
+        return startlocs;
+    }
+    
+    public static double[][] setupStartLocationsSpill(double[][] uvnode, int startelem)
+    {
+        int nsites = 1;
+        double startlocs[][]= new double[nsites][3];
+        startlocs[0][0] = 1; startlocs[0][1] = uvnode[startelem][0]; startlocs[0][2] = uvnode[startelem][1];
         return startlocs;
     }
 
