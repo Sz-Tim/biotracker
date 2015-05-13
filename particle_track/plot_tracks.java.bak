@@ -1,0 +1,133 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package particle_track;
+
+/**
+ *
+ * @author tomdude
+ */
+public class plot_tracks {
+     // plot trajectories
+
+        // plot the grid
+        clf
+        hold on
+        // plot the mesh elements
+        for i=1:N
+            nodes=grid.mesh2.trinodes(i,:);
+            x = [grid.mesh2.nodexy(nodes(1),1) grid.mesh2.nodexy(nodes(2),1) grid.mesh2.nodexy(nodes(3),1)];
+            y = [grid.mesh2.nodexy(nodes(1),2) grid.mesh2.nodexy(nodes(2),2) grid.mesh2.nodexy(nodes(3),2)];
+            fill(x,y,"w");
+        end
+        sourcefarm=5;
+        hold all
+        // plot the trajectories
+        for i=1:nparts
+           plot(locs([1000:3000],i,1,sourcefarm),locs([1000:3000],i,2,sourcefarm))
+        end
+        // plot the fish farms
+        for i=1:length(startlocs)
+            plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",2,"MarkerEdgeColor","k","MarkerFaceColor",[.49 1 .63],"MarkerSize",8)
+        end
+        plot(startlocs(sourcefarm,1),startlocs(sourcefarm,2),"-mo","LineWidth",2,"MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",12)
+        hold off
+
+
+        // plot "probability" maps (proportion of total "particle time" spent in
+        // each cell OVER ENTIRE RUN)
+        // psteps(cell,farm) holds this info
+
+        clf
+        colormap(flipud(gray));
+        sourcefarm=9;
+        //axis off
+        hold on
+        for i=1:N
+         nodes=grid.mesh2.trinodes(i,:);
+         x = [grid.mesh2.nodexy(nodes(1),1) grid.mesh2.nodexy(nodes(2),1) grid.mesh2.nodexy(nodes(3),1)];
+         y = [grid.mesh2.nodexy(nodes(1),2) grid.mesh2.nodexy(nodes(2),2) grid.mesh2.nodexy(nodes(3),2)];
+         fill(x,y,psteps2(i,sourcefarm),"EdgeColor",[0.85 0.85 0.85]);
+        end
+        for i=1:N
+            text(grid.mesh2.nodexy(i,1),grid.mesh2.nodexy(i,2),int2str(i))
+        end
+        hold on
+        bnodes2=[bnodes; bnodes(1,:)];
+        plot(bnodes2(:,1),bnodes2(:,2),"k");
+        //colorbar;
+        // plot the fish farms
+        for i=1:length(startlocs)
+            plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",1,"MarkerEdgeColor","k","MarkerFaceColor",[.49 1 .63],"MarkerSize",5)//
+        end
+        plot(startlocs(sourcefarm,1),startlocs(sourcefarm,2),"-mo","LineWidth",1,"MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",6)
+        xlabel("Easting (m)")
+        ylabel("Northing (m)")
+        // save to a pdf
+        filename=[ "farm" int2str(sourcefarm) ".pdf" ];
+        print("-painters","-dpdf","-r600",filename)
+        //psteps
+        //caxis([0 0.05])
+        //patch("Vertices",grid.mesh2.nodexy,"Faces",grid.mesh2.trinodes,"Cdata",psteps)//,...
+                 //"edgecolor","interp","facecolor","interp")
+        // plot "probability" maps AT EACH TIMESTEP
+        // psteps(cell,farm) holds this info
+
+        //for tt=1:30*24
+        tic
+        for tt=1000:2000
+            clf
+
+            colormap(flipud(gray));
+            sourcefarm=1;
+            axis off
+            hold on
+            //pmax=max(psteps2(:,sourcefarm))
+            x=zeros(N,3);
+            y=zeros(N,3);
+            dens=zeros(N,1);
+            for i=1:N
+                nodes=grid.mesh2.trinodes(i,:);
+                x(i,:) = [grid.mesh2.nodexy(nodes(1),1) grid.mesh2.nodexy(nodes(2),1) grid.mesh2.nodexy(nodes(3),1)];
+                y(i,:) = [grid.mesh2.nodexy(nodes(1),2) grid.mesh2.nodexy(nodes(2),2) grid.mesh2.nodexy(nodes(3),2)];
+                value=0;
+                for j=1:nparts
+                    if (celllocs(tt,j,sourcefarm)==i)
+                        value=value+1;
+                    end
+                end
+                dens(i)=value;
+                //fill(x,y,[1-psteps2(i,sourcefarm)/pmax 1-psteps2(i,sourcefarm)/pmax 1-psteps2(i,sourcefarm)/pmax],"EdgeColor",[1-psteps2(i,sourcefarm)/pmax 1-psteps2(i,sourcefarm)/pmax 1-psteps2(i,sourcefarm)/pmax]);//[0.85 0.85 0.85]);
+            end
+            maxdens=max(dens)
+            for i=1:N
+                if (dens(i)==0)
+                    fill(x(i,:),y(i,:),[0 0.5 1],"EdgeColor",[0 0.5 1]);
+                else
+                    fill(x(i,:),y(i,:),[1 1-dens(i)/maxdens 0],"EdgeColor",[1 1-dens(i)/maxdens 0])
+                end
+            end
+            hold on
+            //bnodes2=[bnodes; bnodes(1,:)];
+            //plot(bnodes2(:,1),bnodes2(:,2),"k");
+            //colorbar;
+            // plot the fish farms
+            for i=1:length(startlocs)
+                plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",1,"MarkerEdgeColor","k","MarkerFaceColor",[.49 1 .63],"MarkerSize",4)//
+            end
+            plot(startlocs(sourcefarm,1),startlocs(sourcefarm,2),"-mo","LineWidth",1,"MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",5)
+            //xlabel("Easting (m)")
+            //ylabel("Northing (m)")
+            set(gca,"Color",[0.8 0.8 0.8]);
+            // save to a pdf
+            filename=[ "particledens" int2str(sourcefarm) "_" int2str(tt) ".png" ]
+            print("-painters","-dpng","-r150",filename)
+        end
+        toc
+        //psteps
+        //caxis([0 0.05])
+        //patch("Vertices",grid.mesh2.nodexy,"Faces",grid.mesh2.trinodes,"Cdata",psteps)//,...
+                 //"edgecolor","interp","facecolor","interp")
+
+}

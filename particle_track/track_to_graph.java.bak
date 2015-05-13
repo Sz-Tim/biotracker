@@ -1,0 +1,162 @@
+package particle_track;
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author tomdude
+ */
+public class track_to_graph {
+    
+        // compute site connections and duration of transport
+        // murray et al."s 0.01, 
+        mortrate=(dt/3600)*0.01;
+
+        // a connectivity matrix between sites
+        connect_matrix_count=zeros(length(startlocs));
+        connect_matrix_density=zeros(length(startlocs));
+
+        //farmcells
+        for sourcefarm=1:length(startlocs)
+        //for sourcefarm=1    
+            // time
+            System.out.println("------ Sourcefarm //d ------\n",sourcefarm);
+            tic;
+            settled=zeros(nparts,2);
+            // 3.63 days = 505 timesteps (each 621 secs)
+            for tt=tstart+500:tmax
+                // particles
+                if (mod(tt,100)==0) 
+                    System.out.println("//d ",tt); 
+                end
+                for p=1:nparts
+                    // has particle already settled?
+                    if (settled(p,1)==0)
+                        // find nearest cell for current location (already
+                        // calculated if not in first batch of runs)
+                        // OR closest=nearest_centroid(locs(tt,p,1,sourcefarm),locs(tt,p,2,sourcefarm),centroids);
+                        //System.out.println("//d ",closest);
+                        closest=celllocs(tt,p,sourcefarm);
+                        coord=[locs(tt,p,1,sourcefarm) locs(tt,p,2,sourcefarm)];
+                        // is my nearest cell centre the same as that of a farm?
+                        for destfarm=1:length(startlocs)
+                            // if so, settle at this farm site
+                            dist=sqrt((coord(1)-startlocs(destfarm,1))^2+(coord(2)-startlocs(destfarm,2))^2);
+                            //if (closest==startcells(destfarm))
+                            if (dist<500)    
+                                settled(p,1)=destfarm; // record ID
+                                prob=exp(-mortrate*tt);
+                                settled(p,2)=prob; // record P(arriving at site after that time)
+                                connect_matrix_count(sourcefarm,destfarm)=connect_matrix_count(sourcefarm,destfarm)+1;
+                                connect_matrix_density(sourcefarm,destfarm)=connect_matrix_density(sourcefarm,destfarm)+prob/nparts;
+                            end
+                        end
+                    end
+                end
+            end
+            toc
+        end
+
+        connect_matrix_count
+        connect_matrix_density
+        // do some graph theoretic stuff
+        // construct a matrix in the format required by grTheory toolbox
+        clear E E2
+        k=1;
+        connections=connect_matrix_count;
+        for i=1:length(startlocs)
+            for j=1:length(startlocs)
+                if (connections(i,j)~=0)
+                    E(k,1)=i;
+                    E(k,2)=j;
+                    E(k,3)=connections(i,j);
+                    k=k+1;
+                end
+            end
+        end
+        //E
+        grPlot(startlocs,E,"d","//d","//d",10000);
+        hold on
+        plot(bnodes2(:,1),bnodes2(:,2),"k");
+
+        // save to a pdf
+        filename="110817_its_farmgraph.png";
+        print("-painters","-dpng","-r600",filename)
+        E2=E(:,1:2);
+        shortestpath1=grShortPath(E);
+        betweenness=zeros(length(startlocs),1);
+        for i=1:length(startlocs)
+            for j=1:length(startlocs)
+                [dSP,sp]=grShortPath(E,i,j);
+                for k=1:length(startlocs)
+                    for l=1:length(sp)  
+                        if (sp(l)==k)
+                            betweenness(k)=betweenness(k)+1;
+                        end
+                    end
+                end
+            end
+        end
+        betweenness
+        //[dSP,sp]=grShortPath(E,4,8)
+        // other miscellaneous maps
+        // farms with size proportional to...........
+        // influx
+        clf
+
+        influx=zeros(length(startlocs),1);
+        for i=1:length(startlocs)
+            for j=1:length(startlocs)
+                influx(i)=influx(i)+connect_matrix_density(j,i)
+            end
+        end
+        maxin=max(influx);
+        log(10000*influx/maxin+1);
+        influx+1;
+        //influx=[0 0 4 2 0 1 5 3 0]
+        //[influx2,influx3]=sort(influx)
+        plot(bnodes2(:,1),bnodes2(:,2),"k");
+        hold on
+        for i=1:length(startlocs)
+            plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",1,...
+                "MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",3*max(log(10000*influx(i)/maxin),0.1))//
+        end
+        axis off
+        filename="110817_its_influx.png";
+        print("-painters","-dpng","-r100",filename)
+        // outflux
+        clf
+
+        outflux=zeros(length(startlocs),1);
+        for i=1:length(startlocs)
+            for j=1:length(startlocs)
+                outflux(i)=outflux(i)+connect_matrix_density(i,j)
+            end
+        end
+        maxout=max(outflux)
+        plot(bnodes2(:,1),bnodes2(:,2),"k");
+        hold on
+        for i=1:length(startlocs)
+            plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",1,...
+                "MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",2*max(log(10000*outflux(i)/maxout),0.1))//
+        end
+        axis off
+        filename="110817_its_outflux.png";
+        print("-painters","-dpng","-r100",filename)
+        // betweenness
+        clf
+
+        plot(bnodes2(:,1),bnodes2(:,2),"k");
+        hold on
+        for i=1:length(startlocs)
+            plot(startlocs(i,1),startlocs(i,2),"-mo","LineWidth",1,...
+                "MarkerEdgeColor","k","MarkerFaceColor","r","MarkerSize",1.5*betweenness(i))//
+        end
+        axis off
+        filename="110817_its_betweenness.png";
+        print("-painters","-dpng","-r100",filename)
+
+}

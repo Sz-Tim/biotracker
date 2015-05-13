@@ -21,7 +21,10 @@ public class Particle_track {
         // TODO code application logic here
     
         System.out.println("Starting particle tracking program\n");
-        
+        Date date = new Date();
+        // display time and date using toString()
+        System.out.println(date.toString());
+       
         //System.out.println(new Date().toString());
         long startTime = System.currentTimeMillis();
         
@@ -102,11 +105,11 @@ public class Particle_track {
             dt=3600;
             stepsPerStep=200;
             thresh=500;
-            viabletime=0;
+            viabletime=87;
             //viabletime=1000000000;
             location="minch_continuous";
-            timeInterpolate = true;
-            spatialInterpolate = true;
+            timeInterpolate = false;
+            spatialInterpolate = false;
             
             habitat=args[0];
             firstday=Integer.parseInt(args[1]);
@@ -277,10 +280,10 @@ public class Particle_track {
         System.out.println("dt = "+dt+" dev_perstep = "+dev_perstep);
 
         System.out.println("behaviour = "+behaviour);
-        if (timeInterpolate==true)
-        {
-            System.out.println("WARNING: time interpolation not operational in last record of each file");
-        }
+//        if (timeInterpolate==true)
+//        {
+//            System.out.println("WARNING: time interpolation not operational in last record of each file");
+//        }
 
         // load array of start node IDs (as stored by matlab)
         double startlocs[][] = new double[10][3];
@@ -434,13 +437,12 @@ public class Particle_track {
         int calcCount=0;
         double time=0;
         
-        int nfreeparts = 0;
-        //int nfreeparts = nparts;
-        
         double[][] particle1Velocity = new double[nrecords*stepsPerStep][3];
         double[][] particle1Location = new double[nrecords*stepsPerStep][2];
         
-        //System.out.println("Viable time = %d\n",viabletime);
+        System.out.printf("Viable time        = %f\n",viabletime);
+        System.out.printf("Threshold distance = %d\n",thresh);
+        System.out.printf("Diffusion          = %f\n",D_h);
         
         int printCount=0;
         
@@ -461,6 +463,13 @@ public class Particle_track {
         //System.out.println("filelist top line: "+br.readLine());
         //br.reset();
 
+        int nfreeparts = 0;
+        int nViable = 0;
+        int nBoundary = 0;
+        int nSettled = 0;
+        
+        String filenums = "";
+        
         // default, run loop forwards
         for (int fnum = firstday; fnum <= lastday; fnum++)
         // alternatively, run loop backwards
@@ -472,35 +481,116 @@ public class Particle_track {
             //clear FVCOM1
             // load the new data file. this puts variables straight into the
             // workspace
+            int depthLayers = 1;       
             
-            int depthLayers = 1;
+            String ufile = "";
+            String vfile = "";
+            String elfile = "";
+            String ufile1 = "";
+            String vfile1 = "";
+            String elfile1 = "";
+            double[][] u = new double[recordsPerFile][N*depthLayers];
+            double[][] v = new double[recordsPerFile][N*depthLayers];
+            double[][] el = new double[recordsPerFile][N*depthLayers];
+            double[][] u1 = new double[recordsPerFile][N*depthLayers];
+            double[][] v1 = new double[recordsPerFile][N*depthLayers];
+            double[][] el1 = new double[recordsPerFile][N*depthLayers];
             
-            // maintain backward compatability with previous number reading
-            String filenums = ""+fnum;
-            if (location.equalsIgnoreCase("minch_continuous"))
+            // Reading files on the first instance:
+            // - Read two files to provide data for time interpolation during last time steps
+            if (fnum == firstday)
             {
-                filenums = br.readLine();
-            }        
-                        
-            String ufile = datadir+"u_"+filenums+".dat";
-            String vfile = datadir+"v_"+filenums+".dat";
-            //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-            String elfile = datadir+"el_"+filenums+".dat";
-            
-            System.out.println(ufile+" "+vfile+" "+elfile);
-            
-            //String sfile = datadir+"\\s_"+fnum+".dat";
-            double[][] u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",false);
-            double[][] v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",false);
-            //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
-            double[][] el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
-            //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
-            String ufile1 = datadir+"\\u_"+(fnum+1)+".dat";
-            String vfile1 = datadir+"\\v_"+(fnum+1)+".dat";
-            String elfile1 = datadir+"\\el_"+(fnum+1)+".dat";
-            double[][] u1 = readFileDoubleArray(ufile1,recordsPerFile,N*10," ",false);
-            double[][] v1 = readFileDoubleArray(vfile1,recordsPerFile,N*10," ",false);
-            double[][] el1 = readFileDoubleArray(elfile1,recordsPerFile,M*10," ",false);
+                System.out.println("Reading data day "+firstday);
+                // maintain backward compatability with previous number reading
+                filenums = ""+fnum;
+                // replace filenums in its entirety               
+                if (location.equalsIgnoreCase("minch_continuous"))
+                {
+                    filenums = br.readLine();
+                } 
+                System.out.println("t=0 Reading t: "+filenums);
+                ufile = datadir+"u_"+filenums+".dat";
+                vfile = datadir+"v_"+filenums+".dat";
+                //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
+                elfile = datadir+"el_"+filenums+".dat";
+                System.out.println(ufile+" "+vfile+" "+elfile);
+                u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
+                v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+                //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
+                el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
+                //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
+                
+                filenums = ""+(fnum+1);
+                if (location.equalsIgnoreCase("minch_continuous"))
+                {
+                    filenums = br.readLine();
+                }
+                System.out.println("t=0 Reading t+1: "+filenums);
+                ufile1 = datadir+"u_"+filenums+".dat";
+                vfile1 = datadir+"v_"+filenums+".dat";
+                elfile1 = datadir+"el_"+filenums+".dat";
+                u1 = readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
+                v1 = readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
+                el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
+//                double usum=0,u1sum=0;
+//                for (int i = 0; i < recordsPerFile; i++)
+//                {
+//                    for (int j = 0; j < recordsPerFile; j++)
+//                    {
+//                        usum+=u[i][j];
+//                        u1sum+=u1[i][j];
+//                    }
+//                }
+//                System.out.println("U Array Sums: u="+usum+" u1="+u1sum);
+            } 
+            // Interim timesteps:
+            // - switch "next file" to being "current file"
+            // - read new "next file"
+            else if (fnum > firstday && fnum < lastday)
+            {
+                System.out.println("**** Reading data day "+fnum);
+                // Cloning arrays doesn't seem to work: read data in again 
+                // (what was file t+1 is now file t)
+                // At this point, "filenums" is the name prefix of the second set of files read
+                // (as determined in second half of loop case above)
+                ufile = datadir+"u_"+filenums+".dat";
+                vfile = datadir+"v_"+filenums+".dat";
+                elfile = datadir+"el_"+filenums+".dat";
+                u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
+                v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+                el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+                //u = u1.clone();
+                //v = v1.clone();
+                //el = el1.clone();
+                // Read in the next file, so that t2+1 is available for time interpolation
+                filenums = ""+(fnum+1);
+                if (location.equalsIgnoreCase("minch_continuous"))
+                {
+                    filenums = br.readLine();
+                }
+                System.out.println("t!=0 Reading t+1: "+filenums);
+                ufile1 = datadir+"u_"+filenums+".dat";
+                vfile1 = datadir+"v_"+filenums+".dat";
+                elfile1 = datadir+"el_"+filenums+".dat";
+                u1 = readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
+                v1 = readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
+                el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
+            } 
+            // Last time step:
+            // - switch "next file" to being "current file"
+            else
+            {
+                System.out.println("t!=0 Reading t+1: "+filenums);
+                ufile = datadir+"u_"+filenums+".dat";
+                vfile = datadir+"v_"+filenums+".dat";
+                elfile = datadir+"el_"+filenums+".dat";
+                u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
+                v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+                el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+                //u = u1.clone();
+                //v = v1.clone();
+                //el = el1.clone();
+            }
 
             
             int firsttime=0;
@@ -508,6 +598,11 @@ public class Particle_track {
             
             // set an initial tide state
             String tideState = "flood";
+            
+            System.out.println("Free particles    = "+nfreeparts);
+            System.out.println("Viable particles  = "+nViable);
+            System.out.println("Arrived particles = "+nSettled);
+            System.out.println("Boundary exits    = "+nBoundary);
             
             // default, run loop forwards
             //for (int tt = firsttime; tt <= 3; tt++)
@@ -517,36 +612,15 @@ public class Particle_track {
             {
                 //System.out.printf("--------- TIME %d ----------\n",tt);
                 System.out.printf("%d ",tt);
-        //             if (mod(tt,100)==0) 
-        //                 fprintf('%d ',tt); 
-        //             end
-                
-//                if (nfreeparts < nparts)
-//                {
-//                    System.out.println("free parts = "+nfreeparts);
-//                    nfreeparts += startlocs.length;
-//                    System.out.println("+ startlocs.length "+startlocs.length);
-//                    System.out.println("\nTotal number of free particles now = "+nfreeparts);
-//                }
-                
-                //int dep=Particle.setParticleDepth(behaviour,tt,0,new double[10]);
-                //uchunk=squeeze(u(tt,dep,:));
-                //vchunk=squeeze(v(tt,dep,:));
-                //velocities=[uchunk vchunk];
-                
+
                 boolean debug = false;
                 if (debug==true)
                     {
                         particleLocsToFile(particles,nparts,0,"particlelocations_t"+tt+".out");
                     }
                 
-                //nfreeparts = (int)Math.min(nparts,nfreeparts+Math.floor((double)nparts/25.0));
-                nfreeparts = nparts;
-//                System.out.println("\nTotal number of free particles now = "+nfreeparts);
-//                for (int i = 0; i < nparts; i++)
-//                {
-//                    System.out.println(i+" freeparts "+nfreeparts+" viable "+particles[i].getViable()+" arrived "+particles[i].getArrived());
-//                }
+                nfreeparts = (int)Math.min(nparts,nfreeparts+Math.floor((double)nparts/25.0));
+                //nfreeparts = nparts;
                 
                 for (int st = 0; st < stepsPerStep; st++)
                 {
@@ -608,15 +682,25 @@ public class Particle_track {
                                 {
                                     if (tt < recordsPerFile-1)
                                     {
-                                        water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u[tt+1][elemPart*10+dep]-u[tt][elemPart*10+dep]);
-                                        water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v[tt+1][elemPart*10+dep]-v[tt][elemPart*10+dep]);
+                                        water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u[tt+1][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep]);
+                                        water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v[tt+1][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);
                                     } 
                                     else
                                     {
-                                        water_U = u[tt][elemPart*depthLayers+dep];
-                                        water_V = v[tt][elemPart*depthLayers+dep];
-                                        //water_U = u[tt][elemPart*10+dep] + ((double)st/(double)stepsPerStep)*(u1[0][elemPart*10+dep]-u[tt][elemPart*10+dep] );
-                                        //water_V = v[tt][elemPart*10+dep] + ((double)st/(double)stepsPerStep)*(v1[0][elemPart*10+dep]-v[tt][elemPart*10+dep]);                             
+                                        //water_U = u[tt][elemPart*depthLayers+dep];
+                                        //water_V = v[tt][elemPart*depthLayers+dep];
+                                        if (fnum < lastday)
+                                        {
+                                            
+                                            water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u1[0][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep] );
+                                            water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v1[0][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);                             
+                                        }
+                                        // Very last timestep: just fix velocity to be same over entire last hour
+                                        else
+                                        {
+                                            water_U = u[tt][elemPart*depthLayers+dep];
+                                            water_V = v[tt][elemPart*depthLayers+dep];
+                                        }
                                     }
                                 } 
                                 
@@ -653,15 +737,25 @@ public class Particle_track {
                                     }
                                     else
                                     {
-                                        velplus1 = particles[i].velocityFromNearestList(tt,u,v);
                                         //velplus1 = particles[i].velocityFromNearestList(0,u1,v1);
+                                        if (fnum < lastday)
+                                        {
+                                            velplus1 = particles[i].velocityFromNearestList(0,u1,v1);
+                                        }
+                                        // Very last timestep: just fix velocity to be same over entire last hour
+                                        else
+                                        {
+                                            velplus1 = particles[i].velocityFromNearestList(tt,u,v);
+                                        }
                                     }
                                     water_U = vel[0] + ((double)st/(double)stepsPerStep)*(velplus1[0]-vel[0]);
                                     water_V = vel[1] + ((double)st/(double)stepsPerStep)*(velplus1[1]-vel[1]);
                                 }
                             }
-                            //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,water_U,water_V);
-                                  
+//                            if (st == 1)
+//                            {
+//                                System.out.printf("Vel (particle %d element %d) = %.4f %.4f\n",i,elemPart,water_U,water_V);
+//                            }
                             
                             // below velocities used if running backwards
                             if (backwards == true)
@@ -791,13 +885,14 @@ public class Particle_track {
 
                             // set particle to become able to settle after a predefined time
                             //if ((day-firstday)*24+tt==viabletime)
-                            if (particles[i].getAge()>viabletime/3600.0)
+                            if (particles[i].getAge()>viabletime/3600.0 && particles[i].getViable()==false)
                             //if (time>viabletime)
                             {
-                                System.out.println("Particle became viable");
+                                //System.out.println("Particle became viable");
                                 //if (ran.raw()<dev_perstep)
                                 //{
                                     particles[i].setViable(true);
+                                    nViable++;
                                     // save location information
                             
                                 
@@ -821,7 +916,9 @@ public class Particle_track {
                                         particles[i].setArrived(true);
                                         particle_info[i][1] = -loc;//(int)startlocs[loc][0];
                                         particle_info[i][2] = (int)particles[i].getAge();//((day-firstday)*24+tt);
+                                        nBoundary++;
                                         break;
+                                        
                                     }
                                 }
                                 
@@ -843,6 +940,7 @@ public class Particle_track {
                                         particle_info[i][1] = loc;//(int)startlocs[loc][0];
                                         particle_info[i][2] = (int)time;//((day-firstday)*24+tt);
                                         settle_density[i][0] = particles[i].getDensity();
+                                        nSettled++;
                                         break;
                                     }
                                 }    
@@ -969,11 +1067,13 @@ public class Particle_track {
         double[][] myDouble = new double[rows][cols];
         int x=0, y=0;
         boolean failed = false;
+        double sum = 0;
         try
         {
             BufferedReader in = new BufferedReader(new FileReader(filename));	//reading files in specified directory
  
             String line;
+            
             outer: while ((line = in.readLine()) != null)	//file reading
             {
                 y=0;
@@ -994,6 +1094,7 @@ public class Particle_track {
                     }
                     double str_double = Double.parseDouble(str);
                     myDouble[x][y]=str_double;
+                    sum+=myDouble[x][y];
                     //System.out.print(myDouble[x][y] + " ");
                     y++;
 
@@ -1005,12 +1106,14 @@ public class Particle_track {
             in.close();
             
         } catch( IOException ioException ) {
-            System.err.println("******************* Cannot read from file "+filename+" ******************************");
-            failed = true;
+            throw new RuntimeException(ioException);
+            //System.err.println("******************* Cannot read from file "+filename+" ******************************");
+            //failed = true;
         }
         if (note == true && failed == false)
         {
             System.out.printf("Created %dx%d array from file: %s\n",myDouble.length,myDouble[0].length,filename);
+            System.out.println("Array sum at read time = "+sum);
         }
         else if (failed == true)
         {
