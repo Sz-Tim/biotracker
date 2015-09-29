@@ -45,7 +45,7 @@ public class Particle_track {
         boolean variableDiff = false;
         boolean calcMort = false;
         
-        boolean cluster = false;
+        boolean cluster = true;
         
         // This actually isn't used, except in the case of defaulting on location
         String basedir = "C:\\Users\\sa01ta\\Documents\\particle_track\\";
@@ -86,8 +86,8 @@ public class Particle_track {
          */
         int behaviour=1;
         
-        boolean timeInterpolate = false;
-        boolean spatialInterpolate = false;
+        boolean timeInterpolate = true;
+        boolean spatialInterpolate = true;
         double D_h = 0.1;
         
         /**
@@ -105,7 +105,7 @@ public class Particle_track {
             dt=3600;
             stepsPerStep=200;
             thresh=500;
-            viabletime=87;
+            viabletime=9999;
             //viabletime=1000000000;
             location="minch_continuous";
             timeInterpolate = false;
@@ -219,6 +219,11 @@ public class Particle_track {
         {
             datadir = "D:\\dima_data\\minch_continuous\\";
             datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
+            if (cluster==true)
+            {
+                datadir=basedir+"minch_continuous/";
+                datadir2=basedir+"minch_continuous/";
+            }
             System.out.println("DATA DIRECTORY = "+datadir2);
         }
         else
@@ -447,7 +452,7 @@ public class Particle_track {
         int printCount=0;
         
         // Initial value for br set - this particular one is only used in case of "spill" habitat (identical to that file list)
-        BufferedReader br = new BufferedReader(new FileReader("C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\150408_spill_list1.dat"));
+        BufferedReader br = new BufferedReader(new FileReader(datadir2+"150408_spill_list1.dat"));
         if (location.equalsIgnoreCase("minch_continuous")) {
             if (habitat.equalsIgnoreCase("spill")){
                 br = new BufferedReader(new FileReader("150408_spill_list1.dat"));
@@ -463,7 +468,8 @@ public class Particle_track {
         //System.out.println("filelist top line: "+br.readLine());
         //br.reset();
 
-        int nfreeparts = 0;
+        //int nfreeparts = 0;
+        int nfreeparts = nparts;
         int nViable = 0;
         int nBoundary = 0;
         int nSettled = 0;
@@ -491,10 +497,10 @@ public class Particle_track {
             String elfile1 = "";
             double[][] u = new double[recordsPerFile][N*depthLayers];
             double[][] v = new double[recordsPerFile][N*depthLayers];
-            double[][] el = new double[recordsPerFile][N*depthLayers];
+            //double[][] el = new double[recordsPerFile][N*depthLayers];
             double[][] u1 = new double[recordsPerFile][N*depthLayers];
             double[][] v1 = new double[recordsPerFile][N*depthLayers];
-            double[][] el1 = new double[recordsPerFile][N*depthLayers];
+            //double[][] el1 = new double[recordsPerFile][N*depthLayers];
             
             // Reading files on the first instance:
             // - Read two files to provide data for time interpolation during last time steps
@@ -512,12 +518,12 @@ public class Particle_track {
                 ufile = datadir+"u_"+filenums+".dat";
                 vfile = datadir+"v_"+filenums+".dat";
                 //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-                elfile = datadir+"el_"+filenums+".dat";
+                //elfile = datadir+"el_"+filenums+".dat";
                 System.out.println(ufile+" "+vfile+" "+elfile);
                 u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
                 v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
                 //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
-                el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
+                //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
                 //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
                 
                 filenums = ""+(fnum+1);
@@ -528,10 +534,10 @@ public class Particle_track {
                 System.out.println("t=0 Reading t+1: "+filenums);
                 ufile1 = datadir+"u_"+filenums+".dat";
                 vfile1 = datadir+"v_"+filenums+".dat";
-                elfile1 = datadir+"el_"+filenums+".dat";
+                //elfile1 = datadir+"el_"+filenums+".dat";
                 u1 = readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
                 v1 = readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-                el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
+                //el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
 //                double usum=0,u1sum=0;
 //                for (int i = 0; i < recordsPerFile; i++)
 //                {
@@ -555,10 +561,10 @@ public class Particle_track {
                 // (as determined in second half of loop case above)
                 ufile = datadir+"u_"+filenums+".dat";
                 vfile = datadir+"v_"+filenums+".dat";
-                elfile = datadir+"el_"+filenums+".dat";
+                //elfile = datadir+"el_"+filenums+".dat";
                 u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
                 v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-                el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
                 //u = u1.clone();
                 //v = v1.clone();
                 //el = el1.clone();
@@ -571,10 +577,10 @@ public class Particle_track {
                 System.out.println("t!=0 Reading t+1: "+filenums);
                 ufile1 = datadir+"u_"+filenums+".dat";
                 vfile1 = datadir+"v_"+filenums+".dat";
-                elfile1 = datadir+"el_"+filenums+".dat";
+                //elfile1 = datadir+"el_"+filenums+".dat";
                 u1 = readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
                 v1 = readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-                el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
+                //el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
             } 
             // Last time step:
             // - switch "next file" to being "current file"
@@ -583,10 +589,10 @@ public class Particle_track {
                 System.out.println("t!=0 Reading t+1: "+filenums);
                 ufile = datadir+"u_"+filenums+".dat";
                 vfile = datadir+"v_"+filenums+".dat";
-                elfile = datadir+"el_"+filenums+".dat";
+                //elfile = datadir+"el_"+filenums+".dat";
                 u = readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
                 v = readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-                el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
                 //u = u1.clone();
                 //v = v1.clone();
                 //el = el1.clone();
@@ -636,15 +642,15 @@ public class Particle_track {
                             int elemPart = particles[i].getElem();
                             //System.out.printf("%d\n",elemPart);
                             // set the depth layer for the particle based on tide state
-                            if (tt>0)
-                            {
-                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
-                                {
-                                    particles[i].setDepthLayer(behaviour,"flood");
-                                } else {
-                                    particles[i].setDepthLayer(behaviour,"ebb");
-                                }
-                            }
+//                            if (tt>0)
+//                            {
+//                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
+//                                {
+//                                    particles[i].setDepthLayer(behaviour,"flood");
+//                                } else {
+//                                    particles[i].setDepthLayer(behaviour,"ebb");
+//                                }
+//                            }
                             
                             int dep = particles[i].getDepthLayer();
                             //System.out.println("Depth ="+dep);
@@ -787,6 +793,9 @@ public class Particle_track {
                             double ran2 = 2.0*ran.raw()-1.0;
                             //System.out.println("D_h = "+D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
                             //System.out.println("Distances travelled: X "+dt*water_U+" "+diff_X*ran1+" Y "+dt*water_U+" "+diff_Y*ran2);
+                            
+                            
+                            
                             double newlocx=particles[i].getLocation()[0]+dt*water_U+dt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
                             double newlocy=particles[i].getLocation()[1]+dt*water_V+dt*behave_uv[1]+diff_Y*ran2;
 
@@ -1000,7 +1009,9 @@ public class Particle_track {
         particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
         writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
         writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
-
+        particleLocsToFile1(particles,"particlelocations_end"+suffix+".out");
+        
+        
         //System.out.println(new Date().toString());
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = "+(endTime-startTime)/1000.0);
@@ -1232,6 +1243,25 @@ public class Particle_track {
             for (int i = 0; i < particles.length/nparts; i++)
             {
                 out.printf("%d %d %f %f %d\n",tt,i,particles[i].getLocation()[0],particles[i].getLocation()[1],particles[i].getElem());
+            }
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
+    // Print ALL particlelocations at a particular time, with corresponding start locations
+    public static void particleLocsToFile1(Particle[] particles, String filename)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,true);
+            PrintWriter out = new PrintWriter(fstream);
+            for (int i = 0; i < particles.length; i++)
+            {
+                out.printf("%d %f %f %f $f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],particles[i].getLocation()[0],particles[i].getLocation()[1]);
             }
             //Close the output stream
             out.close();

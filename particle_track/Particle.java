@@ -12,6 +12,7 @@ public class Particle {
     
     // horizontal position
     private double[] xy = new double[2];
+    private double[] startLoc = new double[2];
     private int elem;
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
@@ -30,6 +31,8 @@ public class Particle {
     {
         this.xy[0] = xstart;
         this.xy[1] = ystart;
+        this.startLoc[0] = xstart;
+        this.startLoc[1] = ystart;
         this.z = 0;
         this.depLayer = 0;
         this.age = 0;
@@ -42,6 +45,10 @@ public class Particle {
     public double[] getLocation()
     {
         return this.xy;
+    }
+    public double[] getStartLocation()
+    {
+        return this.startLoc;
     }
     public void setLocation(double x, double y)
     {
