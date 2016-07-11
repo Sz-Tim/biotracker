@@ -59,11 +59,9 @@ public class Particle_track {
         int nparts=940;
         nparts=100;
         double dt=3600;
-        
         int firstday=3;
         int lastday=31;
         int recordsPerFile=24;
-        
         int stepsPerStep=200;
         
         // The threshold distance, closer than which particles are deemed to have settled.
@@ -74,17 +72,7 @@ public class Particle_track {
         double viabletime = 0;
         String location = "lorn";
                
-        // options for behaviour of particles - depth aspects are set at each
-        // timestep by function
-        /**
-         * 1 - passive, stay on surface
-         * 2 - passive, stay on bottom (layer 10)
-         * 3 - passive, stay in mid layer (layer 5)
-         * 6 - top during flood tides, mid during ebb (local)
-         * 7 - mid during flood tides, bed during ebb (local)
-         * 8 - top during flood tides, bed during ebb (local)
-         */
-        int behaviour=1;
+        int behaviour=1; // Particle behaviour - see Particle.java
         
         boolean timeInterpolate = true;
         boolean spatialInterpolate = true;
@@ -789,7 +777,7 @@ public class Particle_track {
                                             (particles[i].getLocation()[1]-startlocs[loc][2])*(particles[i].getLocation()[1]-startlocs[loc][2]));
                                     if (dist < thresh)
                                     {
-                                        System.out.printf("settlement: %d at %d\n",i,loc);
+                                        //System.out.printf("settlement: %d at %d\n",i,loc);
                                         particles[i].setArrived(true);
                                         particle_info[i][1] = loc;//(int)startlocs[loc][0];
                                         particle_info[i][2] = (int)time;//((day-firstday)*24+tt);
