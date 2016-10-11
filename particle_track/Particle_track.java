@@ -7,6 +7,7 @@ package particle_track;
 import java.io.*;
 import java.util.*;
 import edu.cornell.lassp.houle.RngPack.*;
+import static particle_track.IOUtils.countLines;
 
 /**
  *
@@ -66,9 +67,6 @@ public class Particle_track {
         
         // The threshold distance, closer than which particles are deemed to have settled.
         int thresh = 500;
-        
-        // Particles become viable when they are halway through their PLD. 
-        // This is compared to individual particle age later.
         double viabletime = 0;
         String location = "lorn";
                
@@ -102,7 +100,7 @@ public class Particle_track {
             dt=3600;
             thresh=500;
             
-            location="minch_continuous";
+            location="minch_jelly";
             timeInterpolate = true;
             spatialInterpolate = true;
             
@@ -168,6 +166,9 @@ public class Particle_track {
             }
         }
         
+        // Calc simulation length in hours
+        double simulatedDuration = dt*recordsPerFile*(lastday-firstday+1);
+        
         // Print all main arguments
         System.out.printf("-----------------------------------------------------------\n");
         System.out.printf("Location           = %s\n",location);
@@ -178,6 +179,7 @@ public class Particle_track {
         System.out.printf("stepsperstep       = %d\n",stepsPerStep);
         System.out.printf("firstfile          = %d\n",firstday);
         System.out.printf("lastfile           = %d\n",lastday);
+        System.out.printf("Simulated duration = %f\n",simulatedDuration);
         System.out.printf("RK4                = %s\n",rk4);
         System.out.printf("Vertical behaviour = %d\n",behaviour);        
         System.out.printf("Viable time (h)    = %f\n",viabletime);
@@ -221,18 +223,13 @@ public class Particle_track {
             N = 1593;
             M = 943;
         } 
-        else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous"))
+        else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
         {
             N = 79244;
             M = 46878;            
         }
         
-        double[][] nodexy = new double[M][2];
-        double[][] uvnode = new double[N][2];
-        int[][] trinodes = new int[N][3];
-        int[][] neighbours = new int[N][3];
-
-        
+              
         
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
@@ -268,6 +265,17 @@ public class Particle_track {
                 datadir2=basedir+"minch_continuous/";
             }
             System.out.println("DATA DIRECTORY = "+datadir2);
+            }
+        else if (location.equalsIgnoreCase("minch_jelly"))
+        {
+            datadir = "D:\\dima_data\\minch_jelly\\";
+            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
+            if (cluster==true)
+            {
+                datadir=basedir+"minch_jelly/";
+                datadir2=basedir+"minch_jelly/";
+            }
+            System.out.println("DATA DIRECTORY = "+datadir2);
         }
         else
         {
@@ -275,10 +283,55 @@ public class Particle_track {
             datadir = "D:\\dima_data\\"+datadir;
             System.out.println("DATA DIRECTORY = "+datadir);
         }
+        
+        double[][] nodexy = new double[M][2];
+        double[][] uvnode = new double[N][2];
+        double[][] bathymetry = new double[N][1];
+        double[][] sigvec = new double[N][1];
+        int[][] trinodes = new int[N][3];
+        int[][] neighbours = new int[N][3];
+        
         nodexy = IOUtils.readFileDoubleArray(datadir2+"nodexy.dat",M,2," ",true); // the original mesh nodes
         uvnode = IOUtils.readFileDoubleArray(datadir2+"uvnode.dat",N,2," ",true); // the centroids of the elements
         trinodes = IOUtils.readFileIntArray(datadir2+"trinodes.dat",N,3," ",true); // the corners of the elements
         neighbours = IOUtils.readFileIntArray(datadir2+"neighbours.dat",N,3," ",true);
+        bathymetry = IOUtils.readFileDoubleArray(datadir2+"bathymetry.dat",N,1," ",true);
+        sigvec = IOUtils.readFileDoubleArray(datadir2+"sigvec.dat",N,1," ",true);
+        
+        // Create a 1d array of the sigma layer depths
+        double[] sigvec2 = new double[sigvec.length];
+        for (int i = 0; i < sigvec.length; i++)
+        {
+            sigvec2[i] = sigvec[i][0];
+        }
+        System.out.println("sigvec2 "+sigvec2[0]+" "+sigvec2[1]+" "+sigvec2[2]+" ....");
+        
+        // A list of times at which to print particle locations to file 
+        // (hours from start of simulation)
+        double[][] dumptimes = new double[10][1];
+        double[] dumptimes2 = new double[dumptimes.length];
+        System.out.println("Attempting to read dumptimes.dat");
+        File file = new File("./dumptimes.dat");
+        int nLines = 0;
+        try
+        {
+            nLines = IOUtils.countLines(file);
+            System.out.println("lines = "+nLines);
+        }
+        catch (IOException e)
+        {
+            System.out.println("Cannot open ./dumptimes.dat");
+        }
+        if (nLines != 0)
+        {
+            dumptimes = IOUtils.readFileDoubleArray("./dumptimes.dat",nLines,1," ",true);
+            dumptimes2 = new double[dumptimes.length];
+            for (int i = 0; i < dumptimes.length; i++)
+            {
+                dumptimes2[i] = dumptimes[i][0];
+            }
+            System.out.println("dumptimes2 "+dumptimes2[0]+" "+dumptimes2[1]+" "+dumptimes2[2]+" ....");
+        }
         
         // reduce node/element IDs in files generated by matlab by one (loops start at zero, not one as in matlab)
         for (int i = 0; i < N; i++)
@@ -302,8 +355,6 @@ public class Particle_track {
             allelems[j] = j;
         }
 
-        
-        
         int nrecords=(lastday-firstday+1)*recordsPerFile;
         int inviabletime=nrecords;
         
@@ -319,6 +370,7 @@ public class Particle_track {
 
         // load array of start node IDs (as stored by matlab)
         double startlocs[][] = new double[10][3];
+        double endlocs[][] = new double[10][3];
         double open_BC_locs[][] = new double[1][3];
         
         //String sitedir="C:\\Users\\sa01ta\\Documents\\westcoast_tracking_summary\\habitat_sites\\sites_to_use\\";
@@ -329,6 +381,7 @@ public class Particle_track {
         }
 
         startlocs = IOUtils.setupStartLocs(location,habitat,basedir);
+        
         open_BC_locs = IOUtils.setupOpenBCLocs(location,habitat,basedir); 
         
         if (habitat.equalsIgnoreCase("spill") || habitat.equalsIgnoreCase("test")){
@@ -352,14 +405,16 @@ public class Particle_track {
         //int tot_psteps=nparts*nrecords;
 
         // an array to save the number of "particle-timesteps" in each cell
-        double[][] pstepsImmature= new double[N][2];
-        double[][] pstepsMature= new double[N][2];
+        double[][] pstepsImmature = new double[N][2];
+        double[][] pstepsMature = new double[N][2];
+        double[][] pstepsInst = new double[N][2];
         
    
         for (int i = 0; i < N; i++)
         {
             pstepsImmature[i][0] = i;
             pstepsMature[i][0] = i;
+            pstepsInst[i][0] = i;
         }
         // array to save source, destination, and transport time for each particle
         int[][] particle_info= new int[nparts][3];
@@ -378,7 +433,7 @@ public class Particle_track {
             xstart[i]=startlocs[startid[i]][1];
             ystart[i]=startlocs[startid[i]][2];
 
-            // this boundary location is not actually in the mesh/an element, so set
+            // If start location is a boundary location it is not actually in the mesh/an element, so set
             // new particle location to centre of nearest element.
             int closest=Particle.nearestCentroid(xstart[i],ystart[i],uvnode);
             startElem[i]=Particle.whichElement(xstart[i],ystart[i],allelems,nodexy,trinodes);
@@ -393,12 +448,35 @@ public class Particle_track {
 
         // setup particles
         Particle[] particles = new Particle[nparts];
+        boolean setReleaseTime = true;
+        boolean tidalRelease = false;
+        boolean setDepth = true;
         System.out.println("particles.length = "+particles.length);
         for (int i = 0; i < particles.length; i++)
         {
             particles[i] = new Particle(xstart[i],ystart[i],i);
             particle_info[i][0]=startid[i];//(int)startlocs[startid[i]][0];
             particles[i].setElem(startElem[i]);
+            // if information provided, set release time
+            if (startlocs[startid[i]].length > 3 && setReleaseTime == true)
+            {
+                particles[i].setReleaseTime(startlocs[startid[i]][3]);
+            }
+            // otherwise, allow release over tidal cycle
+            else if (tidalRelease == true)
+            {
+                particles[i].setReleaseTime(i%25);
+            }
+            // otherwise, all released at start of simulation
+            else
+            {
+                particles[i].setReleaseTime(0);
+            }
+            // If provided, set particle depth
+            if (startlocs[startid[i]].length > 4 && setDepth == true)
+            {
+                particles[i].setZ(startlocs[startid[i]][4]);
+            }
         }
         
         IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations_start.out");
@@ -423,7 +501,7 @@ public class Particle_track {
         int printCount=0;
         
         // Initial value for br set - this particular one is only used in case of "spill" habitat (identical to that file list)
-        BufferedReader br = new BufferedReader(new FileReader(datadir2+"150408_spill_list1.dat"));
+        BufferedReader br = new BufferedReader(new FileReader("filelist.dat"));
         if (location.equalsIgnoreCase("minch_continuous")) {
             if (habitat.equalsIgnoreCase("spill")){
                 br = new BufferedReader(new FileReader("150408_spill_list1.dat"));
@@ -439,8 +517,7 @@ public class Particle_track {
         //System.out.println("filelist top line: "+br.readLine());
         //br.reset();
 
-        //int nfreeparts = 0;
-        int nfreeparts = nparts;
+        int nfreeparts = 0;
         int nViable = 0;
         int nBoundary = 0;
         int nSettled = 0;
@@ -463,7 +540,7 @@ public class Particle_track {
             //clear FVCOM1
             // load the new data file. this puts variables straight into the
             // workspace
-            int depthLayers = 1;       
+            int depthLayers = 10;       
             
             String ufile = "";
             String vfile = "";
@@ -486,7 +563,7 @@ public class Particle_track {
                 // maintain backward compatability with previous number reading
                 filenums = ""+fnum;
                 // replace filenums in its entirety               
-                if (location.equalsIgnoreCase("minch_continuous"))
+                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
                 {
                     filenums = br.readLine();
                 } 
@@ -503,7 +580,7 @@ public class Particle_track {
                 //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
                 
                 filenums = ""+(fnum+1);
-                if (location.equalsIgnoreCase("minch_continuous"))
+                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
                 {
                     filenums = br.readLine();
                 }
@@ -541,7 +618,7 @@ public class Particle_track {
                 //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
                 // Read in the next file, so that t2+1 is available for time interpolation
                 filenums = ""+(fnum+1);
-                if (location.equalsIgnoreCase("minch_continuous"))
+                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
                 {
                     filenums = br.readLine();
                 }
@@ -580,7 +657,7 @@ public class Particle_track {
             System.out.println("Boundary exits    = "+nBoundary);
             
             // default, run loop forwards
-            //for (int tt = firsttime; tt <= 3; tt++)
+            // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
             for (int tt = firsttime; tt <= recordsPerFile-1; tt++)
             // alternatively, run loop backwards
             //for (int tt = lasttime; tt >= firsttime; tt--)
@@ -594,239 +671,233 @@ public class Particle_track {
                         IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations_t"+tt+".out");
                     }
                 
-                nfreeparts = (int)Math.min(nparts,nfreeparts+Math.floor((double)nparts/25.0));
-                //nfreeparts = nparts;
-                
+                // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int st = 0; st < stepsPerStep; st++)
                 {
                     //System.out.print(",");
                     //System.out.println("nfreeparts = "+nfreeparts);
-                    for (int i = 0; i < nfreeparts; i++)
+                    for (int i = 0; i < nparts; i++)
                     {
-                        particles[i].increaseAge(dt/3600.0);
-                        //System.out.printf("PARTICLE %d \n",i);
-                        if (particles[i].getArrived()==false)
-                        {
-                            //System.out.println("particle able to move");
-                            int elemPart = particles[i].getElem();
-                            //System.out.printf("%d\n",elemPart);
-                            // set and get the DEPTH layer for the particle based on tide state
-//                            if (tt>0)
-//                            {
-//                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
-//                                {
-//                                    particles[i].setDepthLayer(behaviour,"flood");
-//                                } else {
-//                                    particles[i].setDepthLayer(behaviour,"ebb");
-//                                }
-//                            }
-                            int dep = particles[i].getDepthLayer();
-                            //System.out.println("Depth ="+dep);
-                            
-                            // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
-                            // This is stored at NODES as opposed to ELEMENT CENTROIDS.
-                            // So need to get the value from each of the corners and calculate 
-                            // a value at the particle location (similar method to getting velocity from nearest centroids).
-                            if (st == 0)
+                        if (time > particles[i].getReleaseTime())
+                        {    
+                            particles[i].increaseAge(dt/3600.0);
+                            //System.out.printf("PARTICLE %d \n",i);
+                            if (particles[i].getArrived()==false)
                             {
-                                double salinity = 0;
-                                double mort = 0;
-//                                if (calcMort == true)
-//                                {
-//                                    salinity = particles[i].salinity(tt,sal,trinodes);
-//                                    particles[i].setMortRate(salinity);
-//                                }
-                                particles[i].setDensity();
-                            }
-                              
-                            double advectStep[] = new double[2];
-//                            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
-//                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
-                            if (rk4==true)
-                            {
-                                advectStep = particles[i].rk4Step(u, v, u1, v1, 
-                                    neighbours, uvnode,  nodexy, trinodes, allelems,
-                                    tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers);   
-                            }
-                            else
-                            {
-                                advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
-                                    tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
-                                    spatialInterpolate, timeInterpolate);
-                            }
-                            
-                            // Reverse velocities if running backwards
-                            if (backwards == true)
-                            {
-                                advectStep[0] = -advectStep[0];
-                                advectStep[1] = -advectStep[1];
-                            }
-                            
-                            // 3. Calculate diffusion (random walk step)
-//                            if (variableDiff==true)
-//                            {
-//                                D_h=1000*viscofm[tt][elemPart*10+dep];
-//                            }
-                            // doing this (below) means that can set zero diffusion, even if read in diffusion values
-                            if (diffusion==false)
-                            {
-                                D_h=0;
-                            }
-                            //rand('twister',sum(100*clock)); %resets it to a different state each time.
-                            double diff_X = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
-                            double diff_Y = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
-                            double[] behave_uv = particles[i].behaveVelocity(behaviour);
-                            // 4. update particle location
-                            //double ran1 = BoxMueller.bmTransform(ran.raw(),ran.raw());
-                            //double ran2 = BoxMueller.bmTransform(ran.raw(),ran.raw());
-                            double ran1 = 2.0*ran.raw()-1.0;
-                            double ran2 = 2.0*ran.raw()-1.0;
-                            //System.out.println("D_h = "+D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-                            //System.out.println("Distances travelled: X "+dt*water_U+" "+diff_X*ran1+" Y "+dt*water_U+" "+diff_Y*ran2);
-
-                            double newlocx=particles[i].getLocation()[0]+advectStep[0]+dt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
-                            double newlocy=particles[i].getLocation()[1]+advectStep[1]+dt*behave_uv[1]+diff_Y*ran2;
-
-                            //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
-                            
-                            // find element containing particle and update seach counts for diagnosis
-                            int[] c = particles[i].findContainingElement(newlocx, newlocy, elemPart, 
-                                    nodexy, trinodes, neighbours, allelems);
-                            int whereami = c[0];
-                            for (int j = 0; j < 5; j++)
-                            {
-                                searchCounts[j] += c[j+1];
-                            }
-
-                            // if particle is within the mesh, update location normally and save the distance travelled
-                            if (whereami != -1)
-                            {
-                                double distTrav = Math.sqrt((particles[i].getLocation()[0]-newlocx)*(particles[i].getLocation()[0]-newlocx)+
-                                        (particles[i].getLocation()[1]-newlocy)*(particles[i].getLocation()[1]-newlocy));
-                                if (distTrav>maxDistTrav)
-                                {
-                                    maxDistTrav=distTrav;
-                                }
-                                if (distTrav<minDistTrav)
-                                {
-                                    minDistTrav=distTrav;
-                                }
-                                particles[i].setLocation(newlocx,newlocy);
-                                particles[i].setElem(whereami);
-                                //System.out.printf("** MOVED **, new elem = %d (dist = %f)\n",particles[i].getElem(),Math.sqrt((newlocx-uvnode[particles[i].getElem()][0])*(newlocx-uvnode[particles[i].getElem()][0])+(newlocy-uvnode[particles[i].getElem()][1])*(newlocy-uvnode[particles[i].getElem()][1])));
-                            }
-                            
-                            // if particle has skipped out of the model domain, place it at the nearest element centroid
-                            if (whereami == -1)
-                            {
-                                int closest=Particle.nearestCentroid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode);
-                                //fprintf('x%d',closest);
-                                particles[i].setLocation(uvnode[closest][0],uvnode[closest][1]);
-                                particles[i].setElem(closest);
-                            }
-
-                            // set particle to become able to settle after a predefined time
-                            //if ((day-firstday)*24+tt==viabletime)
-                            if (particles[i].getAge()>viabletime/3600.0 && particles[i].getViable()==false)
-                            //if (time>viabletime)
-                            {
-                                //System.out.println("Particle became viable");
-                                //if (ran.raw()<dev_perstep)
-                                //{
-                                    particles[i].setViable(true);
-                                    nViable++;
-                                    // save location information
-                            
+                                //System.out.println("particle able to move");
+                                int elemPart = particles[i].getElem();
+                                //System.out.printf("%d\n",elemPart);
+                                // set and get the DEPTH layer for the particle based on tide state
+    //                            if (tt>0)
+    //                            {
+    //                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
+    //                                {
+    //                                    particles[i].setDepthLayer(behaviour,"flood");
+    //                                } else {
+    //                                    particles[i].setDepthLayer(behaviour,"ebb");
+    //                                }
+    //                            }
+                                // set depth layer based on fixed depth in metres
+                                particles[i].setLayerFromDepth(bathymetry[elemPart][0],sigvec2);
                                 
-                                    //System.out.println(time+" "+particles[i].getAge());
-                                    //System.out.println("I can settle");
-                                //}
-                                pstepsMature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
-                            } else {
-                                pstepsImmature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
-                            }
-                            
-                            // check whether the particle has gone within a certain range of one of the boundary nodes
-                            // (make it settle there, even if it is inviable)
-                            for (int loc = 0; loc < open_BC_locs.length; loc++)
+                                int dep = particles[i].getDepthLayer();
+                                //System.out.println("Depth ="+dep);
+
+                                // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
+                                // This is stored at NODES as opposed to ELEMENT CENTROIDS.
+                                // So need to get the value from each of the corners and calculate 
+                                // a value at the particle location (similar method to getting velocity from nearest centroids).
+                                if (st == 0)
                                 {
-                                    double dist = Math.sqrt((particles[i].getLocation()[0]-open_BC_locs[loc][1])*(particles[i].getLocation()[0]-open_BC_locs[loc][1])+
-                                            (particles[i].getLocation()[1]-open_BC_locs[loc][2])*(particles[i].getLocation()[1]-open_BC_locs[loc][2]));
-                                    if (dist < 1500)
+                                    double salinity = 0;
+                                    double mort = 0;
+    //                                if (calcMort == true)
+    //                                {
+    //                                    salinity = particles[i].salinity(tt,sal,trinodes);
+    //                                    particles[i].setMortRate(salinity);
+    //                                }
+                                    particles[i].setDensity();
+                                }
+
+                                double advectStep[] = new double[2];
+    //                            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
+    //                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
+                                if (rk4==true)
+                                {
+                                    advectStep = particles[i].rk4Step(u, v, u1, v1, 
+                                        neighbours, uvnode,  nodexy, trinodes, allelems,
+                                        tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers);   
+                                }
+                                else
+                                {
+                                    advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
+                                        tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
+                                        spatialInterpolate, timeInterpolate);
+                                }
+
+                                // Reverse velocities if running backwards
+                                if (backwards == true)
+                                {
+                                    advectStep[0] = -advectStep[0];
+                                    advectStep[1] = -advectStep[1];
+                                }
+
+                                // 3. Calculate diffusion (random walk step)
+    //                            if (variableDiff==true)
+    //                            {
+    //                                D_h=1000*viscofm[tt][elemPart*10+dep];
+    //                            }
+                                // doing this (below) means that can set zero diffusion, even if read in diffusion values
+                                if (diffusion==false)
+                                {
+                                    D_h=0;
+                                }
+                                //rand('twister',sum(100*clock)); %resets it to a different state each time.
+                                double diff_X = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
+                                double diff_Y = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
+                                double[] behave_uv = particles[i].behaveVelocity(behaviour);
+                                // 4. update particle location
+                                //double ran1 = BoxMueller.bmTransform(ran.raw(),ran.raw());
+                                //double ran2 = BoxMueller.bmTransform(ran.raw(),ran.raw());
+                                double ran1 = 2.0*ran.raw()-1.0;
+                                double ran2 = 2.0*ran.raw()-1.0;
+                                //System.out.println("D_h = "+D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
+                                //System.out.println("Distances travelled: X "+dt*water_U+" "+diff_X*ran1+" Y "+dt*water_U+" "+diff_Y*ran2);
+
+                                double newlocx=particles[i].getLocation()[0]+advectStep[0]+dt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
+                                double newlocy=particles[i].getLocation()[1]+advectStep[1]+dt*behave_uv[1]+diff_Y*ran2;
+
+                                //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
+
+                                // find element containing particle and update seach counts for diagnosis
+                                int[] c = particles[i].findContainingElement(newlocx, newlocy, elemPart, 
+                                        nodexy, trinodes, neighbours, allelems);
+                                int whereami = c[0];
+                                for (int j = 0; j < 5; j++)
+                                {
+                                    searchCounts[j] += c[j+1];
+                                }
+
+                                // if particle is within the mesh, update location normally and save the distance travelled
+                                if (whereami != -1)
+                                {
+                                    double distTrav = Math.sqrt((particles[i].getLocation()[0]-newlocx)*(particles[i].getLocation()[0]-newlocx)+
+                                            (particles[i].getLocation()[1]-newlocy)*(particles[i].getLocation()[1]-newlocy));
+                                    if (distTrav>maxDistTrav)
                                     {
-                                        //System.out.printf("Boundary stop: %d at %d\n",i,loc);
-                                        particles[i].setArrived(true);
-                                        particle_info[i][1] = -loc;//(int)startlocs[loc][0];
-                                        particle_info[i][2] = (int)particles[i].getAge();//((day-firstday)*24+tt);
-                                        nBoundary++;
-                                        break;
-                                        
+                                        maxDistTrav=distTrav;
                                     }
+                                    if (distTrav<minDistTrav)
+                                    {
+                                        minDistTrav=distTrav;
+                                    }
+                                    particles[i].setLocation(newlocx,newlocy);
+                                    particles[i].setElem(whereami);
+                                    //System.out.printf("** MOVED **, new elem = %d (dist = %f)\n",particles[i].getElem(),Math.sqrt((newlocx-uvnode[particles[i].getElem()][0])*(newlocx-uvnode[particles[i].getElem()][0])+(newlocy-uvnode[particles[i].getElem()][1])*(newlocy-uvnode[particles[i].getElem()][1])));
+                                }
+
+                                // if particle has skipped out of the model domain, place it at the nearest element centroid
+                                if (whereami == -1)
+                                {
+                                    int closest=Particle.nearestCentroid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode);
+                                    //fprintf('x%d',closest);
+                                    particles[i].setLocation(uvnode[closest][0],uvnode[closest][1]);
+                                    particles[i].setElem(closest);
+                                }
+
+                                // set particle to become able to settle after a predefined time
+                                //if ((day-firstday)*24+tt==viabletime)
+                                if (particles[i].getAge()>viabletime/3600.0 && particles[i].getViable()==false)
+                                //if (time>viabletime)
+                                {
+                                    //System.out.println("Particle became viable");
+                                    //if (ran.raw()<dev_perstep)
+                                    //{
+                                        particles[i].setViable(true);
+                                        nViable++;
+                                        // save location information
+
+
+                                        //System.out.println(time+" "+particles[i].getAge());
+                                        //System.out.println("I can settle");
+                                    //}
+                                    pstepsMature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
+                                } else {
+                                    pstepsImmature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
                                 }
                                 
-                            // if able to settle, is it close to a possible settlement
-                            // location?
-                            //System.out.println("Patricle age = "+particles[i].getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles[i].getViable());
-                            if (particles[i].getViable()==true)
-                            {
-                                //System.out.println(particles[i].getViable());
-                                
-                                for (int loc = 0; loc < startlocs.length; loc++)
-                                {
-                                    double dist = Math.sqrt((particles[i].getLocation()[0]-startlocs[loc][1])*(particles[i].getLocation()[0]-startlocs[loc][1])+
-                                            (particles[i].getLocation()[1]-startlocs[loc][2])*(particles[i].getLocation()[1]-startlocs[loc][2]));
-                                    if (dist < thresh)
-                                    {
-                                        //System.out.printf("settlement: %d at %d\n",i,loc);
-                                        particles[i].setArrived(true);
-                                        particle_info[i][1] = loc;//(int)startlocs[loc][0];
-                                        particle_info[i][2] = (int)time;//((day-firstday)*24+tt);
-                                        settle_density[i][0] = particles[i].getDensity();
-                                        nSettled++;
-                                        break;
-                                    }
-                                }    
-                            }
-                            
-                            
-                            
-                            
 
+                                // check whether the particle has gone within a certain range of one of the boundary nodes
+                                // (make it settle there, even if it is inviable)
+                                for (int loc = 0; loc < open_BC_locs.length; loc++)
+                                    {
+                                        double dist = Math.sqrt((particles[i].getLocation()[0]-open_BC_locs[loc][1])*(particles[i].getLocation()[0]-open_BC_locs[loc][1])+
+                                                (particles[i].getLocation()[1]-open_BC_locs[loc][2])*(particles[i].getLocation()[1]-open_BC_locs[loc][2]));
+                                        if (dist < 1500)
+                                        {
+                                            //System.out.printf("Boundary stop: %d at %d\n",i,loc);
+                                            particles[i].setArrived(true);
+                                            particle_info[i][1] = -loc;//(int)startlocs[loc][0];
+                                            particle_info[i][2] = (int)particles[i].getAge();//((day-firstday)*24+tt);
+                                            nBoundary++;
+                                            break;
+
+                                        }
+                                    }
+
+                                // if able to settle, is it close to a possible settlement
+                                // location?
+                                //System.out.println("Patricle age = "+particles[i].getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles[i].getViable());
+                                if (particles[i].getViable()==true)
+                                {
+                                    //System.out.println(particles[i].getViable());
+
+                                    for (int loc = 0; loc < startlocs.length; loc++)
+                                    {
+                                        double dist = Math.sqrt((particles[i].getLocation()[0]-startlocs[loc][1])*(particles[i].getLocation()[0]-startlocs[loc][1])+
+                                                (particles[i].getLocation()[1]-startlocs[loc][2])*(particles[i].getLocation()[1]-startlocs[loc][2]));
+                                        if (dist < thresh)
+                                        {
+                                            //System.out.printf("settlement: %d at %d\n",i,loc);
+                                            particles[i].setArrived(true);
+                                            particle_info[i][1] = loc;//(int)startlocs[loc][0];
+                                            particle_info[i][2] = (int)time;//((day-firstday)*24+tt);
+                                            settle_density[i][0] = particles[i].getDensity();
+                                            nSettled++;
+                                            break;
+                                        }
+                                    }    
+                                }
+                            }
                         }
                     }
                     time+=dt/3600.0;
-//                    if ((day-firstday)*24+tt==viabletime && st==0)
-//                    {
-//                        System.out.println("print particle locations to file");
-//                        particleLocsToFile(particles,"particlelocations"+thresh+"_"+viabletime+".out");
-//                    }
-                    //System.out.println("Saving particle locations");
-//                    if (lochfyne != true)// && st%25==0)
-//                    {   
-//                        printCount++;
-//                        //int[] testTrackSites = {28, 979, 78, 56, 1215, 505, 788, 359, 335, 857, 551};
-//                        //for (int i = 0; i < testTrackSites.length; i++)
-//                        //{
-//                            particleLocsToFile(particles,printCount,"particlelocations_all.out");
-//                            //particleLocsToFile2(time,particles,testTrackSites[i],"loc_"+i+".out");
-//                        //}
-//                    }
-                    //System.out.println("-----------");
+                    
+                    // Dump particle locations to file at predfined times
+                    for (int ot = 0; ot < dumptimes.length; ot++)
+                    {
+                        if (time>dumptimes2[ot])
+                        {
+                            System.out.println("print particle locations to file "+ot);
+                            IOUtils.particleLocsToFile1(particles,"particlelocations_"+ot+".out");
+                            for (int i = 0; i < particles.length; i++)
+                            {
+                                pstepsInst[particles[i].getElem()][1]+=1;
+                            }
+                            IOUtils.writeDoubleArrayToFile(pstepsInst,"elementCounts_"+ot+".out");
+                            // Once recorded, set this value to be greater than simulation length
+                            dumptimes2[ot] = simulatedDuration*2;
+                        }
+                    }
                     
                     // end of particle loop
                     calcCount++;
                 }
                 
                 printCount++;
-                //if(firstday==3)
-                //{
-                    IOUtils.particleLocsToFile(particles,nparts_per_site,printCount,"particlelocations_all"+suffix+".out");
-                //}
-//                for (int i = 0; i < Math.min(20,nparts); i++)
-//                    {
-//                        particleLocsToFile2(time,particles,i,"loc_"+i+".out");
-//                    }
-                // print particle locations here - once every hour
+                // Append particle locations for first nSites for plotting trajectories
+                IOUtils.particleLocsToFile(particles,particles.length,printCount,"particlelocations_all"+suffix+".out");
+
                 stepcount++;
             }
             System.out.printf("\n");
@@ -839,9 +910,9 @@ public class Particle_track {
         IOUtils.writeDoubleArrayToFile(pstepsMature,"pstepsMature"+suffix+".out");
         IOUtils.writeIntegerArrayToFile(particle_info,"particle_info"+suffix+".out");
         IOUtils.writeDoubleArrayToFile(settle_density,"settle_density"+suffix+".out");
-        IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
-        IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
-        IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
+        //IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
+        //IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
+        //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
         IOUtils.particleLocsToFile1(particles,"particlelocations_end"+suffix+".out");
         
         

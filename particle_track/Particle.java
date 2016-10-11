@@ -17,15 +17,17 @@ public class Particle {
     private int elem;
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
+    // release time
+    private double releaseTime = 0;
     // vertical position
-    private double z;
-    private int depLayer;
+    private double z = 0;
+    private int depLayer = 0;
     // settlement details
-    private double age;
-    private double density;
-    private double mortRate;
-    private boolean arrived;
-    private boolean viable;
+    private double age = 0;
+    private double density = 1;
+    private double mortRate = 0.01; // default hourly rate, based on results of Stein et al. 2005 (copepodid, nauplii rate marginally lower = 0.0078)
+    private boolean arrived = false;
+    private boolean viable = false;
     
     // create a new particle at a defined location, at the water surface
     public Particle(double xstart, double ystart, int id)
@@ -35,15 +37,20 @@ public class Particle {
         this.xy[1] = ystart;
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
-        this.z = 0;
-        this.depLayer = 0;
-        this.age = 0;
-        this.arrived = false;
-        this.viable = false;
-        this.mortRate = 0.01; // default hourly rate, based on results of Stein et al. 2005 (copepodid, nauplii rate marginally lower = 0.0078)
-        this.density = 1;
     }
-    
+
+    public void setReleaseTime(double releaseTime)
+    {
+        this.releaseTime = releaseTime;
+    }
+    public double getReleaseTime()
+    {
+        return this.releaseTime;
+    }
+    public int getID()
+    {
+        return this.id;
+    }
     public double[] getLocation()
     {
         return this.xy;
@@ -166,6 +173,7 @@ public class Particle {
                 }
                 break;
         }
+        // enable running file with two depth layers ("top"=0 and "bottom"=1)
         if (reducedFile==true)
         {
             if (this.depLayer>0)
@@ -193,7 +201,7 @@ public class Particle {
                 depNearest = i;
             }
         }
-        System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
+        //System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
         this.setDepthLayer(depNearest);
     }
     

@@ -10,25 +10,67 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import java.io.LineNumberReader;
+import java.io.File;
+        
 /**
  *
  * @author sa01ta
  */
 public class IOUtils {
+    
+    /**
+     * Count the lines in a file, in order to read files of unknown length
+     * 
+     * @param aFile
+     * @return
+     * @throws IOException 
+     */
+    public static int countLines(File aFile) throws IOException {
+    LineNumberReader reader = null;
+    try {
+        reader = new LineNumberReader(new FileReader(aFile));
+        while ((reader.readLine()) != null);
+        return reader.getLineNumber();
+    } catch (Exception ex) {
+        return -1;
+    } finally { 
+        if(reader != null) 
+            reader.close();
+    }
+}
+    
     public static double[][] setupStartLocs(String location, String habitat, String basedir)
     {
         double startlocs[][] = new double[10][3];
+        
+        // Run particle tracking using a list of locations and densities 
+        // provided by the user in the run directory.
+        if (habitat.equalsIgnoreCase("userdef"))
+        {
+            System.out.println("Startlocations defined by user, reading startlocs.dat");
+            File file = new File("./startlocations.dat");
+            int nLines = 0;
+            try
+            {
+                nLines = countLines(file);
+            }
+            catch (IOException e)
+            {
+                System.out.println("Cannot open ./startlocations.dat");
+            }
+            startlocs = IOUtils.readFileDoubleArray("./startlocations.dat",nLines,5," ",true);
+        }    
         // FYNE configurations
-        if (location.equalsIgnoreCase("fyne"))
+        else if (location.equalsIgnoreCase("fyne"))
         {
             System.out.println("****** Loch Fyne tracking ******");
             startlocs = setupStartLocationsFyneFarms();
         }
-        // North Minch fish farm locations
+        // North Minch pre-configured locations
         else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous"))
         {
-            String sitedir=basedir+"minch_sites/";
+            String sitedir=basedir+"minch_sites/";          
             if (habitat.equalsIgnoreCase("coast"))
             {
                 startlocs = IOUtils.readFileDoubleArray(sitedir+"minchcoast_1km_utm2.dat",3892,4," ",true);
@@ -44,8 +86,11 @@ public class IOUtils {
             }
             else if (habitat.equalsIgnoreCase("fishfarm3"))
             {
-                //startlocs = readFileDoubleArray(sitedir+"140124_ms_site_utm_area.dat",122,4," ",true); 
                 startlocs = IOUtils.readFileDoubleArray(sitedir+"160119_fishfarms_jun15.dat",205,5," ",true);
+            }
+            else if (habitat.equalsIgnoreCase("fishfarm3_new"))
+            {
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_jun15_plusNEW.dat",205,5," ",true);
             }
             else if (habitat.equalsIgnoreCase("nephrops"))
             {
@@ -88,7 +133,7 @@ public class IOUtils {
     public static double[][] setupOpenBCLocs(String location, String habitat, String basedir)
     {
         double open_BC_locs[][] = new double[10][3];
-        if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous"))
+        if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
         {
             String sitedir=basedir+"minch_sites/";
             open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
@@ -293,16 +338,27 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    public static void particleLocsToFile(Particle[] particles, int nparts, int tt, String filename)
+    
+    /** 
+     * Write (append, including time) particle locations to file.
+     * One particle for each source site.
+     * Allows plotting of single trajectory from each source site.
+     * 
+     * @param particles
+     * @param npartsSaved the number of particles for which to save locations (from id=0)
+     * @param tt
+     * @param filename 
+     */
+    public static void particleLocsToFile(Particle[] particles, int npartsSaved, int tt, String filename)
     {
         try
         {
             // Create file 
             FileWriter fstream = new FileWriter(filename,true);
             PrintWriter out = new PrintWriter(fstream);
-            for (int i = 0; i < particles.length/nparts; i++)
+            for (int i = 0; i < npartsSaved; i++)
             {
-                out.printf("%d %d %f %f %d\n",tt,i,particles[i].getLocation()[0],particles[i].getLocation()[1],particles[i].getElem());
+                out.printf("%d %d %f %f %d\n",tt,particles[i].getID(),particles[i].getLocation()[0],particles[i].getLocation()[1],particles[i].getElem());
             }
             //Close the output stream
             out.close();
@@ -311,7 +367,11 @@ public class IOUtils {
         }
     }
     
-    // Print ALL particlelocations at a particular time, with corresponding start locations
+    /** Print ALL particle locations at a particular time, with corresponding start locations.
+     * 
+     * @param particles
+     * @param filename 
+     */
     public static void particleLocsToFile1(Particle[] particles, String filename)
     {
         try
@@ -321,7 +381,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.length; i++)
             {
-                out.printf("%d %f %f %f $f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],particles[i].getLocation()[0],particles[i].getLocation()[1]);
+                out.printf("%d %f %f %f %f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],particles[i].getLocation()[0],particles[i].getLocation()[1]);
             }
             //Close the output stream
             out.close();
@@ -330,6 +390,13 @@ public class IOUtils {
         }
     }
     
+    /**
+     * Print (append) single particle location to file
+     * @param time
+     * @param particles
+     * @param i
+     * @param filename 
+     */
     public static void particleLocsToFile2(double time, Particle[] particles, int i, String filename)
     {
         try
