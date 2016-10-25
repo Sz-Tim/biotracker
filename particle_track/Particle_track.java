@@ -45,6 +45,9 @@ public class Particle_track {
         boolean diffusion = true;
         boolean variableDiff = false;
         boolean calcMort = false;
+        // Should particles arriving at sites finish dispersal on that event (set true)
+        // or continue dispersing with possibility of infecting other sites (set false)?
+        boolean endOnArrival = true; 
         
         boolean cluster = true;
         
@@ -393,6 +396,7 @@ public class Particle_track {
         // Creating initial particle array
         // --------------------------------------------------------------------------------------        
         int nparts_per_site=nparts;
+        int nTracksSavedPerSite=Math.min(50,nparts_per_site);
         nparts=nparts*startlocs.length; 
         
         for (int i = 0; i < startlocs.length; i++)
@@ -402,15 +406,40 @@ public class Particle_track {
         }
 
         // an array to save the number of "particle-timesteps" in each cell
+        boolean splitPsteps = true;
         double[][] pstepsImmature = new double[N][2];
         double[][] pstepsMature = new double[N][2];
         double[][] pstepsInst = new double[N][2];
-        for (int i = 0; i < N; i++)
+        if (splitPsteps == false)
         {
-            pstepsImmature[i][0] = i;
-            pstepsMature[i][0] = i;
-            pstepsInst[i][0] = i;
+            for (int i = 0; i < N; i++)
+            {
+                pstepsImmature[i][0] = i;
+                pstepsMature[i][0] = i;
+                pstepsInst[i][0] = i;
+            }
         }
+        else if (splitPsteps == true)
+        {
+            pstepsImmature = new double[N][startlocs.length+1];
+            pstepsMature = new double[N][startlocs.length+1];
+            pstepsInst = new double[N][startlocs.length+1];
+        
+            for (int i = 0; i < N; i++)
+            {
+                pstepsImmature[i][0] = i;
+                pstepsMature[i][0] = i;
+                pstepsInst[i][0] = i;
+                for (int j = 1; j < startlocs.length+1; j++)
+                {
+                    pstepsImmature[i][j] = 0;
+                    pstepsMature[i][j] = 0;
+                    pstepsInst[i][j] = 0;
+                }
+            }
+        }
+        
+        
         // array to save source, destination, and transport time for each particle
         int[][] particle_info= new int[nparts][3];
         double[][] settle_density = new double[nparts][1];
@@ -791,27 +820,31 @@ public class Particle_track {
                                 }
 
                                 // set particle to become able to settle after a predefined time
-                                //if ((day-firstday)*24+tt==viabletime)
                                 if (particles[i].getAge()>viabletime/3600.0 && particles[i].getViable()==false)
-                                //if (time>viabletime)
                                 {
-                                    //System.out.println("Particle became viable");
-                                    //if (ran.raw()<dev_perstep)
-                                    //{
-                                        particles[i].setViable(true);
-                                        nViable++;
-                                        // save location information
+                                    //System.out.println("Particle became viable");                                  
+                                    particles[i].setViable(true);
+                                    nViable++;
 
-
-                                        //System.out.println(time+" "+particles[i].getAge());
-                                        //System.out.println("I can settle");
-                                    //}
-                                    pstepsMature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
+                                    if (splitPsteps==false)
+                                    {
+                                        pstepsMature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
+                                    }
+                                    else
+                                    {
+                                        pstepsMature[elemPart][particles[i].getStartID()+1]+=(dt/3600)*1.0/stepsPerStep;
+                                    }
                                 } else {
-                                    pstepsImmature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
+                                    if (splitPsteps==false)
+                                    {
+                                        pstepsImmature[elemPart][1]+=(dt/3600)*1.0/stepsPerStep;
+                                    }
+                                    else
+                                    {
+                                        pstepsMature[elemPart][particles[i].getStartID()+1]+=(dt/3600)*1.0/stepsPerStep;
+                                    }                                          
                                 }
                                 
-
                                 // check whether the particle has gone within a certain range of one of the boundary nodes
                                 // (make it settle there, even if it is inviable)
                                 for (int loc = 0; loc < open_BC_locs.length; loc++)
@@ -844,7 +877,10 @@ public class Particle_track {
                                         if (dist < thresh)
                                         {
                                             //System.out.printf("settlement: %d at %d\n",i,loc);
-                                            particles[i].setArrived(true);
+                                            if (endOnArrival==true)
+                                            {
+                                                particles[i].setArrived(true);
+                                            }
                                             particle_info[i][1] = loc;//(int)startlocs[loc][0];
                                             particle_info[i][2] = (int)time;//((day-firstday)*24+tt);
                                             settle_density[i][0] = particles[i].getDensity();
@@ -881,12 +917,10 @@ public class Particle_track {
                 
                 printCount++;
                 // Append particle locations for first nSites for plotting trajectories
-                IOUtils.particleLocsToFile(particles,particles.length*100/nparts_per_site,printCount,"particlelocations_all"+suffix+".out");
-
+                IOUtils.particleLocsToFile(particles,startlocs.length*nTracksSavedPerSite,printCount,"particlelocations_all"+suffix+".out");
                 stepcount++;
             }
             System.out.printf("\n");
-
         }  
         System.out.printf("\nelement search counts: %d %d %d %d %d\n",searchCounts[0],searchCounts[1],searchCounts[2],searchCounts[3],searchCounts[4]);
         System.out.printf("transport distances: min = %.4e, max = %.4e\n", minDistTrav, maxDistTrav);
@@ -900,44 +934,15 @@ public class Particle_track {
         //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
         IOUtils.particleLocsToFile1(particles,"particlelocations_end"+suffix+".out");
         
-        
-        //System.out.println(new Date().toString());
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = "+(endTime-startTime)/1000.0);
-        
-        // scale psteps
-//        tot_psteps=tmax*nparts;
-//        double[] psteps2 = new double[N];
-//        for (int i = 0; i < N; i++)
-//        {
-//            psteps2[i]=(double)psteps[i][1]/tot_psteps;
-//        }
-        System.exit(0);
     }
     
-
-    public double[][] makeCentroidXY()
-    {
-        double[][] out=new double[1][1];
-        return out;
-    }
-
     public void setupOutput()
     {
-
     }
 
     public void writeOutput()
-    {
-    
+    { 
     }
-    
-     
-    
-    public double nc_varget(String filename, String variable)
-    {
-        double out=0;
-        return out;
-    }
-
 }
