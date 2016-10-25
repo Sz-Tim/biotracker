@@ -14,6 +14,7 @@ public class Particle {
     // horizontal position
     private double[] xy = new double[2];
     private double[] startLoc = new double[2];
+    private int startSiteID = 0;
     private int elem;
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
@@ -30,11 +31,12 @@ public class Particle {
     private boolean viable = false;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, int id)
+    public Particle(double xstart, double ystart, int startSiteID, int id)
     {
         this.id = id;
         this.xy[0] = xstart;
         this.xy[1] = ystart;
+        this.startSiteID = startSiteID;
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
     }
@@ -58,6 +60,10 @@ public class Particle {
     public double[] getStartLocation()
     {
         return this.startLoc;
+    }
+    public int getStartID()
+    {
+        return this.startSiteID;
     }
     public void setLocation(double x, double y)
     {

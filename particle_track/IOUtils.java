@@ -26,19 +26,20 @@ public class IOUtils {
      * @return
      * @throws IOException 
      */
-    public static int countLines(File aFile) throws IOException {
-    LineNumberReader reader = null;
-    try {
-        reader = new LineNumberReader(new FileReader(aFile));
-        while ((reader.readLine()) != null);
-        return reader.getLineNumber();
-    } catch (Exception ex) {
-        return -1;
-    } finally { 
-        if(reader != null) 
-            reader.close();
+    public static int countLines(File aFile) throws Exception 
+    {
+        LineNumberReader reader = null;
+        try {
+            reader = new LineNumberReader(new FileReader(aFile));
+            while ((reader.readLine()) != null);
+            return reader.getLineNumber();
+        } catch (Exception ex) {
+            return -1;
+        } finally { 
+            if(reader != null) 
+                reader.close();
+        }
     }
-}
     
     public static double[][] setupStartLocs(String location, String habitat, String basedir)
     {
@@ -55,7 +56,7 @@ public class IOUtils {
             {
                 nLines = countLines(file);
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 System.out.println("Cannot open ./startlocations.dat");
             }
@@ -82,15 +83,31 @@ public class IOUtils {
             }
             else if (habitat.equalsIgnoreCase("fishfarm2"))
             {
-                startlocs = IOUtils.readFileDoubleArray(sitedir+"151130_fishfarm_locs.dat",195,4," ",true);
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"151130_fishfarm_locs.dat",195,3," ",true);
             }
             else if (habitat.equalsIgnoreCase("fishfarm3"))
             {
-                startlocs = IOUtils.readFileDoubleArray(sitedir+"160119_fishfarms_jun15.dat",205,5," ",true);
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"160119_fishfarms_jun15.dat",205,3," ",true);
             }
-            else if (habitat.equalsIgnoreCase("fishfarm3_new"))
+            else if (habitat.equalsIgnoreCase("fishfarm3_new_out"))
             {
-                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_jun15_plusNEW.dat",205,5," ",true);
+                System.out.println("Dispersal from new site run, reading startlocations.dat");
+                File file = new File("./startlocations.dat");
+                int nLines = 0;
+                try
+                {
+                    nLines = countLines(file);
+                    System.out.println("lines = "+nLines);
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Cannot open ./startlocations.dat");
+                }
+                startlocs = IOUtils.readFileDoubleArray("startlocations.dat",nLines,3," ",true);
+            }
+            else if (habitat.equalsIgnoreCase("fishfarm3_new_in_out"))
+            {
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_jun15_plus_new.dat",206,5," ",true);
             }
             else if (habitat.equalsIgnoreCase("nephrops"))
             {
@@ -128,6 +145,35 @@ public class IOUtils {
             //startlocs = readFileDoubleArray(basedir+"infrastructure\\portsmarinas_search.dat",353,3," ",true);    
         }
         return startlocs;
+    }
+    
+    public static double[][] setupEndLocs(String location, String habitat, String basedir, double[][] startlocs)
+    {
+        String sitedir=basedir+"minch_sites/";
+        double[][] endlocs = new double[10][3];
+        
+        if (habitat.equalsIgnoreCase("fishfarm3_new"))
+        {
+            double[][] extraEndLocs = IOUtils.readFileDoubleArray(sitedir+"160119_fishfarms_jun15.dat",205,5," ",true);
+            endlocs = new double[startlocs.length+extraEndLocs.length][];
+            for(int i = 0; i < startlocs.length; i++)
+            {
+                endlocs[i] = startlocs[i].clone();
+            }
+            for (int i = startlocs.length; i < startlocs.length+endlocs.length; i++)
+            {
+                endlocs[i] = extraEndLocs[i-startlocs.length].clone();
+            }
+        }
+        else
+        {
+            endlocs = new double[startlocs.length][];
+            for(int i = 0; i < startlocs.length; i++)
+            {
+                endlocs[i] = startlocs[i].clone();
+            }
+        }
+        return endlocs;
     }
     
     public static double[][] setupOpenBCLocs(String location, String habitat, String basedir)

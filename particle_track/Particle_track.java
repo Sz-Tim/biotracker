@@ -100,7 +100,7 @@ public class Particle_track {
             dt=3600;
             thresh=500;
             
-            location="minch_jelly";
+            location="minch_continuous";
             timeInterpolate = true;
             spatialInterpolate = true;
             
@@ -318,11 +318,11 @@ public class Particle_track {
             nLines = IOUtils.countLines(file);
             System.out.println("lines = "+nLines);
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             System.out.println("Cannot open ./dumptimes.dat");
         }
-        if (nLines != 0)
+        if (nLines > 0)
         {
             dumptimes = IOUtils.readFileDoubleArray("./dumptimes.dat",nLines,1," ",true);
             dumptimes2 = new double[dumptimes.length];
@@ -381,7 +381,7 @@ public class Particle_track {
         }
 
         startlocs = IOUtils.setupStartLocs(location,habitat,basedir);
-        
+        endlocs = IOUtils.setupEndLocs(location,habitat,basedir,startlocs);
         open_BC_locs = IOUtils.setupOpenBCLocs(location,habitat,basedir); 
         
         if (habitat.equalsIgnoreCase("spill") || habitat.equalsIgnoreCase("test")){
@@ -401,15 +401,10 @@ public class Particle_track {
             //System.out.println(startlocs[i][0]);
         }
 
-        //nparts=startlocs.length;
-        //int tot_psteps=nparts*nrecords;
-
         // an array to save the number of "particle-timesteps" in each cell
         double[][] pstepsImmature = new double[N][2];
         double[][] pstepsMature = new double[N][2];
         double[][] pstepsInst = new double[N][2];
-        
-   
         for (int i = 0; i < N; i++)
         {
             pstepsImmature[i][0] = i;
@@ -446,15 +441,22 @@ public class Particle_track {
             //System.out.printf("start location %d = %d %.4e %.4e %d %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest,startElem[i]);
         }
 
-        // setup particles
+        // --------------------------------------------------------------------------------------
+        // Setup particles
+        // --------------------------------------------------------------------------------------
         Particle[] particles = new Particle[nparts];
-        boolean setReleaseTime = true;
-        boolean tidalRelease = false;
-        boolean setDepth = true;
+        boolean setReleaseTime = false;
+        boolean tidalRelease = true;
+        boolean setDepth = false;
+        if (habitat.equalsIgnoreCase("userdef"))
+        {
+            setReleaseTime = true;
+            setDepth = true;
+        }
         System.out.println("particles.length = "+particles.length);
         for (int i = 0; i < particles.length; i++)
         {
-            particles[i] = new Particle(xstart[i],ystart[i],i);
+            particles[i] = new Particle(xstart[i],ystart[i],startid[i],i);
             particle_info[i][0]=startid[i];//(int)startlocs[startid[i]][0];
             particles[i].setElem(startElem[i]);
             // if information provided, set release time
@@ -465,7 +467,7 @@ public class Particle_track {
             // otherwise, allow release over tidal cycle
             else if (tidalRelease == true)
             {
-                particles[i].setReleaseTime(i%25);
+                particles[i].setReleaseTime((i/nparts_per_site)%25);
             }
             // otherwise, all released at start of simulation
             else
@@ -502,20 +504,6 @@ public class Particle_track {
         
         // Initial value for br set - this particular one is only used in case of "spill" habitat (identical to that file list)
         BufferedReader br = new BufferedReader(new FileReader("filelist.dat"));
-        if (location.equalsIgnoreCase("minch_continuous")) {
-            if (habitat.equalsIgnoreCase("spill")){
-                br = new BufferedReader(new FileReader("150408_spill_list1.dat"));
-            }
-            // Doing a minch_continuous run but using whatever set of files is appropriate for the desired period
-            else
-            {
-                br = new BufferedReader(new FileReader("filelist.dat"));
-            }
-        }
-        // Marking and reseting fails for some reason; use bash head command instead in submitting script
-        //br.mark(0);
-        //System.out.println("filelist top line: "+br.readLine());
-        //br.reset();
 
         int nfreeparts = 0;
         int nViable = 0;
@@ -523,10 +511,7 @@ public class Particle_track {
         int nSettled = 0;
         
         String filenums = "";
-        
-        
-        
-        
+       
         // --------------------------------------------------------------------------------------
         // Start time loop
         // --------------------------------------------------------------------------------------
@@ -852,10 +837,10 @@ public class Particle_track {
                                 {
                                     //System.out.println(particles[i].getViable());
 
-                                    for (int loc = 0; loc < startlocs.length; loc++)
+                                    for (int loc = 0; loc < endlocs.length; loc++)
                                     {
-                                        double dist = Math.sqrt((particles[i].getLocation()[0]-startlocs[loc][1])*(particles[i].getLocation()[0]-startlocs[loc][1])+
-                                                (particles[i].getLocation()[1]-startlocs[loc][2])*(particles[i].getLocation()[1]-startlocs[loc][2]));
+                                        double dist = Math.sqrt((particles[i].getLocation()[0]-endlocs[loc][1])*(particles[i].getLocation()[0]-endlocs[loc][1])+
+                                                (particles[i].getLocation()[1]-endlocs[loc][2])*(particles[i].getLocation()[1]-endlocs[loc][2]));
                                         if (dist < thresh)
                                         {
                                             //System.out.printf("settlement: %d at %d\n",i,loc);
@@ -896,7 +881,7 @@ public class Particle_track {
                 
                 printCount++;
                 // Append particle locations for first nSites for plotting trajectories
-                IOUtils.particleLocsToFile(particles,particles.length,printCount,"particlelocations_all"+suffix+".out");
+                IOUtils.particleLocsToFile(particles,particles.length*100/nparts_per_site,printCount,"particlelocations_all"+suffix+".out");
 
                 stepcount++;
             }
@@ -926,7 +911,8 @@ public class Particle_track {
 //        for (int i = 0; i < N; i++)
 //        {
 //            psteps2[i]=(double)psteps[i][1]/tot_psteps;
-//        }       
+//        }
+        System.exit(0);
     }
     
 
