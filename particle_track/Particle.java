@@ -29,9 +29,10 @@ public class Particle {
     private double mortRate = 0.01; // default hourly rate, based on results of Stein et al. 2005 (copepodid, nauplii rate marginally lower = 0.0078)
     private boolean arrived = false;
     private boolean viable = false;
+    private boolean free = false;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, int startSiteID, int id)
+    public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -39,6 +40,7 @@ public class Particle {
         this.startSiteID = startSiteID;
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
+        this.mortRate = mortalityRate;
     }
 
     public void setReleaseTime(double releaseTime)
@@ -225,7 +227,11 @@ public class Particle {
     public void setArrived(boolean arrived)
     {
         this.arrived = arrived;
-    }  
+    }
+    public void setFree(boolean free)
+    {
+        this.free = free;
+    } 
     public boolean getViable()
     {
         return this.viable;
@@ -233,6 +239,10 @@ public class Particle {
     public boolean getArrived()
     {
         return this.arrived;
+    }
+    public boolean getFree()
+    {
+        return this.free;
     }
     
     public double[] behaveVelocity(int behaviour)

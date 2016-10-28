@@ -107,7 +107,7 @@ public class IOUtils {
             }
             else if (habitat.equalsIgnoreCase("fishfarm3_new_in_out"))
             {
-                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_jun15_plus_new.dat",206,5," ",true);
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_south_plus_new.dat",75,5," ",true);
             }
             else if (habitat.equalsIgnoreCase("nephrops"))
             {
