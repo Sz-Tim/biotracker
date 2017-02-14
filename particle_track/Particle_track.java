@@ -52,12 +52,6 @@ public class Particle_track {
         boolean cluster = true;
         
         // This actually isn't used, except in the case of defaulting on location
-        String basedir = "C:\\Users\\sa01ta\\Documents\\particle_track\\";
-        String scriptdir =  "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
-        if (cluster==true)
-        {
-            basedir = "/home/sa01ta/particle_track/";
-        }
         
         // Set some basic default parameters
         int nparts=940;
@@ -220,6 +214,19 @@ public class Particle_track {
             suffix = args[12];
             location = args[13];
         }
+        
+        // --------------------------------------------------------------------------------------
+        // File reading and domain configuration
+        // --------------------------------------------------------------------------------------
+        // Set the directories required to run the model
+        String[] dirList = IOUtils.setDataDirectories(location, cluster);
+        String basedir = dirList[0];
+        String scriptdir = dirList[1];
+        String sitedir = dirList[2];
+        String datadir = dirList[3];
+        String datadir2 = dirList[4];
+        
+        // ---------- Get FVCOM mesh configuration data ------------------
         // default "Firth of Lorn" values
         int N = 25071;
         int M = 14000;
@@ -232,62 +239,6 @@ public class Particle_track {
         {
             N = 79244;
             M = 46878;            
-        }
-        
-              
-        
-        // --------------------------------------------------------------------------------------
-        // File reading and domain configuration
-        // --------------------------------------------------------------------------------------
-        String datadir = "";
-        String datadir2 = "";
-        
-        if (location.equalsIgnoreCase("fyne"))
-        {
-            datadir = "D:\\fvcom_output\\"+datadir+"\\output\\ptrack_dat";
-            datadir2 = "C:\\Users\\sa01ta\\Documents\\EFF\\mesh\\943dat2";
-            System.out.println("DATA DIRECTORY = "+datadir);
-
-        } 
-        else if (location.equalsIgnoreCase("minch")) 
-        {
-            datadir = "D:\\dima_data\\minch1_results\\plots\\minch1_v05\\";
-            datadir2 = "D:\\dima_data\\minch1_results\\plots\\minch1_v05\\";
-            //datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run";
-            if (cluster==true)
-            {
-                datadir=basedir+"minch1_v05/";
-                datadir2=basedir+"minch1_v05/";
-            }
-            System.out.println("DATA DIRECTORY = "+datadir2);
-        }
-        else if (location.equalsIgnoreCase("minch_continuous"))
-        {
-            datadir = "D:\\dima_data\\minch_continuous\\";
-            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
-            if (cluster==true)
-            {
-                datadir=basedir+"minch_continuous/";
-                datadir2=basedir+"minch_continuous/";
-            }
-            System.out.println("DATA DIRECTORY = "+datadir2);
-            }
-        else if (location.equalsIgnoreCase("minch_jelly"))
-        {
-            datadir = "D:\\dima_data\\minch_jelly\\";
-            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
-            if (cluster==true)
-            {
-                datadir=basedir+"minch_jelly/";
-                datadir2=basedir+"minch_jelly/";
-            }
-            System.out.println("DATA DIRECTORY = "+datadir2);
-        }
-        else
-        {
-            System.out.println("No location......");
-            datadir = "D:\\dima_data\\"+datadir;
-            System.out.println("DATA DIRECTORY = "+datadir);
         }
         
         double[][] nodexy = new double[M][2];
@@ -348,12 +299,6 @@ public class Particle_track {
         double startlocs[][] = new double[10][3];
         double endlocs[][] = new double[10][3];
         double open_BC_locs[][] = new double[1][3];
-        
-        String sitedir="C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\site_locations\\";
-        if (cluster==true)
-        {
-            sitedir=basedir+"minch_sites/";
-        }
  
         startlocs = IOUtils.setupStartLocs(location,habitat,basedir);
         endlocs = IOUtils.setupEndLocs(location,habitat,basedir,startlocs);
@@ -366,7 +311,7 @@ public class Particle_track {
         for (int i = 0; i < startlocs.length; i++)
         {
             startlocs[i][0]--;
-            //System.out.println(startlocs[i][0]);
+            System.out.println(startlocs[i][0]+" "+startlocs[i][1]+" "+startlocs[i][2]);
         }
         
         // array to save source, destination, and transport time for each particle

@@ -41,6 +41,15 @@ public class IOUtils {
         }
     }
     
+    public static int countWords(String s){
+
+        String trim = s.trim();
+        if (trim.isEmpty()){
+            return 0;
+        }
+        return trim.split("\\w+").length;
+    }
+    
     public static double[][] setupStartLocs(String location, String habitat, String basedir)
     {
         double startlocs[][] = new double[10][3];
@@ -89,6 +98,10 @@ public class IOUtils {
             {
                 startlocs = IOUtils.readFileDoubleArray(sitedir+"160119_fishfarms_jun15.dat",205,3," ",true);
             }
+            else if (habitat.equalsIgnoreCase("fishfarm3_netting"))
+            {
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"startlocations_ff3_plus_netting.dat",220,4," ",true);
+            }
             else if (habitat.equalsIgnoreCase("fishfarm3_new_out"))
             {
                 System.out.println("Dispersal from new site run, reading startlocations.dat");
@@ -107,7 +120,8 @@ public class IOUtils {
             }
             else if (habitat.equalsIgnoreCase("fishfarm3_new_in_out"))
             {
-                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_south_plus_new.dat",75,5," ",true);
+                //startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_south_plus_new.dat",75,5," ",true);
+                startlocs = IOUtils.readFileDoubleArray(sitedir+"fishfarms_south_plus_new_rem36.dat",74,5," ",true);
             }
             else if (habitat.equalsIgnoreCase("nephrops"))
             {
@@ -182,13 +196,85 @@ public class IOUtils {
         if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
         {
             String sitedir=basedir+"minch_sites/";
-            open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
+            //open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
+            open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs_os.dat",137,3," ",true);
         } 
         else
         {
             open_BC_locs = IOUtils.readFileDoubleArray("C:\\Users\\sa01ta\\Documents\\lorn\\120903_renewableimpact\\131107_revision\\open_boundary_locs.dat",93,3," ",true);
         }
         return open_BC_locs;
+    }
+    
+    public static String[] setDataDirectories(String location, boolean cluster)
+    {
+        // where the FVCOM output/configuration files are saved
+        String datadir = ""; 
+        String datadir2 = "";
+        // where the model will be run from
+        String basedir = "C:\\Users\\sa01ta\\Documents\\particle_track\\"; 
+        // where processing scripts are saved
+        String scriptdir =  "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\"; 
+        // where site locations are saved (particle initialisation)
+        String sitedir="C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\site_locations\\"; 
+        if (cluster==true)
+        {
+            basedir = "/home/sa01ta/particle_track/";
+        }
+        if (cluster==true)
+        {
+            sitedir=basedir+"minch_sites/";
+        }
+        
+        if (location.equalsIgnoreCase("fyne"))
+        {
+            datadir = "D:\\fvcom_output\\"+datadir+"\\output\\ptrack_dat";
+            datadir2 = "C:\\Users\\sa01ta\\Documents\\EFF\\mesh\\943dat2";
+            System.out.println("DATA DIRECTORY = "+datadir);
+
+        } 
+        else if (location.equalsIgnoreCase("minch")) // OLD MINCH STUFF
+        {
+            datadir = "D:\\dima_data\\minch1_results\\plots\\minch1_v05\\";
+            datadir2 = "D:\\dima_data\\minch1_results\\plots\\minch1_v05\\";
+            //datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run";
+            if (cluster==true)
+            {
+                datadir=basedir+"minch1_v05/";
+                datadir2=basedir+"minch1_v05/";
+            }
+            System.out.println("DATA DIRECTORY = "+datadir2);
+        }
+        else if (location.equalsIgnoreCase("minch_continuous"))
+        {
+            datadir = "D:\\dima_data\\minch_continuous\\";
+            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
+            if (cluster==true)
+            {
+                datadir=basedir+"minch_continuous/";
+                datadir2=basedir+"minch_continuous/";
+            }
+            System.out.println("DATA DIRECTORY = "+datadir2);
+            }
+        else if (location.equalsIgnoreCase("minch_jelly"))
+        {
+            datadir = "D:\\dima_data\\minch_jelly\\";
+            datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
+            if (cluster==true)
+            {
+                datadir=basedir+"minch_jelly/";
+                datadir2=basedir+"minch_jelly/";
+            }
+            System.out.println("DATA DIRECTORY = "+datadir2);
+        }
+        else
+        {
+            System.out.println("No location......");
+            datadir = "D:\\dima_data\\"+datadir;
+            System.out.println("DATA DIRECTORY = "+datadir);
+        }
+        String[] allDirs = {basedir, scriptdir, sitedir, datadir, datadir2};
+        return allDirs;
     }
     
     public static double[][] setupStartLocationsFyneFarms()
@@ -235,9 +321,17 @@ public class IOUtils {
             BufferedReader in = new BufferedReader(new FileReader(filename));	//reading files in specified directory
  
             String line;
+            boolean printWarning=true;
             
             outer: while ((line = in.readLine()) != null)	//file reading
             {
+                
+                int numEntries = countWords(line);
+                if (numEntries < cols && printWarning==true)
+                {
+                    System.out.println("WARNING: Number of entries on line = "+numEntries);
+                    printWarning=false;
+                }
                 y=0;
                 if (x >= rows)
                 {
@@ -297,11 +391,10 @@ public class IOUtils {
             String line;
             while ((line = in.readLine()) != null)	//file reading
             {
-                
                 y=0;
                 if (x >= rows)
                 {
-                    System.out.println(filename+" has more rows than expected.");
+                    System.out.println("WARNING: "+filename+" has more rows than expected. EXITING!");
                     failed = true;
                     break;
                 }
@@ -310,9 +403,9 @@ public class IOUtils {
                 {
                     if (y >= cols)
                     {
-                        System.out.println(filename+" has more columns than expected.");
-                        failed = true;
-                        break;
+                        System.out.println("WARNING: "+filename+" has more columns than expected. Some information not read!");
+                        //failed = true;
+                        //break;
                     }
                     int str_int = Integer.parseInt(str);
                     myInt[x][y]=str_int;
