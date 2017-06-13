@@ -173,7 +173,7 @@ public class Particle_track {
         System.out.printf("Habitat            = %s\n",habitat);
         System.out.printf("N_parts/site       = %d\n",nparts);
         System.out.printf("hydromod dt (s)    = %f\n",dt);
-        System.out.printf("hydromod rec/file  = %d\n",recordsPerFile);
+        System.out.printf("hydromod rec/file  = %d\n",recordsPerFile+1);
         System.out.printf("stepsperstep       = %d\n",stepsPerStep);
         System.out.printf("firstfile          = %d\n",firstday);
         System.out.printf("lastfile           = %d\n",lastday);
@@ -302,10 +302,10 @@ public class Particle_track {
  
         startlocs = IOUtils.setupStartLocs(location,habitat,basedir);
         endlocs = IOUtils.setupEndLocs(location,habitat,basedir,startlocs);
-        open_BC_locs = IOUtils.setupOpenBCLocs(location,habitat,basedir); 
+        open_BC_locs = IOUtils.setupOpenBCLocs(location,basedir); 
                
         int nparts_per_site=nparts;
-        int nTracksSavedPerSite=Math.min(50,nparts_per_site);
+        int nTracksSavedPerSite=Math.min(1,nparts_per_site);
         nparts=nparts*startlocs.length; 
          
         for (int i = 0; i < startlocs.length; i++)
@@ -351,9 +351,21 @@ public class Particle_track {
         boolean setReleaseTime = false;
         boolean tidalRelease = true;
         boolean setDepth = false;
+        // integer to switch release scenario
+        // 0 all at time zero
+        // 1 tidal release (evenly over first 24 hours)
+        // 2 continuous release (1 per hour per site)
+        // 3 continuous release (5 per hour per site)
+        // 4 continuous release (10 per hour per site)
+        // 5 continuous release (20 per hour per site)
+        // 10 defined release times
+        
+        int releaseScenario = 5;
+
         if (location.equalsIgnoreCase("minch_jelly"))
         {
             setReleaseTime = true;
+            releaseScenario = 10;
             setDepth = true;
         }
         System.out.println("particles.length = "+particles.length);
@@ -363,21 +375,49 @@ public class Particle_track {
             particle_info[i][0]=startid[i];//(int)startlocs[startid[i]][0];
             particles[i].setElem(startElem[i]);
             // if information provided, set release time
-            if (startlocs[startid[i]].length > 3 && setReleaseTime == true)
+            switch(releaseScenario)
             {
-                particles[i].setReleaseTime(startlocs[startid[i]][3]);
+                case 0: 
+                    particles[i].setReleaseTime(0);
+                    break;
+                case 1: 
+                    particles[i].setReleaseTime((i/startlocs.length)%25);
+                    break;
+                case 2: 
+                    particles[i].setReleaseTime(Math.floor(i/startlocs.length));
+                    break;
+                case 3: 
+                    particles[i].setReleaseTime(Math.floor(i/(5*startlocs.length)));
+                    break;
+                case 4: 
+                    particles[i].setReleaseTime(Math.floor(i/(10*startlocs.length)));
+                    break;
+                case 5: 
+                    particles[i].setReleaseTime(Math.floor(i/(20*startlocs.length)));
+                    break;
+                case 10: 
+                    particles[i].setReleaseTime(startlocs[startid[i]][3]);
+                    break;
             }
-            // otherwise, allow release over tidal cycle
-            else if (tidalRelease == true)
-            {
-                particles[i].setReleaseTime((i/startlocs.length)%25);
-                //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+(i/startlocs.length)%25);
-            }
-            // otherwise, all released at start of simulation
-            else
-            {
-                particles[i].setReleaseTime(0);
-            }
+            //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+particles[i].getReleaseTime());
+            
+            // Deprecated code - switch statement above replaces        
+//            if (startlocs[startid[i]].length > 3 && setReleaseTime == true)
+//            {
+//                particles[i].setReleaseTime(startlocs[startid[i]][3]);
+//            }
+//            // otherwise, allow release over tidal cycle
+//            else if (tidalRelease == true)
+//            {
+//                particles[i].setReleaseTime((i/startlocs.length)%25);
+//                //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+(i/startlocs.length)%25);
+//            }
+              
+//            // otherwise, all released at start of simulation
+//            else
+//            {
+//                particles[i].setReleaseTime(0);
+//            }
             //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+particles[i].getReleaseTime());
             // If provided, set particle depth
             if (startlocs[startid[i]].length > 4 && setDepth == true)
@@ -506,20 +546,20 @@ public class Particle_track {
             String ufile = "";
             String vfile = "";
             String elfile = "";
-            String ufile1 = "";
-            String vfile1 = "";
-            String elfile1 = "";
-            double[][] u = new double[recordsPerFile][N*depthLayers];
-            double[][] v = new double[recordsPerFile][N*depthLayers];
+            //String ufile1 = "";
+            //String vfile1 = "";
+            //String elfile1 = "";
+            double[][] u = new double[recordsPerFile+1][N*depthLayers];
+            double[][] v = new double[recordsPerFile+1][N*depthLayers];
             //double[][] el = new double[recordsPerFile][N*depthLayers];
-            double[][] u1 = new double[recordsPerFile][N*depthLayers];
-            double[][] v1 = new double[recordsPerFile][N*depthLayers];
+            //double[][] u1 = new double[recordsPerFile][N*depthLayers];
+            //double[][] v1 = new double[recordsPerFile][N*depthLayers];
             //double[][] el1 = new double[recordsPerFile][N*depthLayers];
             
             // Reading files on the first instance:
             // - Read two files to provide data for time interpolation during last time steps
-            if (fnum == firstday)
-            {
+//            if (fnum == firstday)
+//            {
                 System.out.println("Reading data day "+firstday);
                 // maintain backward compatability with previous number reading
                 filenums = ""+fnum;
@@ -534,76 +574,66 @@ public class Particle_track {
                 //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
                 //elfile = datadir+"el_"+filenums+".dat";
                 System.out.println(ufile+" "+vfile+" "+elfile);
-                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
-                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile+1,N*depthLayers," ",true);
+                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile+1,N*depthLayers," ",true);
                 //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
                 //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
                 //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
                 
-                filenums = ""+(fnum+1);
-                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-                {
-                    filenums = br.readLine();
-                }
-                System.out.println("t=0 Reading t+1: "+filenums);
-                ufile1 = datadir+"u_"+filenums+".dat";
-                vfile1 = datadir+"v_"+filenums+".dat";
-                //elfile1 = datadir+"el_"+filenums+".dat";
-                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
-                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-                //el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
-//                double usum=0,u1sum=0;
-//                for (int i = 0; i < recordsPerFile; i++)
+//                filenums = ""+(fnum+1);
+//                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
 //                {
-//                    for (int j = 0; j < recordsPerFile; j++)
-//                    {
-//                        usum+=u[i][j];
-//                        u1sum+=u1[i][j];
-//                    }
+//                    filenums = br.readLine();
 //                }
-//                System.out.println("U Array Sums: u="+usum+" u1="+u1sum);
-            } 
+//                System.out.println("t=0 Reading t+1: "+filenums);
+//                ufile1 = datadir+"u_"+filenums+".dat";
+//                vfile1 = datadir+"v_"+filenums+".dat";
+//                //elfile1 = datadir+"el_"+filenums+".dat";
+//                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
+//                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
+                //el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
+
             // Interim timesteps:
             // - switch "next file" to being "current file"
             // - read new "next file"
-            else if (fnum > firstday && fnum < lastday)
-            {
-                System.out.println("**** Reading data day "+fnum);
-                // At this point, "filenums" is the name prefix of the second set of files read
-                // (as determined in second half of loop case above)
-                ufile = datadir+"u_"+filenums+".dat";
-                vfile = datadir+"v_"+filenums+".dat";
-                //elfile = datadir+"el_"+filenums+".dat";
-                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
-                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
-                // Read in the next file, so that t2+1 is available for time interpolation
-                filenums = ""+(fnum+1);
-                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-                {
-                    filenums = br.readLine();
-                }
-                System.out.println("t!=0 Reading t+1: "+filenums);
-                ufile1 = datadir+"u_"+filenums+".dat";
-                vfile1 = datadir+"v_"+filenums+".dat";
-                //elfile1 = datadir+"el_"+filenums+".dat";
-                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
-                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-                //el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
-            } 
-            // Last time step:
-            // - switch "next file" to being "current file"
-            else
-            {
-                System.out.println("t!=0 Reading t+1: "+filenums);
-                ufile = datadir+"u_"+filenums+".dat";
-                vfile = datadir+"v_"+filenums+".dat";
-                //elfile = datadir+"el_"+filenums+".dat";
-                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
-                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
-
-            }
+//            else if (fnum > firstday && fnum < lastday)
+//            {
+//                System.out.println("**** Reading data day "+fnum);
+//                // At this point, "filenums" is the name prefix of the second set of files read
+//                // (as determined in second half of loop case above)
+//                ufile = datadir+"u_"+filenums+".dat";
+//                vfile = datadir+"v_"+filenums+".dat";
+//                //elfile = datadir+"el_"+filenums+".dat";
+//                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
+//                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+//                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+//                // Read in the next file, so that t2+1 is available for time interpolation
+//                filenums = ""+(fnum+1);
+//                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
+//                {
+//                    filenums = br.readLine();
+//                }
+//                System.out.println("t!=0 Reading t+1: "+filenums);
+//                ufile1 = datadir+"u_"+filenums+".dat";
+//                vfile1 = datadir+"v_"+filenums+".dat";
+//                //elfile1 = datadir+"el_"+filenums+".dat";
+//                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
+//                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
+//                //el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
+//            } 
+//            // Last time step:
+//            // - switch "next file" to being "current file"
+//            else
+//            {
+//                System.out.println("t!=0 Reading t+1: "+filenums);
+//                ufile = datadir+"u_"+filenums+".dat";
+//                vfile = datadir+"v_"+filenums+".dat";
+//                //elfile = datadir+"el_"+filenums+".dat";
+//                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
+//                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
+//                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
+//
+//            }
 
             
             int firsttime=0;
@@ -694,15 +724,16 @@ public class Particle_track {
     //                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
                                 if (rk4==true)
                                 {
-                                    advectStep = particles[i].rk4Step(u, v, u1, v1, 
+                                    advectStep = particles[i].rk4Step(u, v, 
                                         neighbours, uvnode,  nodexy, trinodes, allelems,
                                         tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers);   
                                 }
                                 else
                                 {
-                                    advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
-                                        tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
-                                        spatialInterpolate, timeInterpolate);
+                                    System.out.println("Euler step not calculated --- edit method to work with 7 row velocities");
+//                                    advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
+//                                        tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
+//                                        spatialInterpolate, timeInterpolate);
                                 }
 
                                 // Reverse velocities if running backwards

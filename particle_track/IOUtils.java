@@ -190,7 +190,7 @@ public class IOUtils {
         return endlocs;
     }
     
-    public static double[][] setupOpenBCLocs(String location, String habitat, String basedir)
+    public static double[][] setupOpenBCLocs(String location, String basedir)
     {
         double open_BC_locs[][] = new double[10][3];
         if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
@@ -251,8 +251,8 @@ public class IOUtils {
             datadir2 = "C:\\Users\\sa01ta\\Documents\\Sealice_NorthMinch\\hydro_mesh_run\\minch2\\";
             if (cluster==true)
             {
-                datadir=basedir+"minch_continuous/";
-                datadir2=basedir+"minch_continuous/";
+                datadir=basedir+"minch_continuous_overlap/";
+                datadir2=basedir+"minch_continuous_overlap/";
             }
             System.out.println("DATA DIRECTORY = "+datadir2);
             }

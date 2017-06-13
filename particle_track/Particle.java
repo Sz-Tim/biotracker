@@ -644,8 +644,12 @@ public class Particle {
      * 
      * Note that this must use a spatially interpolated velocity for each step 
      * of the calculation. Therefore read in full velocity fields here
+     * 
+     * 14/02/17 --- Removed  double[][] u1, double[][] v1, from argument list. 
+     *              Removed from method calls stepAhead
+     *              Replace velplus1[] calculation with direct calculation
      */
-    public double[] rk4Step(double[][] u, double[][] v, double[][] u1, double[][] v1, // velocities
+    public double[] rk4Step(double[][] u, double[][] v, // velocities
             int[][] neighbours, double[][] uvnode, double[][] nodexy, 
             int[][] trinodes, int[] allelems,      // other mesh info
             int tt, int st, double dt,                                  // locate particle in space and time
@@ -660,7 +664,8 @@ public class Particle {
         // 2. Compute k_1 (spatial interpolation at start of step)
         //System.out.println("Start step");
         double[] vel = this.velPart(tt,u,v);
-        double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,this.getNrList(),u,v,u1,v1,numLayers,dep);
+        double[] velplus1 = velocityFromNearestList(this.getNrList(),tt+1,u,v,numLayers,dep);
+        //double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,this.getNrList(),u,v,u1,v1,numLayers,dep);
         double[] k1 = new double[2];
         k1[0] = dt*(vel[0] + ((double)st/(double)stepsPerStep)*(velplus1[0]-vel[0]));
         k1[1] = dt*(vel[1] + ((double)st/(double)stepsPerStep)*(velplus1[1]-vel[1]));
@@ -671,7 +676,7 @@ public class Particle {
         double[] k2 = stepAhead(
                 new double[]{this.getLocation()[0]+k1[0]/2.0,this.getLocation()[1]+k1[1]/2.0},
                 elemPart,dep,1.0/2.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,u1,v1,
+                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);
 
         // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
@@ -679,7 +684,7 @@ public class Particle {
         double[] k3 = stepAhead(
                 new double[]{this.getLocation()[0]+k2[0]/2.0,this.getLocation()[1]+k2[1]/2.0},
                 elemPart,dep,1.0/2.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,u1,v1,
+                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);              
         
         // 5. Compute k_4 (spatial interpolation at end step)
@@ -687,7 +692,7 @@ public class Particle {
         double[] k4 = stepAhead(
                 new double[]{this.getLocation()[0]+k3[0],this.getLocation()[1]+k3[1]},
                 elemPart,dep,1.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,u1,v1,
+                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);
         
         // 6. Add it all together
@@ -727,10 +732,12 @@ public class Particle {
      * @param lastday
      * @param numLayers
      * @return 
+     * 
+     * 14/02/17 --- REMOVED double[][] u1, double[][] v1, from arguments
      */
     public static double[] stepAhead(double[] xy, int elemPart, int dep, double timeStepAhead,
             int[][] neighbours, double[][] uvnode, double[][] nodexy, int[][] trinodes, int[] allelems,
-            double[][] u, double[][] v, double[][] u1, double[][] v1,
+            double[][] u, double[][] v, 
             int tt, int st, double dt,
             int stepsPerStep, int recordsPerFile, int fnum, int lastday, int numLayers)
     {   
@@ -744,13 +751,17 @@ public class Particle {
         }
         // compute velocities at start and end of entire step, at the new location
         double[] vel = velocityFromNearestList(xNrList,tt,u,v,numLayers,dep);
-        double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,xNrList,u,v,u1,v1,numLayers,dep);               
+        // 14/02/17 --- This line changed to directly get velocity from new 7 line velocity files (makes getNextVel redundant)
+        double[] velplus1 = velocityFromNearestList(xNrList,tt+1,u,v,numLayers,dep);
+        //double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,xNrList,u,v,u1,v1,numLayers,dep);               
         xy_step[0] = dt*(vel[0] + ((double)(st+1.0/timeStepAhead)/(double)stepsPerStep)*(velplus1[0]-vel[0]));
         xy_step[1] = dt*(vel[1] + ((double)(st+1.0/timeStepAhead)/(double)stepsPerStep)*(velplus1[1]-vel[1]));
         return xy_step;
     }
     
     /**
+     * THIS IS THE OLD METHOD FOR 6 ROW VELOCITY FILES
+     * 
      * Get the relevant next velocity to compute a time interpolation (which depends on 
      * current time in relation to the records stored in the input arrays) 
      * in the spatial interpolation case
