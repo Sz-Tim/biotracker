@@ -36,7 +36,8 @@ public class Particle_track {
         
         System.out.println(System.getProperty("user.dir"));
            
-        RunProperties rp = new RunProperties("model_setup.properties");   
+        //RunProperties rp = new RunProperties("model_setup.properties");
+        RunProperties rp = new RunProperties(args[0]); // first (and only?) cmd line arg is properties filename e.g. model_setup.properties
         // Use this instead of previous to create runProps from CMD line args
         //RunProperties runProps = new RunProperties(args); 
         
@@ -80,7 +81,7 @@ public class Particle_track {
         int[][] neighbours = new int[rp.N][3];
         
         uvnode = IOUtils.readFileDoubleArray(rp.datadir2+"uvnode.dat",rp.N,2," ",true); // the centroids of the elements
-        nodexy = IOUtils.readFileDoubleArray(rp.datadir2+"nodexy.dat",rp.N,2," ",true); // the centroids of the elements
+        nodexy = IOUtils.readFileDoubleArray(rp.datadir2+"nodexy.dat",rp.N,2," ",true);
         trinodes = IOUtils.readFileIntArray(rp.datadir2+"trinodes.dat",rp.N,3," ",true); // the corners of the elements
         neighbours = IOUtils.readFileIntArray(rp.datadir2+"neighbours.dat",rp.N,3," ",true);
         bathymetry = IOUtils.readFileDoubleArray(rp.datadir2+"bathymetry.dat",rp.N,1," ",true);
@@ -129,9 +130,10 @@ public class Particle_track {
         double endlocs[][] = new double[10][3];
         double open_BC_locs[][] = new double[1][3];
  
-        startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
-        endlocs = IOUtils.setupEndLocs(rp.location,rp.habitat,rp.basedir,startlocs);
-        open_BC_locs = IOUtils.setupOpenBCLocs(rp.location,rp.basedir); 
+        startlocs = IOUtils.setupStartLocs(rp.sitefile);
+        //startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
+        endlocs = IOUtils.setupEndLocs(rp.habitat,rp.sitedir,startlocs);
+        open_BC_locs = IOUtils.setupOpenBCLocs(rp.location,rp.sitedir); 
                
         int nparts_per_site=rp.nparts;
         int nTracksSavedPerSite=Math.min(1,nparts_per_site);
