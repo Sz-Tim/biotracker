@@ -6,6 +6,7 @@ package particle_track;
 
 import java.io.*;
 import java.util.*;
+
 import edu.cornell.lassp.houle.RngPack.*;
 import static particle_track.IOUtils.countLines;
 
@@ -33,227 +34,57 @@ public class Particle_track {
            
         System.out.println("Reading in data\n");
         
-        /**
-         * files are 
-         * 
-         * nodexy.dat, uvnode.dat, trinodes.dat, neighbours.dat
-         * u_[3-31].dat
-         * v_[3-31].dat
-         */ 
-        
-        boolean backwards = false;
-        boolean diffusion = true;
-        boolean variableDiff = false;
-        boolean calcMort = false;
-        // Should particles arriving at sites finish dispersal on that event (set true)
-        // or continue dispersing with possibility of infecting other sites (set false)?
-        boolean endOnArrival = true; 
-        
-        boolean cluster = true;
-        
-        // This actually isn't used, except in the case of defaulting on location
-        
-        // Set some basic default parameters
-        int nparts=940;
-        nparts=100;
-        double dt=3600;
-        int firstday=3;
-        int lastday=31;
-        int recordsPerFile=24;
-        int stepsPerStep=200;
-        
-        // The threshold distance, closer than which particles are deemed to have settled.
-        int thresh = 500;
-        double viabletime = 0;
-        String location = "lorn";
-               
-        int behaviour=1; // Particle behaviour - see Particle.java
-        
-        boolean timeInterpolate = true;
-        boolean spatialInterpolate = true;
-        boolean rk4 = true;
-        if (rk4 == true)
-        {
-            System.out.println("Using RK4 algorithm");
-        }
-        else
-        {
-            System.out.println("Using Euler algorithm");
-        }
-        double D_h = 0.1;
-        
-        /**
-         * SETUP CONFIGURATION FOR THE MINCH CHAPTER CASES
-         */
-        String habitat = "";
-        String suffix = "";
-        double diffusionMultiplier = 1;
-        double mortalityRate = 0.01;
-        if (args.length == 6 || args.length == 7 || args.length == 8)
-        {
-            System.out.println("Standard minch chapter args (5)");
-            // set values for many of the things that used to be read in
-            nparts=Integer.parseInt(args[5]);
-            recordsPerFile=6;
-            dt=3600;
-            thresh=500;
-            
-            location="minch_continuous";
-            timeInterpolate = true;
-            spatialInterpolate = true;
-            
-            habitat=args[0];
-            firstday=Integer.parseInt(args[1]);
-            lastday=Integer.parseInt(args[2]);
-            diffusionMultiplier=Double.parseDouble(args[3]);
-            D_h=0.1*diffusionMultiplier;
-            if (D_h==0)
-                {
-                    diffusion = false;
-                }
-            // the case of using spatially variable diffusion as output by FVCOM
-            if (D_h<0)
-                {
-                    variableDiff = true;
-                }
-            behaviour=Integer.parseInt(args[4]);
-            stepsPerStep=25;
-            if (args.length == 7)
-            {
-                stepsPerStep=Integer.parseInt(args[6]);
-            }
-            viabletime=9999;
-            if (args.length == 8)
-            {
-                viabletime=Double.parseDouble(args[7]);
-            }
-        }
-        
-        if (args.length >= 12)
-        {
-            try 
-            {
-                nparts=Integer.parseInt(args[0]);
-                firstday=Integer.parseInt(args[1]);
-                lastday=Integer.parseInt(args[2]);
-                recordsPerFile=Integer.parseInt(args[3]);
-                dt=Integer.parseInt(args[4]);
-                stepsPerStep=Integer.parseInt(args[5]);
-                thresh=Integer.parseInt(args[6]);
-                viabletime=Integer.parseInt(args[7]);
-                behaviour=Integer.parseInt(args[8]);
-                if (args[9].equalsIgnoreCase("true"))
-                {
-                    timeInterpolate = true;
-                }
-                if (args[10].equalsIgnoreCase("true"))
-                {
-                    spatialInterpolate = true;
-                }
-                D_h = Double.parseDouble(args[11]);
-                if (D_h==0)
-                {
-                    diffusion = false;
-                    System.out.println("No diffusion");
-                }
-                //System.out.println("nparts = "+nparts+"\nsettlement threshold distance = "+thresh+"\nviabletime = "+viabletime+" D_h = "+D_h);
-            }
-            catch (IndexOutOfBoundsException e)
-            {
-                System.err.println("Incorrect number of input parameters, found "+args.length);
-            }
-        }
-        
-        // Calc simulation length in hours
-        double simulatedDuration = dt*recordsPerFile*(lastday-firstday+1);
+        System.out.println(System.getProperty("user.dir"));
+           
+        RunProperties rp = new RunProperties("model_setup.properties");   
+        // Use this instead of previous to create runProps from CMD line args
+        //RunProperties runProps = new RunProperties(args); 
         
         // Print all main arguments
         System.out.printf("-----------------------------------------------------------\n");
-        System.out.printf("Location           = %s\n",location);
-        System.out.printf("Habitat            = %s\n",habitat);
-        System.out.printf("N_parts/site       = %d\n",nparts);
-        System.out.printf("hydromod dt (s)    = %f\n",dt);
-        System.out.printf("hydromod rec/file  = %d\n",recordsPerFile+1);
-        System.out.printf("stepsperstep       = %d\n",stepsPerStep);
-        System.out.printf("firstfile          = %d\n",firstday);
-        System.out.printf("lastfile           = %d\n",lastday);
-        System.out.printf("Simulated duration = %f\n",simulatedDuration);
-        System.out.printf("RK4                = %s\n",rk4);
-        System.out.printf("Vertical behaviour = %d\n",behaviour);        
-        System.out.printf("Viable time (h)    = %f\n",viabletime);
-        System.out.printf("Viable time (d)    = %f\n",viabletime/24.0);
-        System.out.printf("Threshold distance = %d\n",thresh);
-        System.out.printf("Diffusion          = %f\n",D_h);
-        System.out.printf("-----------------------------------------------------------\n");
-        
-        if ((location.equalsIgnoreCase("lorn") == true || location.equalsIgnoreCase("minch") == true) && viabletime==0)
-        {
-            // case when for viable at
-            viabletime=(lastday-firstday+1)*recordsPerFile*dt/2;
-            System.out.println("Ignoring input viable time, set to "+viabletime);
-        }
-        else if (viabletime==666)
-        {
-            // ensure that particles never become viable...
-            viabletime=(lastday-firstday+1)*recordsPerFile*dt*2;
-            mortalityRate=0;
-            System.out.println("Ignoring input viable time, set to "+viabletime);
-        }
-        else
-        {
-            viabletime=viabletime*3600;
-            System.out.println("Using input viabletime: "+viabletime/3600.0+"hrs "+viabletime+"s");
-        }
-        System.out.printf("-----------------------------------------------------------\n");
-        
+        System.out.printf("Location           = %s\n",rp.location);
+        System.out.printf("Habitat            = %s\n",rp.habitat);
+        System.out.printf("N_parts/site       = %d\n",rp.nparts);
+        System.out.printf("hydromod dt (s)    = %f\n",rp.dt);
+        System.out.printf("hydromod rec/file  = %d\n",rp.recordsPerFile+1);
+        System.out.printf("stepsperstep       = %d\n",rp.stepsPerStep);
+        System.out.printf("firstfile          = %d\n",rp.firstday);
+        System.out.printf("lastfile           = %d\n",rp.lastday);
+        System.out.printf("Simulated duration = %f\n",rp.dt*rp.recordsPerFile*(rp.lastday-rp.firstday+1));
+        System.out.printf("RK4                = %s\n",rp.rk4);
+        System.out.printf("Vertical behaviour = %d\n",rp.behaviour);        
+        System.out.printf("Viable time (h)    = %f\n",rp.viabletime);
+        System.out.printf("Viable time (d)    = %f\n",rp.viabletime/24.0);
+        System.out.printf("Threshold distance = %d\n",rp.thresh);
+        System.out.printf("Diffusion          = %f\n",rp.D_h);
+        System.out.printf("-----------------------------------------------------------\n");    
 
-        // if only 12 arguments, just behave as previously (Firth of Lorn assumed, or set manually to Fyne)
-        if (args.length == 14)
-        {
-            //datadir = args[13];
-            suffix = args[12];
-            location = args[13];
-        }
+       
         
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
         // --------------------------------------------------------------------------------------
         // Set the directories required to run the model
-        String[] dirList = IOUtils.setDataDirectories(location, cluster);
-        String basedir = dirList[0];
-        String scriptdir = dirList[1];
-        String sitedir = dirList[2];
-        String datadir = dirList[3];
-        String datadir2 = dirList[4];
+        //String[] dirList = IOUtils.setDataDirectories(location, cluster);
+//        String basedir = dirList[0];
+//        String sitedir = dirList[2];
+//        String datadir = dirList[3];
+//        String datadir2 = dirList[4];
         
-        // ---------- Get FVCOM mesh configuration data ------------------
-        // default "Firth of Lorn" values
-        int N = 25071;
-        int M = 14000;
-        if (location.equalsIgnoreCase("fyne"))
-        {          
-            N = 1593;
-            M = 943;
-        } 
-        else if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-        {
-            N = 79244;
-            M = 46878;            
-        }
+                
+        double[][] nodexy = new double[rp.M][2];
+        double[][] uvnode = new double[rp.N][2];
+        double[][] bathymetry = new double[rp.N][1];
+        double[][] sigvec = new double[rp.N][1];
+        int[][] trinodes = new int[rp.N][3];
+        int[][] neighbours = new int[rp.N][3];
         
-        double[][] nodexy = new double[M][2];
-        double[][] uvnode = new double[N][2];
-        double[][] bathymetry = new double[N][1];
-        double[][] sigvec = new double[N][1];
-        int[][] trinodes = new int[N][3];
-        int[][] neighbours = new int[N][3];
-        
-        nodexy = IOUtils.readFileDoubleArray(datadir2+"nodexy.dat",M,2," ",true); // the original mesh nodes
-        uvnode = IOUtils.readFileDoubleArray(datadir2+"uvnode.dat",N,2," ",true); // the centroids of the elements
-        trinodes = IOUtils.readFileIntArray(datadir2+"trinodes.dat",N,3," ",true); // the corners of the elements
-        neighbours = IOUtils.readFileIntArray(datadir2+"neighbours.dat",N,3," ",true);
-        bathymetry = IOUtils.readFileDoubleArray(datadir2+"bathymetry.dat",N,1," ",true);
-        sigvec = IOUtils.readFileDoubleArray(datadir2+"sigvec.dat",N,1," ",true);
+        uvnode = IOUtils.readFileDoubleArray(rp.datadir2+"uvnode.dat",rp.N,2," ",true); // the centroids of the elements
+        nodexy = IOUtils.readFileDoubleArray(rp.datadir2+"nodexy.dat",rp.N,2," ",true); // the centroids of the elements
+        trinodes = IOUtils.readFileIntArray(rp.datadir2+"trinodes.dat",rp.N,3," ",true); // the corners of the elements
+        neighbours = IOUtils.readFileIntArray(rp.datadir2+"neighbours.dat",rp.N,3," ",true);
+        bathymetry = IOUtils.readFileDoubleArray(rp.datadir2+"bathymetry.dat",rp.N,1," ",true);
+        sigvec = IOUtils.readFileDoubleArray(rp.datadir2+"sigvec.dat",rp.N,1," ",true);
         
         // Create a 1d array of the sigma layer depths
         double[] sigvec2 = new double[sigvec.length];
@@ -264,7 +95,7 @@ public class Particle_track {
         System.out.println("sigvec2 "+sigvec2[0]+" "+sigvec2[1]+" "+sigvec2[2]+" ....");
         
         // reduce node/element IDs in files generated by matlab by one (loops start at zero, not one as in matlab)
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < rp.N; i++)
         {
             //System.out.println(bathymetry[i][0]);
             for (int j = 0; j < 3; j++)
@@ -284,13 +115,11 @@ public class Particle_track {
             allelems[j] = j;
         }
 
-        int nrecords=(lastday-firstday+1)*recordsPerFile;
-        int inviabletime=nrecords;
-        
-        dt=dt/(double)stepsPerStep;
+       
+        double dt=rp.dt/(double)rp.stepsPerStep;
         double dev_perstep = Math.pow(0.1,dt);
         System.out.println("Particle dt = "+dt+" dev_perstep = "+dev_perstep);
-        System.out.println("behaviour = "+behaviour);
+        System.out.println("behaviour = "+rp.behaviour);
 
         // --------------------------------------------------------------------------------------
         // Creating initial particle array
@@ -300,13 +129,13 @@ public class Particle_track {
         double endlocs[][] = new double[10][3];
         double open_BC_locs[][] = new double[1][3];
  
-        startlocs = IOUtils.setupStartLocs(location,habitat,basedir);
-        endlocs = IOUtils.setupEndLocs(location,habitat,basedir,startlocs);
-        open_BC_locs = IOUtils.setupOpenBCLocs(location,basedir); 
+        startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
+        endlocs = IOUtils.setupEndLocs(rp.location,rp.habitat,rp.basedir,startlocs);
+        open_BC_locs = IOUtils.setupOpenBCLocs(rp.location,rp.basedir); 
                
-        int nparts_per_site=nparts;
+        int nparts_per_site=rp.nparts;
         int nTracksSavedPerSite=Math.min(1,nparts_per_site);
-        nparts=nparts*startlocs.length; 
+        int nparts=rp.nparts*startlocs.length; 
          
         for (int i = 0; i < startlocs.length; i++)
         {
@@ -348,35 +177,23 @@ public class Particle_track {
         // Setup particles
         // --------------------------------------------------------------------------------------
         Particle[] particles = new Particle[nparts];
-        boolean setReleaseTime = false;
-        boolean tidalRelease = true;
-        boolean setDepth = false;
-        // integer to switch release scenario
-        // 0 all at time zero
-        // 1 tidal release (evenly over first 24 hours)
-        // 2 continuous release (1 per hour per site)
-        // 3 continuous release (5 per hour per site)
-        // 4 continuous release (10 per hour per site)
-        // 5 continuous release (20 per hour per site)
-        // 10 defined release times
-        
-        int releaseScenario = 5;
-
-        if (location.equalsIgnoreCase("minch_jelly"))
-        {
-            setReleaseTime = true;
-            releaseScenario = 10;
-            setDepth = true;
-        }
         System.out.println("particles.length = "+particles.length);
         for (int i = 0; i < particles.length; i++)
         {
-            particles[i] = new Particle(xstart[i],ystart[i],startid[i],i,mortalityRate);
+            particles[i] = new Particle(xstart[i],ystart[i],startid[i],i,rp.mortalityRate);
             particle_info[i][0]=startid[i];//(int)startlocs[startid[i]][0];
             particles[i].setElem(startElem[i]);
             // if information provided, set release time
-            switch(releaseScenario)
+            switch(rp.releaseScenario)
             {
+                // integer to switch release scenario
+                // 0 all at time zero
+                // 1 tidal release (evenly over first 24 hours)
+                // 2 continuous release (1 per hour per site)
+                // 3 continuous release (5 per hour per site)
+                // 4 continuous release (10 per hour per site)
+                // 5 continuous release (20 per hour per site)
+                // 10 defined release times
                 case 0: 
                     particles[i].setReleaseTime(0);
                     break;
@@ -400,27 +217,8 @@ public class Particle_track {
                     break;
             }
             //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+particles[i].getReleaseTime());
-            
-            // Deprecated code - switch statement above replaces        
-//            if (startlocs[startid[i]].length > 3 && setReleaseTime == true)
-//            {
-//                particles[i].setReleaseTime(startlocs[startid[i]][3]);
-//            }
-//            // otherwise, allow release over tidal cycle
-//            else if (tidalRelease == true)
-//            {
-//                particles[i].setReleaseTime((i/startlocs.length)%25);
-//                //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+(i/startlocs.length)%25);
-//            }
-              
-//            // otherwise, all released at start of simulation
-//            else
-//            {
-//                particles[i].setReleaseTime(0);
-//            }
-            //System.out.println("Particle "+i+" (release site "+particles[i].getStartID()+") release time: "+particles[i].getReleaseTime());
-            // If provided, set particle depth
-            if (startlocs[startid[i]].length > 4 && setDepth == true)
+             // If provided, set particle depth
+            if (startlocs[startid[i]].length > 4 && rp.setDepth == true)
             {
                 particles[i].setZ(startlocs[startid[i]][4]);
             }
@@ -434,12 +232,12 @@ public class Particle_track {
         // an array to save the number of "particle-timesteps" in each cell
         boolean splitPsteps = true;
         boolean pstepsIncMort = true;
-        double[][] pstepsImmature = new double[N][2];
-        double[][] pstepsMature = new double[N][2];
-        double[][] pstepsInst = new double[N][2];
+        double[][] pstepsImmature = new double[rp.N][2];
+        double[][] pstepsMature = new double[rp.N][2];
+        double[][] pstepsInst = new double[rp.N][2];
         if (splitPsteps == false)
         {
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < rp.N; i++)
             {
                 pstepsImmature[i][0] = i;
                 pstepsMature[i][0] = i;
@@ -448,11 +246,11 @@ public class Particle_track {
         }
         else if (splitPsteps == true)
         {
-            pstepsImmature = new double[N][startlocs.length+1];
-            pstepsMature = new double[N][startlocs.length+1];
-            pstepsInst = new double[N][startlocs.length+1];
+            pstepsImmature = new double[rp.N][startlocs.length+1];
+            pstepsMature = new double[rp.N][startlocs.length+1];
+            pstepsInst = new double[rp.N][startlocs.length+1];
         
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < rp.N; i++)
             {
                 pstepsImmature[i][0] = i;
                 pstepsMature[i][0] = i;
@@ -512,9 +310,6 @@ public class Particle_track {
         int stepcount=0;
         int calcCount=0;
         double time=0;
-        
-        double[][] particle1Velocity = new double[nrecords*stepsPerStep][3];
-        double[][] particle1Location = new double[nrecords*stepsPerStep][2];
                 
         int printCount=0;
         
@@ -531,11 +326,11 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Start time loop
         // --------------------------------------------------------------------------------------
-        for (int fnum = firstday; fnum <= lastday; fnum++)
+        for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
         // alternatively, run loop backwards
         //for (int day = lastday; day >= firstday; day--)
         {
-            System.out.printf("\nfile %d - time %fsecs (%fhrs) \n",fnum,stepcount*dt*stepsPerStep,time);
+            System.out.printf("\nfile %d - time %fsecs (%fhrs) \n",fnum,stepcount*dt*rp.stepsPerStep,time);
             
             // clear any old data
             //clear FVCOM1
@@ -546,99 +341,36 @@ public class Particle_track {
             String ufile = "";
             String vfile = "";
             String elfile = "";
-            //String ufile1 = "";
-            //String vfile1 = "";
-            //String elfile1 = "";
-            double[][] u = new double[recordsPerFile+1][N*depthLayers];
-            double[][] v = new double[recordsPerFile+1][N*depthLayers];
+
+            double[][] u = new double[rp.recordsPerFile][rp.N*depthLayers];
+            double[][] v = new double[rp.recordsPerFile][rp.N*depthLayers];
             //double[][] el = new double[recordsPerFile][N*depthLayers];
             //double[][] u1 = new double[recordsPerFile][N*depthLayers];
             //double[][] v1 = new double[recordsPerFile][N*depthLayers];
             //double[][] el1 = new double[recordsPerFile][N*depthLayers];
             
-            // Reading files on the first instance:
-            // - Read two files to provide data for time interpolation during last time steps
-//            if (fnum == firstday)
-//            {
-                System.out.println("Reading data day "+firstday);
-                // maintain backward compatability with previous number reading
-                filenums = ""+fnum;
-                // replace filenums in its entirety               
-                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-                {
-                    filenums = br.readLine();
-                } 
-                System.out.println("t=0 Reading t: "+filenums);
-                ufile = datadir+"u_"+filenums+".dat";
-                vfile = datadir+"v_"+filenums+".dat";
-                //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-                //elfile = datadir+"el_"+filenums+".dat";
-                System.out.println(ufile+" "+vfile+" "+elfile);
-                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile+1,N*depthLayers," ",true);
-                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile+1,N*depthLayers," ",true);
-                //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
-                //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
-                //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
+
+            System.out.println("Reading data day "+rp.firstday);
+            // maintain backward compatability with previous number reading
+            filenums = ""+fnum;
+            // replace filenums in its entirety               
+            if (rp.location.equalsIgnoreCase("minch_continuous") || rp.location.equalsIgnoreCase("minch_jelly"))
+            {
+                filenums = br.readLine();
+            } 
+            System.out.println("t=0 Reading t: "+filenums);
+            ufile = rp.datadir+"u_"+filenums+".dat";
+            vfile = rp.datadir+"v_"+filenums+".dat";
+            //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
+            //elfile = datadir+"el_"+filenums+".dat";
+            System.out.println(ufile+" "+vfile+" "+elfile);
+            u = IOUtils.readFileDoubleArray(ufile,rp.recordsPerFile,rp.N*depthLayers," ",true);
+            v = IOUtils.readFileDoubleArray(vfile,rp.recordsPerFile,rp.N*depthLayers," ",true);
+            //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
+            //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
+            //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
                 
-//                filenums = ""+(fnum+1);
-//                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-//                {
-//                    filenums = br.readLine();
-//                }
-//                System.out.println("t=0 Reading t+1: "+filenums);
-//                ufile1 = datadir+"u_"+filenums+".dat";
-//                vfile1 = datadir+"v_"+filenums+".dat";
-//                //elfile1 = datadir+"el_"+filenums+".dat";
-//                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
-//                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-                //el1 = readFileDoubleArray(elfile1,recordsPerFile,M*depthLayers," ",false);
-
-            // Interim timesteps:
-            // - switch "next file" to being "current file"
-            // - read new "next file"
-//            else if (fnum > firstday && fnum < lastday)
-//            {
-//                System.out.println("**** Reading data day "+fnum);
-//                // At this point, "filenums" is the name prefix of the second set of files read
-//                // (as determined in second half of loop case above)
-//                ufile = datadir+"u_"+filenums+".dat";
-//                vfile = datadir+"v_"+filenums+".dat";
-//                //elfile = datadir+"el_"+filenums+".dat";
-//                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
-//                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-//                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
-//                // Read in the next file, so that t2+1 is available for time interpolation
-//                filenums = ""+(fnum+1);
-//                if (location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
-//                {
-//                    filenums = br.readLine();
-//                }
-//                System.out.println("t!=0 Reading t+1: "+filenums);
-//                ufile1 = datadir+"u_"+filenums+".dat";
-//                vfile1 = datadir+"v_"+filenums+".dat";
-//                //elfile1 = datadir+"el_"+filenums+".dat";
-//                u1 = IOUtils.readFileDoubleArray(ufile1,recordsPerFile,N*depthLayers," ",true);
-//                v1 = IOUtils.readFileDoubleArray(vfile1,recordsPerFile,N*depthLayers," ",true);
-//                //el1 = readFileDoubleArray(elfile1,recordsPerFile,N*depthLayers," ",true);
-//            } 
-//            // Last time step:
-//            // - switch "next file" to being "current file"
-//            else
-//            {
-//                System.out.println("t!=0 Reading t+1: "+filenums);
-//                ufile = datadir+"u_"+filenums+".dat";
-//                vfile = datadir+"v_"+filenums+".dat";
-//                //elfile = datadir+"el_"+filenums+".dat";
-//                u = IOUtils.readFileDoubleArray(ufile,recordsPerFile,N*depthLayers," ",true);
-//                v = IOUtils.readFileDoubleArray(vfile,recordsPerFile,N*depthLayers," ",true);
-//                //el = readFileDoubleArray(elfile,recordsPerFile,N*depthLayers," ",true);
-//
-//            }
-
-            
-            int firsttime=0;
-            int lasttime=recordsPerFile;
-            
+           
             // set an initial tide state
             String tideState = "flood";
             
@@ -649,7 +381,7 @@ public class Particle_track {
             
             // default, run loop forwards
             // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
-            for (int tt = firsttime; tt <= recordsPerFile-1; tt++)
+            for (int tt = 0; tt <= rp.recordsPerFile-2; tt++)
             // alternatively, run loop backwards
             //for (int tt = lasttime; tt >= firsttime; tt--)
             {
@@ -663,7 +395,7 @@ public class Particle_track {
                     }
                 
                 // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
-                for (int st = 0; st < stepsPerStep; st++)
+                for (int st = 0; st < rp.stepsPerStep; st++)
                 {
                     //System.out.print(",");
                     //System.out.println("nfreeparts = "+nfreeparts);
@@ -722,11 +454,11 @@ public class Particle_track {
                                 double advectStep[] = new double[2];
     //                            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
     //                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
-                                if (rk4==true)
+                                if (rp.rk4==true)
                                 {
                                     advectStep = particles[i].rk4Step(u, v, 
                                         neighbours, uvnode,  nodexy, trinodes, allelems,
-                                        tt, st, dt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers);   
+                                        tt, st, dt, rp.stepsPerStep, fnum, rp.lastday, depthLayers);   
                                 }
                                 else
                                 {
@@ -737,7 +469,7 @@ public class Particle_track {
                                 }
 
                                 // Reverse velocities if running backwards
-                                if (backwards == true)
+                                if (rp.backwards == true)
                                 {
                                     advectStep[0] = -advectStep[0];
                                     advectStep[1] = -advectStep[1];
@@ -748,15 +480,11 @@ public class Particle_track {
     //                            {
     //                                D_h=1000*viscofm[tt][elemPart*10+dep];
     //                            }
-                                // doing this (below) means that can set zero diffusion, even if read in diffusion values
-                                if (diffusion==false)
-                                {
-                                    D_h=0;
-                                }
+
                                 //rand('twister',sum(100*clock)); %resets it to a different state each time.
-                                double diff_X = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
-                                double diff_Y = Math.sqrt(6*D_h*dt/(double)stepsPerStep);
-                                double[] behave_uv = particles[i].behaveVelocity(behaviour);
+                                double diff_X = Math.sqrt(6*rp.D_h*dt/(double)rp.stepsPerStep);
+                                double diff_Y = Math.sqrt(6*rp.D_h*dt/(double)rp.stepsPerStep);
+                                double[] behave_uv = particles[i].behaveVelocity(rp.behaviour);
                                 // 4. update particle location
                                 //double ran1 = BoxMueller.bmTransform(ran.raw(),ran.raw());
                                 //double ran2 = BoxMueller.bmTransform(ran.raw(),ran.raw());
@@ -807,7 +535,7 @@ public class Particle_track {
                                 }
 
                                 // set particle to become able to settle after a predefined time
-                                if (particles[i].getAge()>viabletime/3600.0 && particles[i].getViable()==false)
+                                if (particles[i].getAge()>rp.viabletime/3600.0 && particles[i].getViable()==false)
                                 {
                                     //System.out.println("Particle became viable");                                  
                                     particles[i].setViable(true);
@@ -826,11 +554,11 @@ public class Particle_track {
                                 {
                                     if (splitPsteps==false)
                                     {
-                                        pstepsMature[elemPart][1]+=d*(dt/3600)*1.0/stepsPerStep;
+                                        pstepsMature[elemPart][1]+=d*(dt/3600)*1.0/rp.stepsPerStep;
                                     }
                                     else
                                     {
-                                        pstepsMature[elemPart][particles[i].getStartID()+1]+=d*(dt/3600)*1.0/stepsPerStep;
+                                        pstepsMature[elemPart][particles[i].getStartID()+1]+=d*(dt/3600)*1.0/rp.stepsPerStep;
                                     }
                                 } 
                                 else 
@@ -838,11 +566,11 @@ public class Particle_track {
                                     //System.out.println("Printing to pstepsImmature");
                                     if (splitPsteps==false)
                                     {
-                                        pstepsImmature[elemPart][1]+=d*(dt/3600)*1.0/stepsPerStep;
+                                        pstepsImmature[elemPart][1]+=d*(dt/3600)*1.0/rp.stepsPerStep;
                                     }
                                     else
                                     {
-                                        pstepsImmature[elemPart][particles[i].getStartID()+1]+=d*(dt/3600)*1.0/stepsPerStep;
+                                        pstepsImmature[elemPart][particles[i].getStartID()+1]+=d*(dt/3600)*1.0/rp.stepsPerStep;
                                     }                                          
                                 }
                                 
@@ -875,10 +603,10 @@ public class Particle_track {
                                     {
                                         double dist = Math.sqrt((particles[i].getLocation()[0]-endlocs[loc][1])*(particles[i].getLocation()[0]-endlocs[loc][1])+
                                                 (particles[i].getLocation()[1]-endlocs[loc][2])*(particles[i].getLocation()[1]-endlocs[loc][2]));
-                                        if (dist < thresh)
+                                        if (dist < rp.thresh)
                                         {
                                             //System.out.printf("settlement: %d at %d\n",i,loc);
-                                            if (endOnArrival==true)
+                                            if (rp.endOnArrival==true)
                                             {
                                                 particles[i].setArrived(true);
                                             }
@@ -910,7 +638,7 @@ public class Particle_track {
                                 }
                                 IOUtils.writeDoubleArrayToFile(pstepsInst,"elementCounts_"+ot+".out");
                                 // Once recorded, set this value to be greater than simulation length
-                                dumptimes2[ot] = simulatedDuration*2;
+                                dumptimes2[ot] = rp.dt*rp.recordsPerFile*(rp.lastday-rp.firstday+1)*2;
                             }
                         }
                     }                    
@@ -920,7 +648,7 @@ public class Particle_track {
                 
                 printCount++;
                 // Append particle locations for first nSites for plotting trajectories
-                IOUtils.particleLocsToFile(particles,startlocs.length*nTracksSavedPerSite,printCount,"particlelocations_all"+suffix+".out");
+                IOUtils.particleLocsToFile(particles,startlocs.length*nTracksSavedPerSite,printCount,"particlelocations_all"+rp.suffix+".out");
                 stepcount++;
             }
             System.out.printf("\n");
@@ -928,14 +656,14 @@ public class Particle_track {
         System.out.printf("\nelement search counts: %d %d %d %d %d\n",searchCounts[0],searchCounts[1],searchCounts[2],searchCounts[3],searchCounts[4]);
         System.out.printf("transport distances: min = %.4e, max = %.4e\n", minDistTrav, maxDistTrav);
 
-        IOUtils.writeDoubleArrayToFile(pstepsImmature,"pstepsImmature"+suffix+".out");
-        IOUtils.writeDoubleArrayToFile(pstepsMature,"pstepsMature"+suffix+".out");
-        IOUtils.writeIntegerArrayToFile(particle_info,"particle_info"+suffix+".out");
-        IOUtils.writeDoubleArrayToFile(settle_density,"settle_density"+suffix+".out");
+        IOUtils.writeDoubleArrayToFile(pstepsImmature,"pstepsImmature"+rp.suffix+".out");
+        IOUtils.writeDoubleArrayToFile(pstepsMature,"pstepsMature"+rp.suffix+".out");
+        IOUtils.writeIntegerArrayToFile(particle_info,"particle_info"+rp.suffix+".out");
+        IOUtils.writeDoubleArrayToFile(settle_density,"settle_density"+rp.suffix+".out");
         //IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
         //IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
         //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
-        IOUtils.particleLocsToFile1(particles,"particlelocations_end"+suffix+".out");
+        IOUtils.particleLocsToFile1(particles,"particlelocations_end"+rp.suffix+".out");
         
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = "+(endTime-startTime)/1000.0);

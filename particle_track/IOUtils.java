@@ -273,7 +273,7 @@ public class IOUtils {
             datadir = "D:\\dima_data\\"+datadir;
             System.out.println("DATA DIRECTORY = "+datadir);
         }
-        String[] allDirs = {basedir, scriptdir, sitedir, datadir, datadir2};
+        String[] allDirs = {basedir, sitedir, datadir, datadir2};
         return allDirs;
     }
     

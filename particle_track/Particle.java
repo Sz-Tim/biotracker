@@ -653,7 +653,7 @@ public class Particle {
             int[][] neighbours, double[][] uvnode, double[][] nodexy, 
             int[][] trinodes, int[] allelems,      // other mesh info
             int tt, int st, double dt,                                  // locate particle in space and time
-            int stepsPerStep, int recordsPerFile, int fnum, int lastday, int numLayers)   // info on simulation length
+            int stepsPerStep, int fnum, int lastday, int numLayers)   // info on simulation length
     {
         int elemPart = this.getElem();
         int dep = this.getDepthLayer();
@@ -677,7 +677,7 @@ public class Particle {
                 new double[]{this.getLocation()[0]+k1[0]/2.0,this.getLocation()[1]+k1[1]/2.0},
                 elemPart,dep,1.0/2.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
-                tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);
+                tt,st,dt,stepsPerStep,fnum,lastday,numLayers);
 
         // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
         //System.out.println("Half step (k2 -> k3)");
@@ -685,7 +685,7 @@ public class Particle {
                 new double[]{this.getLocation()[0]+k2[0]/2.0,this.getLocation()[1]+k2[1]/2.0},
                 elemPart,dep,1.0/2.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
-                tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);              
+                tt,st,dt,stepsPerStep,fnum,lastday,numLayers);              
         
         // 5. Compute k_4 (spatial interpolation at end step)
         //System.out.println("End step (k3 -> k4)");
@@ -693,7 +693,7 @@ public class Particle {
                 new double[]{this.getLocation()[0]+k3[0],this.getLocation()[1]+k3[1]},
                 elemPart,dep,1.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
-                tt,st,dt,stepsPerStep,recordsPerFile,fnum,lastday,numLayers);
+                tt,st,dt,stepsPerStep,fnum,lastday,numLayers);
         
         // 6. Add it all together
         if (k1[0] == 0 || k2[0] == 0 || k3[0] == 0 || k4[0] == 0)
@@ -727,7 +727,6 @@ public class Particle {
      * @param st
      * @param dt
      * @param stepsPerStep
-     * @param recordsPerFile
      * @param fnum
      * @param lastday
      * @param numLayers
@@ -739,7 +738,7 @@ public class Particle {
             int[][] neighbours, double[][] uvnode, double[][] nodexy, int[][] trinodes, int[] allelems,
             double[][] u, double[][] v, 
             int tt, int st, double dt,
-            int stepsPerStep, int recordsPerFile, int fnum, int lastday, int numLayers)
+            int stepsPerStep, int fnum, int lastday, int numLayers)
     {   
         double[] xy_step = new double[2];
         // Generate a "nearest list" for this location
