@@ -15,7 +15,7 @@ import java.io.File;
         
 // import netcdf reading libraries for alternative data import
 // https://publicwiki.deltares.nl/display/FEWSDOC/Reading+and+writing+netcdf+gridded+data+with+Java
-import ucar.nc2.*;
+//import ucar.nc2.*;
 
 /**
  *
@@ -54,21 +54,22 @@ public class IOUtils {
         return trim.split("\\w+").length;
     }
     
-    public static double[][] setupStartLocs(String filename)
+    public static double[][] setupStartLocs(String filename, String sitedir)
     {
         double startlocs[][] = new double[10][3];
         System.out.println("Startlocations defined in file: "+filename);
-        File file = new File("./"+filename);
+        File file = new File(sitedir+filename);
         int nLines = 0;
         try
         {
             nLines = countLines(file);
+            System.out.println("FILE "+file+" NLINES "+nLines);
         }
         catch (Exception e)
         {
-            System.out.println("Cannot open ./startlocations.dat");
+            System.out.println("Cannot open "+sitedir+filename);
         }
-        startlocs = IOUtils.readFileDoubleArray("./startlocations.dat",nLines,5," ",true);
+        startlocs = IOUtils.readFileDoubleArray(sitedir+filename,nLines,5," ",true);
         return startlocs;
     }
     
@@ -213,14 +214,14 @@ public class IOUtils {
         return endlocs;
     }
     
-    public static double[][] setupOpenBCLocs(String location, String sitedir)
+    public static double[][] setupOpenBCLocs(String location, String datadir2)
     {
         double open_BC_locs[][] = new double[10][3];
         if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
         {
             //String sitedir=basedir+"minch_sites/";
             //open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
-            open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs_os.dat",137,3," ",true);
+            open_BC_locs = IOUtils.readFileDoubleArray(datadir2+"open_boundary_locs_os.dat",137,3," ",true);
         } 
         else
         {
@@ -459,28 +460,28 @@ public class IOUtils {
         return myInt;
     }
     
-    public static double[][] openNCFileDoubleArray(String filename, String variable, boolean threeD){
-        //String filename = "C:/data/my/file.nc";
-        NetcdfFile ncfile = null;
-        double[][] array = new double[7][100];
-        try {
-          ncfile = NetcdfFile.open(filename);
-          
-          // Do something with file and variable and threeD
-          
-          
-        } catch (IOException ioe) {
-            System.err.println("trying to open " + filename);
-        } finally { 
-            if (null != ncfile) try {
-                ncfile.close();
-            } catch (IOException ioe) {
-                System.err.println("trying to close " + filename);
-            }
-        }
-        
-        return array;
-    }
+//    public static double[][] openNCFileDoubleArray(String filename, String variable, boolean threeD){
+//        //String filename = "C:/data/my/file.nc";
+//        NetcdfFile ncfile = null;
+//        double[][] array = new double[7][100];
+//        try {
+//          ncfile = NetcdfFile.open(filename);
+//          
+//          // Do something with file and variable and threeD
+//          
+//          
+//        } catch (IOException ioe) {
+//            System.err.println("trying to open " + filename);
+//        } finally { 
+//            if (null != ncfile) try {
+//                ncfile.close();
+//            } catch (IOException ioe) {
+//                System.err.println("trying to close " + filename);
+//            }
+//        }
+//        
+//        return array;
+//    }
     
     
     public static void writeDoubleArrayToFile(double[][] variable, String filename)
