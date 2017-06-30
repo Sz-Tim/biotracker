@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.LineNumberReader;
 import java.io.File;
+
+import java.util.*;
         
 // import netcdf reading libraries for alternative data import
 // https://publicwiki.deltares.nl/display/FEWSDOC/Reading+and+writing+netcdf+gridded+data+with+Java
@@ -555,6 +557,25 @@ public class IOUtils {
         }
     }
     
+    public static void particleLocsToFile(List<Particle> particles, int npartsSaved, int tt, String filename)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,true);
+            PrintWriter out = new PrintWriter(fstream);
+            for (int i = 0; i < npartsSaved; i++)
+            {
+                out.printf("%d %d %f %f %d\n",tt,particles.get(i).getID(),
+                        particles.get(i).getLocation()[0],particles.get(i).getLocation()[1],particles.get(i).getElem());
+            }
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
     /** Print ALL particle locations at a particular time, with corresponding start locations.
      * 
      * @param particles
@@ -570,6 +591,24 @@ public class IOUtils {
             for (int i = 0; i < particles.length; i++)
             {
                 out.printf("%d %f %f %f %f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],particles[i].getLocation()[0],particles[i].getLocation()[1]);
+            }
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    public static void particleLocsToFile1(List<Particle> particles, String filename)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,true);
+            PrintWriter out = new PrintWriter(fstream);
+            for (int i = 0; i < particles.size(); i++)
+            {
+                out.printf("%d %f %f %f %f\n",i,particles.get(i).getStartLocation()[0],
+                        particles.get(i).getStartLocation()[1],particles.get(i).getLocation()[0],particles.get(i).getLocation()[1]);
             }
             //Close the output stream
             out.close();
