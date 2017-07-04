@@ -52,6 +52,7 @@ public class RunProperties {
     int recordsPerFile=7; // Number of records per velocity file
     int stepsPerStep=25; // Number of increments between each velocity record (also for time interpolations)
     int depthLayers=10;
+    int dumpInterval=24; // Interval in hours for printing particle locations and elements to file 
     
     // The threshold distance, closer than which particles are deemed to have settled.
     int thresh = 500; // Threshold distance for "settlement" (m)
@@ -194,6 +195,7 @@ public class RunProperties {
         recordsPerFile = Integer.parseInt(properties.getProperty("recordsPerFile"));
         stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep"));
         depthLayers = Integer.parseInt(properties.getProperty("depthLayers"));
+        dumpInterval = Integer.parseInt(properties.getProperty("dumpInterval"));
 
         thresh = Integer.parseInt(properties.getProperty("thresh"));
         viabletime = Double.parseDouble(properties.getProperty("viabletime"));

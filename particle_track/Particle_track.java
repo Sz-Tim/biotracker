@@ -289,50 +289,29 @@ public class Particle_track {
             }
         }
         
-        
-        
-        /**
-         * OUTSOURCE THIS METHOD!!!
-         */
-        
-        // A list of times at which to print particle locations to file 
-        // (hours from start of simulation)
-        double[][] dumptimes = new double[10][1];
-        double[] dumptimes2 = new double[dumptimes.length];
-        System.out.println("Attempting to read dumptimes.dat");
-        File file = new File("./dumptimes.dat");
-        int nDumps = 0;
-        try
+
+        // --------------------------------------------------------------------------------------
+        // Set up times at which to print particle locations to file 
+        // --------------------------------------------------------------------------------------
+        int simLengthHours = numberOfDays*24;
+        int nDumps = simLengthHours/rp.dumpInterval+1;
+        System.out.println("simLengthHours "+simLengthHours+" dumpInterval "+rp.dumpInterval+" nDumps "+nDumps);
+        double[] dumptimes2 = new double[1];
+        if (nDumps > 1)
         {
-            nDumps = IOUtils.countLines(file);
-            System.out.println("lines = "+nDumps);
-        }
-        catch (Exception e)
-        {
-            System.out.println("Cannot open ./dumptimes.dat");
-        }
-        if (nDumps > 0)
-        {
-            dumptimes = IOUtils.readFileDoubleArray("./dumptimes.dat",nDumps,1," ",true);
-            dumptimes2 = new double[dumptimes.length];
-            for (int i = 0; i < dumptimes.length; i++)
+            dumptimes2 = new double[nDumps];
+            for (int i = 0; i < nDumps; i++)
             {
-                dumptimes2[i] = dumptimes[i][0];
+                dumptimes2[i] = i*rp.dumpInterval;
+                System.out.println("Dumptime set: "+dumptimes2[i]);
             }
-            System.out.println("dumptimes2 "+dumptimes2[0]+" "+dumptimes2[1]+" "+dumptimes2[2]+" ....");
-        } 
+        }
         else
         {
-            System.out.println("No file dumptimes.dat:\n"
-                    + "- only cumulative element counts produced\n"
-                    + "- only start/end particlelocations (and max 100 tracks/site) produced");
+            dumptimes2[0] = simLengthHours*2;
+            System.out.println("No dumptimes set: ");
         }
-        
-        
-        
-        
-        
-        
+     
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
@@ -446,6 +425,7 @@ public class Particle_track {
                         //System.out.println("nfreeparts = "+nfreeparts);
                         for (int i = 0; i < nparts; i++)
                         {
+                            
                             // Set particles free once they pass thier defined release time (hours)
                             if (particles.get(i).getFree()==false)
                             {
@@ -673,11 +653,11 @@ public class Particle_track {
                         // Dump particle locations to file at predfined times
                         if (nDumps > 0)
                         {
-                            for (int ot = 0; ot < dumptimes.length; ot++)
+                            for (int ot = 0; ot < dumptimes2.length; ot++)
                             {
                                 if (time>dumptimes2[ot])
                                 {
-                                    System.out.println("print particle locations to file "+ot);
+                                    System.out.println("Print particle locations to file "+ot+" "+dumptimes2[ot]+" hrs");
                                     IOUtils.particleLocsToFile1(particles,"particlelocations_"+ot+".out");
                                     for (int i = 0; i < particles.size(); i++)
                                     {
@@ -685,7 +665,8 @@ public class Particle_track {
                                     }
                                     IOUtils.writeDoubleArrayToFile(pstepsInst,"elementCounts_"+ot+".out");
                                     // Once recorded, set this value to be greater than simulation length
-                                    dumptimes2[ot] = rp.dt*rp.recordsPerFile*numberOfDays*2;
+                                    dumptimes2[ot] = simLengthHours*2;
+                                    
                                 }
                             }
                         }                    
