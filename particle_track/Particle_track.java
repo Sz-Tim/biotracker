@@ -16,9 +16,11 @@ import java.util.*;
 //import java.util.Collection;
 //import java.util.List;
 //import java.util.ArrayList;
-//import java.util.concurrent.Callable;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ThreadLocalRandom;
 //import java.lang.InterruptedException;
 
@@ -36,7 +38,7 @@ public class Particle_track {
      */
     public static void main(String[] args) throws IOException {
         // TODO code application logic here
-    
+      
         System.out.println("Starting particle tracking program\n");
         Date date = new Date();
         // display time and date using toString()
@@ -331,428 +333,197 @@ public class Particle_track {
         int printCount=0;
 
         int[] freeViableSettleExit = new int[4];
-        
-        //String filenums = "";
-       
-        // --------------------------------------------------------------------------------------
-        // Start time loop
-        // --------------------------------------------------------------------------------------
-        
-        
-        //for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
-        for (int fnum = 0; fnum < numberOfDays; fnum++)
+
+        int numberOfExecutorThreads = Runtime.getRuntime().availableProcessors();
+        if (rp.parallel==false)
         {
-            
-            for (int dayQuarter = 1; dayQuarter <= 4; dayQuarter++)
-            // alternatively, run loop backwards
-            //for (int day = lastday; day >= firstday; day--)
-            {
-                System.out.printf(currentIsoDate.getDateStr());
-                long currTime = System.currentTimeMillis();    
-                System.out.printf("\n------ Day %d (%s) - Quarter %d - Stepcount %d (%f hrs)  - Runtime %f s ------ \n", 
-                        fnum+1, currentIsoDate.getDateStr(), dayQuarter, stepcount, time, (currTime - startTime) / 1000.0);
-                //System.out.printf("\nfile %d - time %fsecs (%fhrs) \n",fnum,stepcount*subStepDt*rp.stepsPerStep,time);
-
-                // clear any old data
-                //clear FVCOM1
-                // load the new data file. this puts variables straight into the
-                // workspace
-                //int depthLayers = 10;       
-
-                String ufile = "";
-                String vfile = "";
-                String elfile = "";
-
-                double[][] u = new double[rp.recordsPerFile][rp.N*rp.depthLayers];
-                double[][] v = new double[rp.recordsPerFile][rp.N*rp.depthLayers];
-                //double[][] el = new double[recordsPerFile][N*depthLayers];
-                //double[][] u1 = new double[recordsPerFile][N*depthLayers];
-                //double[][] v1 = new double[recordsPerFile][N*depthLayers];
-                //double[][] el1 = new double[recordsPerFile][N*depthLayers];
-
-                // maintain backward compatability with previous number reading
-//                filenums = ""+fnum;
-//                // replace filenums in its entirety               
-//                if (rp.location.equalsIgnoreCase("minch_continuous") || rp.location.equalsIgnoreCase("minch_jelly"))
-//                {
-//                    filenums = br.readLine();
-//                } 
-                //System.out.println("t=0 Reading t: "+filenums);
-                //ufile = rp.datadir+"u_"+filenums+".dat";
-                //vfile = rp.datadir+"v_"+filenums+".dat";
-                // Use Mike's file reading method to avoid use of the filelist for reading in
-                ufile = rp.datadir+"u_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
-                vfile = rp.datadir+"v_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
-                //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-                //elfile = datadir+"el_"+filenums+".dat";
-                //System.out.println(ufile+" "+vfile+" "+elfile);
-                u = IOUtils.readFileDoubleArray(ufile,rp.recordsPerFile,rp.N*rp.depthLayers," ",true);
-                v = IOUtils.readFileDoubleArray(vfile,rp.recordsPerFile,rp.N*rp.depthLayers," ",true);
-                //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
-                //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
-                //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
-
-
-                // set an initial tide state
-                String tideState = "flood";
-
-                freeViableSettleExit = particleCounts(particles);
-                System.out.println("Free particles    = "+freeViableSettleExit[0]);
-                System.out.println("Viable particles  = "+freeViableSettleExit[1]);
-                System.out.println("Arrival count     = "+freeViableSettleExit[2]);
-                System.out.println("Boundary exits    = "+freeViableSettleExit[3]);
-
-                // default, run loop forwards
-                // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
-                for (int tt = 0; tt <= rp.recordsPerFile-2; tt++){
-                // alternatively, run loop backwards
-                //for (int tt = lasttime; tt >= firsttime; tt--)
+            numberOfExecutorThreads = 1;
+        }
+        System.out.println("Number of executor threads = "+numberOfExecutorThreads);
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfExecutorThreads);
+        
+        final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
                 
-                    //System.out.printf("--------- TIME %d ----------\n",tt);
-                    System.out.printf("%d ",tt+1);
+        try{
+            // --------------------------------------------------------------------------------------
+            // Start time loop
+            // --------------------------------------------------------------------------------------
 
-                    boolean debug = false;
-                    if (debug==true)
-                        {
-                            IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations_t"+tt+".out");
-                        }
-                    
+            //for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
+            for (int fnum = 0; fnum < numberOfDays; fnum++)
+            {
 
-                    // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
-                    for (int st = 0; st < rp.stepsPerStep; st++){
-                        
-                        pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
+                for (int dayQuarter = 1; dayQuarter <= 4; dayQuarter++)
+                // alternatively, run loop backwards
+                //for (int day = lastday; day >= firstday; day--)
+                {
+                    System.out.printf(currentIsoDate.getDateStr());
+                    long currTime = System.currentTimeMillis();    
+                    System.out.printf("\n------ Day %d (%s) - Quarter %d - Stepcount %d (%f hrs)  - Runtime %f s ------ \n", 
+                            fnum+1, currentIsoDate.getDateStr(), dayQuarter, stepcount, time, (currTime - startTime) / 1000.0);
+                    //System.out.printf("\nfile %d - time %fsecs (%fhrs) \n",fnum,stepcount*subStepDt*rp.stepsPerStep,time);
 
-                        //System.out.print(",");
-                        //System.out.println("nfreeparts = "+nfreeparts);
-                        
-                        // Parallel loop - DOESN'T WORK!
-//                        Parallel.For(particles, 
-//                            // The operation to perform with each item
-//                            new Parallel.Operation<Particle>() {
-//                                public void perform(Particle part) {
-//                                    System.out.println(part.getID()+" "+part.getLocation()[0]+" "+part.getLocation()[1]);
-//                                    move(part, time, tt, st, subStepDt, rp, ran, 
-//                                            u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
-//                                            startlocs, endlocs, open_BC_locs,
-//                                            freeViableSettleExit, searchCounts, pstepsMature, pstepsImmature, 
-//                                            particle_info, settle_density, minMaxDistTrav);
-//                                    
-//                                };
-//                            });
+                    // clear any old data
+                    //clear FVCOM1
+                    // load the new data file. this puts variables straight into the
+                    // workspace
+                    //int depthLayers = 10;       
+
+                    String ufile = "";
+                    String vfile = "";
+                    String elfile = "";
+
+                    double[][] u = new double[rp.recordsPerFile][rp.N*rp.depthLayers];
+                    double[][] v = new double[rp.recordsPerFile][rp.N*rp.depthLayers];
+                    //double[][] el = new double[recordsPerFile][N*depthLayers];
+                    //double[][] u1 = new double[recordsPerFile][N*depthLayers];
+                    //double[][] v1 = new double[recordsPerFile][N*depthLayers];
+                    //double[][] el1 = new double[recordsPerFile][N*depthLayers];
+
+                    //System.out.println("t=0 Reading t: "+filenums);
+                    //ufile = rp.datadir+"u_"+filenums+".dat";
+                    //vfile = rp.datadir+"v_"+filenums+".dat";
+                    // Use Mike's file reading method to avoid use of the filelist for reading in
+                    ufile = rp.datadir+"u_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
+                    vfile = rp.datadir+"v_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
+                    //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
+                    //elfile = datadir+"el_"+filenums+".dat";
+                    //System.out.println(ufile+" "+vfile+" "+elfile);
+                    u = IOUtils.readFileDoubleArray(ufile,rp.recordsPerFile,rp.N*rp.depthLayers," ",true);
+                    v = IOUtils.readFileDoubleArray(vfile,rp.recordsPerFile,rp.N*rp.depthLayers," ",true);
+                    //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
+                    //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
+                    //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
 
 
-                        // Normal serial loop
-                        for (int i = 0; i < nparts; i++){
-                        
-                            move(particles.get(i), time, tt, st, subStepDt, rp, 
-                                    u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
-                                    startlocs, endlocs, open_BC_locs,
-                                    searchCounts, 
-                                    particle_info, settle_density, minMaxDistTrav);
-                            
-                        }
-                    
-                        // --------------- End of particle loop ---------------------
-                        
-                        time+=subStepDt/3600.0;
+                    // set an initial tide state
+                    String tideState = "flood";
 
-                        // Dump particle locations to file at predfined times
-                        if (nDumps > 0)
-                        {
-                            for (int ot = 0; ot < dumptimes2.length; ot++)
+                    freeViableSettleExit = particleCounts(particles);
+                    System.out.println("Free particles    = "+freeViableSettleExit[0]);
+                    System.out.println("Viable particles  = "+freeViableSettleExit[1]);
+                    System.out.println("Arrival count     = "+freeViableSettleExit[2]);
+                    System.out.println("Boundary exits    = "+freeViableSettleExit[3]);
+
+                    // default, run loop forwards
+                    // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
+                    for (int tt = 0; tt <= rp.recordsPerFile-2; tt++){
+                    // alternatively, run loop backwards
+                    //for (int tt = lasttime; tt >= firsttime; tt--)
+
+                        //System.out.printf("--------- TIME %d ----------\n",tt);
+                        System.out.printf("%d ",tt+1);
+
+                        boolean debug = false;
+                        if (debug==true)
                             {
-                                if (time>dumptimes2[ot])
-                                {
-                                    System.out.println("Print particle locations to file "+ot+" "+dumptimes2[ot]+" hrs");
-                                    IOUtils.particleLocsToFile1(particles,"particlelocations_"+ot+".out",false);
-                                    for (int i = 0; i < particles.size(); i++)
-                                    {
-                                        pstepsInst[particles.get(i).getElem()][1]+=1;
-                                    }
-                                    IOUtils.writeDoubleArrayToFile(pstepsInst,"elementCounts_"+ot+".out");
-                                    // Once recorded, set this value to be greater than simulation length
-                                    dumptimes2[ot] = simLengthHours*2;
-                                    
+                                IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations_t"+tt+".out");
+                            }
+
+
+                        // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
+                        for (int st = 0; st < rp.stepsPerStep; st++){
+
+                            pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
+
+                            //System.out.print(",");
+                            //System.out.println("nfreeparts = "+nfreeparts);
+
+                            if (rp.parallel==true)
+                            {
+                                callables.add(new ParallelParticleMover(particles, time, tt, st, subStepDt, rp, 
+                                            u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
+                                            startlocs, endlocs, open_BC_locs,
+                                            searchCounts, 
+                                            particle_info, settle_density, minMaxDistTrav));
+                                CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<>(executorService);
+                                for (Callable<List<Particle>> callable : callables) {
+                                    executorCompletionService.submit(callable);
+                                }
+                                callables.clear();
+                            }
+                            else
+                            {
+                                // Normal serial loop
+                                for (Particle part : particles){
+                                    // Can just use the move method that was shipped out to the ParallelParticleMover class
+                                    ParallelParticleMover.move(part, time, tt, st, subStepDt, rp, 
+                                            u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
+                                            startlocs, endlocs, open_BC_locs,
+                                            searchCounts, 
+                                            particle_info, settle_density, minMaxDistTrav);
+
                                 }
                             }
-                        }                    
-                        // end of particle loop
-                        calcCount++;
-                    }
-                    for (int i=0; i < particles.size(); i++)
-                    {
-                        particles.get(i).setSettledThisHour(false);
-                    }
-                    printCount++;
-                    // Append particle locations for first nSites for plotting trajectories
-                    IOUtils.particleLocsToFile(particles,startlocs.length*nTracksSavedPerSite,printCount,"particlelocations_all"+rp.suffix+".out");
-                    stepcount++;
-                }
-                System.out.printf("\n");
-            }
-            currentIsoDate.addDay();
-        }
-        System.out.printf("\nelement search counts: %d %d %d %d %d\n",searchCounts[0],searchCounts[1],searchCounts[2],searchCounts[3],searchCounts[4]);
-        System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
 
-        IOUtils.writeDoubleArrayToFile(pstepsImmature,"pstepsImmature"+rp.suffix+".out");
-        IOUtils.writeDoubleArrayToFile(pstepsMature,"pstepsMature"+rp.suffix+".out");
-        IOUtils.writeIntegerArrayToFile(particle_info,"particle_info"+rp.suffix+".out");
-        IOUtils.writeDoubleArrayToFile(settle_density,"settle_density"+rp.suffix+".out");
-        //IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
-        //IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
-        //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
-        IOUtils.particleLocsToFile1(particles,"particlelocations_end"+rp.suffix+".out",false);
+                            // --------------- End of particle loop ---------------------
+
+                            time+=subStepDt/3600.0;
+
+                            // Dump particle locations to file at predfined times
+                            if (nDumps > 0)
+                            {
+                                for (int ot = 0; ot < dumptimes2.length; ot++)
+                                {
+                                    if (time>dumptimes2[ot])
+                                    {
+                                        System.out.println("Print particle locations to file "+ot+" "+dumptimes2[ot]+" hrs");
+                                        IOUtils.particleLocsToFile1(particles,"particlelocations_"+ot+".out",false);
+                                        for (int i = 0; i < particles.size(); i++)
+                                        {
+                                            pstepsInst[particles.get(i).getElem()][1]+=1;
+                                        }
+                                        IOUtils.writeDoubleArrayToFile(pstepsInst,"elementCounts_"+ot+".out");
+                                        // Once recorded, set this value to be greater than simulation length
+                                        dumptimes2[ot] = simLengthHours*2;
+
+                                    }
+                                }
+                            }                    
+                            // end of particle loop
+                            calcCount++;
+                        }
+                        for (int i=0; i < particles.size(); i++)
+                        {
+                            particles.get(i).setSettledThisHour(false);
+                        }
+                        printCount++;
+                        // Append particle locations for first nSites for plotting trajectories
+                        IOUtils.particleLocsToFile(particles,startlocs.length*nTracksSavedPerSite,printCount,"particlelocations_all"+rp.suffix+".out");
+                        stepcount++;
+                    }
+                    System.out.printf("\n");
+                }
+                currentIsoDate.addDay();
+            }
+            System.out.printf("\nelement search counts: %d %d %d %d %d\n",searchCounts[0],searchCounts[1],searchCounts[2],searchCounts[3],searchCounts[4]);
+            System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
+
+            IOUtils.writeDoubleArrayToFile(pstepsImmature,"pstepsImmature"+rp.suffix+".out");
+            IOUtils.writeDoubleArrayToFile(pstepsMature,"pstepsMature"+rp.suffix+".out");
+            IOUtils.writeIntegerArrayToFile(particle_info,"particle_info"+rp.suffix+".out");
+            IOUtils.writeDoubleArrayToFile(settle_density,"settle_density"+rp.suffix+".out");
+            //IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
+            //IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
+            //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
+            IOUtils.particleLocsToFile1(particles,"particlelocations_end"+rp.suffix+".out",false);
+
+            executorService.shutdownNow();
+        } finally {
+            executorService.shutdownNow();     
+        }
         
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = "+(endTime-startTime)/1000.0);
     }
     
+  
     /**
-     * Method to do the movement for a single particle; this allows parallel operation
+     * Count the number of particles in different states (free, viable, settled, exited domain)
      * 
-     * @param part
-     * @param time
-     * @param tt
-     * @param st
-     * @param subStepDt
-     * @param rp
-     * @param ran
-     * @param u
-     * @param v
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
-     * @param bathymetry
-     * @param sigvec2
-     * @param startlocs
-     * @param endlocs
-     * @param open_BC_locs
-     * @param freeViableSettleExit
-     * @param searchCounts
-     * @param pstepsMature
-     * @param pstepsImmature
-     * @param particle_info
-     * @param settle_density
-     * @param minMaxDistTrav 
+     * @param parts
+     * @return 
      */
-    public static void move(Particle part, double time, int tt, int st, double subStepDt,
-            RunProperties rp, 
-            double[][] u, double[][] v,
-            int[][] neighbours, double[][] uvnode,  double[][] nodexy, 
-            int[][] trinodes, int[] allelems,
-            double[][] bathymetry, double[] sigvec2, double[][] startlocs,
-            double[][] endlocs, double[][] open_BC_locs,
-            int[] searchCounts,
-            int[][] particle_info, double[][] settle_density,
-            double[] minMaxDistTrav)
-    {
-        // Set particles free once they pass thier defined release time (hours)
-        if (part.getFree()==false)
-        {
-            if (time > part.getReleaseTime())
-            {
-                part.setFree(true);
-                //System.out.println("Particle "+i+" released from "+particles[i].getLocation()[0]+" "+particles[i].getLocation()[1]+" at t="+time);
-                // This is updated by many threads - calculation now done outside of move
-                //freeViableSettleExit[0]++;
-            }
-        }
-        if (part.getFree()==true && part.getArrived()==false && part.getBoundaryExit()==false)
-        {    
-            
-            part.increaseAge(subStepDt/3600.0); // particle age in hours
-            //System.out.printf("PARTICLE %d \n",i);
-            
-            //System.out.println("particle able to move");
-            int elemPart = part.getElem();
-            //System.out.printf("%d\n",elemPart);
-            // set and get the DEPTH layer for the particle based on tide state
-//                            if (tt>0)
-//                            {
-//                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
-//                                {
-//                                    particles[i].setDepthLayer(behaviour,"flood");
-//                                } else {
-//                                    particles[i].setDepthLayer(behaviour,"ebb");
-//                                }
-//                            }
-            // set depth layer based on fixed depth in metres
-            part.setLayerFromDepth(bathymetry[elemPart][0],sigvec2);
-
-            // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
-            // This is stored at NODES as opposed to ELEMENT CENTROIDS.
-            // So need to get the value from each of the corners and calculate 
-            // a value at the particle location (similar method to getting velocity from nearest centroids).
-            if (st == 0)
-            {
-                double salinity = 0;
-                double mort = 0;
-//                                if (calcMort == true)
-//                                {
-//                                    salinity = particles[i].salinity(tt,sal,trinodes);
-//                                    particles[i].setMortRate(salinity);
-//                                }
-                part.setDensity();
-            }
-
-            double advectStep[] = new double[2];
-//                            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
-//                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
-            if (rp.rk4==true)
-            {
-                advectStep = part.rk4Step(u, v, 
-                    neighbours, uvnode,  nodexy, trinodes, allelems,
-                    tt, st, subStepDt, rp.stepsPerStep, rp.depthLayers);   
-            }
-            else
-            {
-                System.err.println("Euler step not calculated --- edit method to work with 7 row velocities");
-//                                    advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
-//                                        tt, st, subStepDt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
-//                                        spatialInterpolate, timeInterpolate);
-            }
-
-            // Reverse velocities if running backwards
-            if (rp.backwards == true)
-            {
-                advectStep[0] = -advectStep[0];
-                advectStep[1] = -advectStep[1];
-            }
-
-            // 3. Calculate diffusion (random walk step)
-//                            if (variableDiff==true)
-//                            {
-//                                D_h=1000*viscofm[tt][elemPart*10+dep];
-//                            }
-
-            //rand('twister',sum(100*clock)); %resets it to a different state each time.
-            double diff_X = Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
-            double diff_Y = Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
-            double[] behave_uv = part.behaveVelocity(rp.behaviour);
-            
-            //double ran1 = 2.0*ran.raw()-1.0;
-            //double ran2 = 2.0*ran.raw()-1.0;
-            // Use in-built RNG that is intented for multithread conecurrent use. Also saves importing anything.
-            double ran1 = ThreadLocalRandom.current().nextDouble(-1.0,1.0);
-            double ran2 = ThreadLocalRandom.current().nextDouble(-1.0,1.0);
-            //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-            //System.out.println("Distances travelled: X "+subStepDt*water_U+" "+diff_X*ran1+" Y "+subStepDt*water_U+" "+diff_Y*ran2);
-
-            // 4. update particle location
-            double newlocx=part.getLocation()[0]+advectStep[0]+subStepDt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
-            double newlocy=part.getLocation()[1]+advectStep[1]+subStepDt*behave_uv[1]+diff_Y*ran2;
-
-            //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
-
-            // find element containing particle and update seach counts for diagnosis
-            int[] c = part.findContainingElement(newlocx, newlocy, elemPart, 
-                    nodexy, trinodes, neighbours, allelems);
-            int whereami = c[0];
-            for (int j = 0; j < 4; j++)
-            {
-                //moveStats[j+4] = c[j];
-                searchCounts[j] += c[j+1];
-            }
-            
-            // if particle is within the mesh, update location normally and save the distance travelled
-            double distTrav = 0;
-            if (whereami != -1)
-            {
-                distTrav = Math.sqrt((part.getLocation()[0]-newlocx)*(part.getLocation()[0]-newlocx)+
-                        (part.getLocation()[1]-newlocy)*(part.getLocation()[1]-newlocy));
-                part.setLocation(newlocx,newlocy);
-                part.setElem(whereami);
-                //System.out.printf("** MOVED **, new elem = %d (dist = %f)\n",particles[i].getElem(),Math.sqrt((newlocx-uvnode[particles[i].getElem()][0])*(newlocx-uvnode[particles[i].getElem()][0])+(newlocy-uvnode[particles[i].getElem()][1])*(newlocy-uvnode[particles[i].getElem()][1])));
-            }
-            // What's done here is probably not thread-safe; but it's not critical to operation.
-            // Maybe save particle own min/max travel distances and calculate overall at end?
-            if (distTrav>minMaxDistTrav[1])
-            {
-                minMaxDistTrav[1]=distTrav;
-            }
-            if (distTrav<minMaxDistTrav[0])
-            {
-                minMaxDistTrav[0]=distTrav;
-            }
-
-            // if particle has skipped out of the model domain, place it at the nearest element centroid
-            if (whereami == -1)
-            {
-                int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],uvnode);
-                //fprintf('x%d',closest);
-                part.setLocation(uvnode[closest][0],uvnode[closest][1]);
-                part.setElem(closest);
-            }
-
-            // set particle to become able to settle after a predefined time
-            if (part.getAge()>rp.viabletime && part.getViable()==false)
-            {
-                //System.out.println("Particle became viable");                                  
-                part.setViable(true);
-                // This is updated by many threads - calculation now done outside of move
-                //freeViableSettleExit[1]++;
-            }
-
-            
-
-            // check whether the particle has gone within a certain range of one of the boundary nodes
-            // (make it settle there, even if it is inviable)
-            for (int loc = 0; loc < open_BC_locs.length; loc++)
-                {
-                    double dist = Math.sqrt((part.getLocation()[0]-open_BC_locs[loc][1])*(part.getLocation()[0]-open_BC_locs[loc][1])+
-                            (part.getLocation()[1]-open_BC_locs[loc][2])*(part.getLocation()[1]-open_BC_locs[loc][2]));
-                    if (dist < 1500)
-                    {
-                        //System.out.printf("Boundary stop: %d at %d\n",i,loc);
-                        //part.setArrived(true);
-                        part.setBoundaryExit(true);
-                        // elements of particle_info are only updated once by a single thread
-                        particle_info[part.getID()][1] = -loc;//(int)startlocs[loc][0];
-                        particle_info[part.getID()][2] = (int)part.getAge();//((day-firstday)*24+tt);
-                        // This is updated by many threads - calculation now done outside of move
-                        //freeViableSettleExit[3]++;
-                        break;
-
-                    }
-                }
-
-            // if able to settle, is it close to a possible settlement
-            // location?
-            //System.out.println("Patricle age = "+particles.get(i).getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles.get(i).getViable());
-            if (part.getViable()==true)
-            {
-                //System.out.println(particles[i].getViable());
-
-                for (int loc = 0; loc < endlocs.length; loc++)
-                {
-                    double dist = Math.sqrt((part.getLocation()[0]-endlocs[loc][1])*(part.getLocation()[0]-endlocs[loc][1])+
-                            (part.getLocation()[1]-endlocs[loc][2])*(part.getLocation()[1]-endlocs[loc][2]));
-                    if (dist < rp.thresh && part.getSettledThisHour()==false)
-                    {
-                        //System.out.printf("settlement: %d at %d\n",i,loc);
-                        if (rp.endOnArrival==true)
-                        {
-                            part.setArrived(true);
-                        }
-                        // elements of particle_info and settle_density are only updated once by a single thread
-                        particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
-                        particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
-                        settle_density[part.getID()][0] = part.getDensity();
-                        // This is updated by many threads - calculation now done outside of move                        
-                        //freeViableSettleExit[2]++;
-                        part.setSettledThisHour(true);
-                        break;
-                    }
-                }    
-            }            
-        }
-    }
-    
-    
     public static int[] particleCounts(List<Particle> parts)
     {
         int freeViableSettleExit[] = new int[4];
@@ -771,7 +542,15 @@ public class Particle_track {
         return freeViableSettleExit;
     }
     
-    // Make additions to the element presence counts (PSTEPS)
+    /**
+     * Make additions to the element presence counts (PSTEPS)
+     * 
+     * @param particles
+     * @param rp
+     * @param pstepsMature
+     * @param pstepsImmature
+     * @param subStepDt 
+     */
     public static void pstepUpdater(List<Particle> particles, RunProperties rp, 
             double[][] pstepsMature, double[][] pstepsImmature, double subStepDt)
     {
@@ -811,7 +590,12 @@ public class Particle_track {
         }
     }
     
-    // work out the date from an integer in format YYYYMMDD - Mike Bedington method
+    /**
+     * work out the date from an integer in format YYYYMMDD - Mike Bedington method
+     * 
+     * @param ymd
+     * @return 
+     */
     public static int[] dateIntParse(int ymd) {
         double start_ymd_mod = (double)(ymd);
         int startYear = (int)Math.floor(start_ymd_mod/10000);

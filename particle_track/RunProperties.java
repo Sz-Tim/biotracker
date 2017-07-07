@@ -43,6 +43,8 @@ public class RunProperties {
     // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true)
     boolean pstepsIncMort = true;
     
+    boolean parallel = false;
+    
     int releaseScenario = 5; // Instantaneous/continuous/etc release - see switch statement in main method
     int nparts=100; // Number of particles released per site
 
@@ -184,6 +186,8 @@ public class RunProperties {
         setDepth = Boolean.parseBoolean(properties.getProperty("setDepth"));
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps"));
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort"));
+        
+        parallel = Boolean.parseBoolean(properties.getProperty("parallel"));
     
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario"));
         nparts = Integer.parseInt(properties.getProperty("nparts"));
