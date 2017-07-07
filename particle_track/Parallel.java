@@ -72,7 +72,7 @@ public class Parallel {
 
 // Basic process given on
 // https://stackoverflow.com/questions/4010185/parallel-for-for-java
-//    ExecutorService exec = Executors.newFixedThreadPool(SOME_NUM_OF_THREADS);
+//    ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 //try {
 //    for (final Object o : list) {
 //        exec.submit(new Runnable() {

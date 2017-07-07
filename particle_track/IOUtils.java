@@ -598,12 +598,12 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    public static void particleLocsToFile1(List<Particle> particles, String filename)
+    public static void particleLocsToFile1(List<Particle> particles, String filename, boolean append)
     {
         try
         {
             // Create file 
-            FileWriter fstream = new FileWriter(filename,true);
+            FileWriter fstream = new FileWriter(filename,append);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.size(); i++)
             {

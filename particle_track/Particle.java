@@ -10,10 +10,10 @@ package particle_track;
  */
 public class Particle {
     
-    private int id;
+    final private int id;
     // horizontal position
     private double[] xy = new double[2];
-    private double[] startLoc = new double[2];
+    final private double[] startLoc = new double[2];
     private int startSiteID = 0;
     private int elem;
     private double[][] nrList = new double[5][2];
@@ -31,6 +31,7 @@ public class Particle {
     private boolean viable = false;
     private boolean free = false;
     private boolean settledThisHour = false;
+    private boolean boundaryExit = false;
     
     // create a new particle at a defined location, at the water surface
     public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate)
@@ -237,6 +238,10 @@ public class Particle {
     {
         this.free = free;
     } 
+    public void setBoundaryExit(boolean exit)
+    {
+        this.boundaryExit = exit;
+    }
     public boolean getViable()
     {
         return this.viable;
@@ -253,7 +258,10 @@ public class Particle {
     {
         return this.free;
     }
-    
+    public boolean getBoundaryExit()
+    {
+        return this.boundaryExit;
+    }    
     public double[] behaveVelocity(int behaviour)
     {
         double[] uv = new double[2];
