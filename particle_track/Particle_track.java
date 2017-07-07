@@ -342,7 +342,8 @@ public class Particle_track {
         System.out.println("Number of executor threads = "+numberOfExecutorThreads);
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfExecutorThreads);
         
-        final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
+        //final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
+        final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>> ();
                 
         try{
             // --------------------------------------------------------------------------------------
@@ -436,7 +437,7 @@ public class Particle_track {
                                             startlocs, endlocs, open_BC_locs,
                                             searchCounts, 
                                             particle_info, settle_density, minMaxDistTrav));
-                                CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<>(executorService);
+                                CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<List<Particle>>(executorService);
                                 for (Callable<List<Particle>> callable : callables) {
                                     executorCompletionService.submit(callable);
                                 }
