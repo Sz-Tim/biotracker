@@ -400,6 +400,7 @@ public class Particle_track {
                     // set an initial tide state
                     String tideState = "flood";
 
+                    // COUNT the number of particles in different states
                     freeViableSettleExit = particleCounts(particles);
                     System.out.println("Free particles    = "+freeViableSettleExit[0]);
                     System.out.println("Viable particles  = "+freeViableSettleExit[1]);
@@ -425,13 +426,16 @@ public class Particle_track {
                         // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
                         for (int st = 0; st < rp.stepsPerStep; st++){
 
+                            // Update the element count arrays
                             pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
 
                             //System.out.print(",");
                             //System.out.println("nfreeparts = "+nfreeparts);
 
+                            // MOVE the particles
                             if (rp.parallel==true)
                             {
+                                
                                 callables.add(new ParallelParticleMover(particles, time, tt, st, subStepDt, rp, 
                                             u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
                                             startlocs, endlocs, open_BC_locs,
