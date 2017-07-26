@@ -82,6 +82,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
+            //System.out.println("Time "+time+" - Moving particle "+part.getID());
             move(part, time, tt, st, subStepDt, rp, 
                                     u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
                                     startlocs, endlocs, open_BC_locs,
