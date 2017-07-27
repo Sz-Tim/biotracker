@@ -313,7 +313,8 @@ public class Particle_track {
         //numberOfExecutorThreads = 1;
         System.out.println("Number of executor threads = " + numberOfExecutorThreads);
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfExecutorThreads);
-
+        CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<List<Particle>>(executorService);                           
+        
         //final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
@@ -381,7 +382,7 @@ public class Particle_track {
                         // alternatively, run loop backwards
                         //for (int tt = lasttime; tt >= firsttime; tt--)
 
-                        System.out.printf("--------- TIME %d ----------\n",tt+1);
+                        System.out.printf("--------- HOUR %d ----------\n",tt+1);
                         //System.out.printf("%d \n", tt + 1);
 
                         boolean debug = false;
@@ -418,22 +419,13 @@ public class Particle_track {
                                             particle_info, settle_density, minMaxDistTrav));
                                     
                                 }
-                                for (int i = 0; i < numberOfExecutorThreads; i++) {
-                                    CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<List<Particle>>(executorService);
-                                    // When I look at this and the code above, it looks to me like:
-                                    // 1. callables consists of nExecutorThreads lists of ParallelParticleMovers (each of which contains an Arraylist sublist)
-                                    // 2. all of these callables are submitted for each executor thread; i.e. the action is repeated nExecutorThreads times
-                                    // 3. we do not shift to the next ExecutorThread until all the callables (i.e. every sublist/Mover) have returned their new value (the ArrayList sublist of updated particles)
-                                    // So it looks as though the callables are not being passed to separate ExecutorServices, and/or
-                                    // work is duplicated on each executorService (so particles would all move e.g. 8 times per step)
-                                    for (Callable<List<Particle>> callable : callables) {
-                                        executorCompletionService.submit(callable);
-                                    }
-                                    for (Callable<List<Particle>> callable : callables) {
-                                        executorCompletionService.take().get();
-                                    }
-                                    callables.clear();
+                                for (Callable<List<Particle>> callable : callables) {
+                                    executorCompletionService.submit(callable);
                                 }
+                                for (Callable<List<Particle>> callable : callables) {
+                                    executorCompletionService.take().get();
+                                }
+                                callables.clear();
                             } else {
                                 // Normal serial loop
                                 for (Particle part : particles) {
