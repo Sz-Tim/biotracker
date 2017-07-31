@@ -73,7 +73,7 @@ public class Particle_track {
         System.out.printf("Habitat            = %s\n", rp.habitat);
         System.out.printf("N_parts/site       = %d\n", rp.nparts);
         System.out.printf("hydromod dt (s)    = %f\n", rp.dt);
-        System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile + 1);
+        System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile);
         System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
         System.out.printf("firstfile          = %d\n", rp.start_ymd);
         System.out.printf("lastfile           = %d\n", rp.end_ymd);
@@ -85,7 +85,7 @@ public class Particle_track {
         System.out.printf("Viable time (h)    = %f\n", rp.viabletime);
         System.out.printf("Viable time (d)    = %f\n", rp.viabletime / 24.0);
         System.out.printf("Threshold distance = %d\n", rp.thresh);
-        System.out.printf("Diffusion          = %f\n", rp.D_h);
+        System.out.printf("Diffusion D_h      = %f (diffusion: %s)\n", rp.D_h, rp.diffusion);
         System.out.printf("-----------------------------------------------------------\n");
 
         // --------------------------------------------------------------------------------------

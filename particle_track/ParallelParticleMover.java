@@ -210,23 +210,22 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                                D_h=1000*viscofm[tt][elemPart*10+dep];
 //                            }
 
-            //rand('twister',sum(100*clock)); %resets it to a different state each time.
-            double diff_X = Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
-            double diff_Y = Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
+            double diff_X = 0;
+            double diff_Y = 0;
+            if (rp.diffusion==true)
+            {
+                // Use in-built RNG that is intented for multithread concurrent use. Also saves importing anything.
+                diff_X = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
+                diff_Y = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
+            }
             double[] behave_uv = part.behaveVelocity(rp.behaviour);
-            
-            //double ran1 = 2.0*ran.raw()-1.0;
-            //double ran2 = 2.0*ran.raw()-1.0;
-            // Use in-built RNG that is intented for multithread conecurrent use. Also saves importing anything.
-            double ran1 = ThreadLocalRandom.current().nextDouble(-1.0,1.0);
-            double ran2 = ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+
             //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
             //System.out.println("Distances travelled: X "+subStepDt*water_U+" "+diff_X*ran1+" Y "+subStepDt*water_U+" "+diff_Y*ran2);
 
             // 4. update particle location
-            double newlocx=part.getLocation()[0]+advectStep[0]+subStepDt*behave_uv[0]+diff_X*ran1; // simplest possible "Euler"
-            double newlocy=part.getLocation()[1]+advectStep[1]+subStepDt*behave_uv[1]+diff_Y*ran2;
-
+            double newlocx=part.getLocation()[0]+advectStep[0]+subStepDt*behave_uv[0]+diff_X; // simplest possible "Euler"
+            double newlocy=part.getLocation()[1]+advectStep[1]+subStepDt*behave_uv[1]+diff_Y;
             //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
 
             // find element containing particle and update seach counts for diagnosis
