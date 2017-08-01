@@ -7,6 +7,8 @@ package particle_track;
 
 import java.io.*;
 import java.util.Properties;
+import static particle_track.Particle_track.dateIntParse;
+
 /**
  *
  * @author sa01ta
@@ -23,6 +25,7 @@ public class RunProperties {
     
     int start_ymd = 20150101;
     int end_ymd = 20150121;
+    int numberOfDays = 0;
         
     boolean backwards = false;
     boolean timeInterpolate = true;
@@ -71,6 +74,7 @@ public class RunProperties {
     int M = 46878; // Number of mesh nodes
     
     // default constructor for lack of property file
+    // NOT TESTED SINCE CODE REVISED.......
     public RunProperties(String[] args)
     {
         if (args.length == 6 || args.length == 7 || args.length == 8)
@@ -163,7 +167,21 @@ public class RunProperties {
         suffix = properties.getProperty("suffix");     
         
         start_ymd = Integer.parseInt(properties.getProperty("start_ymd"));
-        end_ymd = Integer.parseInt(properties.getProperty("end_ymd"));
+        numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays"));
+        if (numberOfDays>0)
+        {
+            int[] startDate = dateIntParse(start_ymd);
+            ISO_datestr tempIsoDate = new ISO_datestr(startDate[0], startDate[1], startDate[2]);
+            for (int i = 1; i < numberOfDays; i++)
+            {
+                tempIsoDate.addDay();
+            }
+            end_ymd = Integer.parseInt(tempIsoDate.getDateStr());
+        }
+        else
+        {
+            end_ymd = Integer.parseInt(properties.getProperty("end_ymd"));
+        }
         if (end_ymd<start_ymd)
         {
             System.err.println("End date before start date!");

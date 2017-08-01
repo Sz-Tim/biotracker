@@ -17,7 +17,7 @@ public class ISO_datestr {
     private int month;
     private int year;
     private int[][] monthDays = new int[][]{{1,31},{2,28},{3,31},{4,30},{5,31},{6,30},{7,31},{8,31},{9,30},{10,31},{11,30},{12,31}};
-    private final int[] leapYears = new int[]{1992,1996,2000,2004,2008,2012,2016,2020};
+    private final int[] leapYears = new int[]{1992,1996,2000,2004,2008,2012,2016,2020,2024,2028,2032};
     
 public ISO_datestr(int inDay, int inMonth, int inYear)
 {
