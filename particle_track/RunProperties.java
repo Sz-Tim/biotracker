@@ -70,6 +70,7 @@ public class RunProperties {
         
     double diffusionMultiplier = 1;
     double mortalityRate = 0.01;
+    double maxParticleAge = -1; // Maximum age for particles. Set to <=0 and it will be ignored.
     
     int N = 79244; // Number of mesh element centroids
     int M = 46878; // Number of mesh nodes
@@ -229,6 +230,7 @@ public class RunProperties {
         D_h = Double.parseDouble(properties.getProperty("D_h"));
         diffusionMultiplier = Double.parseDouble(properties.getProperty("diffusionMultiplier"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate"));
+        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge"));
         
         N = Integer.parseInt(properties.getProperty("N"));
         M = Integer.parseInt(properties.getProperty("M"));

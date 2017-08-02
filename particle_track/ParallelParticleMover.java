@@ -277,7 +277,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 //freeViableSettleExit[1]++;
             }
 
-            
+            // Stop particles in their tracks if they exceed a maximum age
+            if (part.getAge()>rp.maxParticleAge && rp.maxParticleAge > 0)
+            {
+                part.setFree(false);
+            }
 
             // check whether the particle has gone within a certain range of one of the boundary nodes
             // (make it settle there, even if it is inviable)
