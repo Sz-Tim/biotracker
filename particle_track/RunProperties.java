@@ -47,6 +47,7 @@ public class RunProperties {
     boolean pstepsIncMort = true;
     
     boolean parallel = false;
+    boolean all_locs_out = true;
     
     int releaseScenario = 5; // Instantaneous/continuous/etc release - see switch statement in main method
     int nparts=100; // Number of particles released per site
@@ -206,6 +207,8 @@ public class RunProperties {
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel"));
+        
+        all_locs_out = Boolean.parseBoolean(properties.getProperty("all_locs_out"));
     
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario"));
         nparts = Integer.parseInt(properties.getProperty("nparts"));

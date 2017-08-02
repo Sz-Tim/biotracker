@@ -466,7 +466,14 @@ public class Particle_track {
                         }
                         printCount++;
                         // Append particle locations for first nSites for plotting trajectories
-                        IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
+                        if (rp.all_locs_out==true)
+                        {
+                            IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
+                        }
+                        else
+                        {
+                            IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
+                        }
                         stepcount++;
                     }
                     System.out.printf("\n");
