@@ -205,6 +205,7 @@ public class RunProperties {
         tidalRelease = Boolean.parseBoolean(properties.getProperty("tidalRelease"));
         setDepth = Boolean.parseBoolean(properties.getProperty("setDepth"));
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps"));
+        
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel"));

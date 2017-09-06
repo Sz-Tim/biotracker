@@ -45,6 +45,41 @@ public class Particle {
         this.mortRate = mortalityRate;
     }
 
+    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
+    {
+        switch (releaseScenario) {
+            // integer to switch release scenario
+            // 0 all at time zero
+            // 1 tidal release (evenly over first 24 hours)
+            // 2 continuous release (1 per hour per site)
+            // 3 continuous release (5 per hour per site)
+            // 4 continuous release (10 per hour per site)
+            // 5 continuous release (20 per hour per site)
+            // 10 defined release times
+            case 0:
+                this.setReleaseTime(0);
+                break;
+            case 1:
+                this.setReleaseTime((this.id / startlocs.length) % 25);
+                break;
+            case 2:
+                this.setReleaseTime(Math.floor(this.id / startlocs.length));
+                break;
+            case 3:
+                this.setReleaseTime(Math.floor(this.id / (5 * startlocs.length)));
+                break;
+            case 4:
+                this.setReleaseTime(Math.floor(this.id / (10 * startlocs.length)));
+                break;
+            case 5:
+                this.setReleaseTime(Math.floor(this.id / (20 * startlocs.length)));
+                break;
+            case 10:
+                this.setReleaseTime(startlocs[this.id][3]);
+                break;
+        }
+    }
+    
     public void setReleaseTime(double releaseTime)
     {
         this.releaseTime = releaseTime;

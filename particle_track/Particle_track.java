@@ -199,38 +199,9 @@ public class Particle_track {
             particle_info[i][0] = startid[i];//(int)startlocs[startid[i]][0];
             particles.get(i).setElem(startElem[i]);
             // if information provided, set release time
-            switch (rp.releaseScenario) {
-                // integer to switch release scenario
-                // 0 all at time zero
-                // 1 tidal release (evenly over first 24 hours)
-                // 2 continuous release (1 per hour per site)
-                // 3 continuous release (5 per hour per site)
-                // 4 continuous release (10 per hour per site)
-                // 5 continuous release (20 per hour per site)
-                // 10 defined release times
-                case 0:
-                    particles.get(i).setReleaseTime(0);
-                    break;
-                case 1:
-                    particles.get(i).setReleaseTime((i / startlocs.length) % 25);
-                    break;
-                case 2:
-                    particles.get(i).setReleaseTime(Math.floor(i / startlocs.length));
-                    break;
-                case 3:
-                    particles.get(i).setReleaseTime(Math.floor(i / (5 * startlocs.length)));
-                    break;
-                case 4:
-                    particles.get(i).setReleaseTime(Math.floor(i / (10 * startlocs.length)));
-                    break;
-                case 5:
-                    particles.get(i).setReleaseTime(Math.floor(i / (20 * startlocs.length)));
-                    break;
-                case 10:
-                    particles.get(i).setReleaseTime(startlocs[startid[i]][3]);
-                    break;
-            }
-            //System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
+            particles.get(i).setReleaseScenario(rp.releaseScenario, startlocs);
+                        
+            System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
             // If provided, set particle depth
             if (startlocs[startid[i]].length > 4 && rp.setDepth == true) {
                 particles.get(i).setZ(startlocs[startid[i]][4]);
@@ -243,30 +214,18 @@ public class Particle_track {
         // Particle data arrays for model output
         // --------------------------------------------------------------------------------------
         // an array to save the number of "particle-timesteps" in each cell
-        double[][] pstepsImmature = new double[rp.N][2];
-        double[][] pstepsMature = new double[rp.N][2];
-        double[][] pstepsInst = new double[rp.N][2];
-        if (rp.splitPsteps == false) {
-            for (int i = 0; i < rp.N; i++) {
-                pstepsImmature[i][0] = i;
-                pstepsMature[i][0] = i;
-                pstepsInst[i][0] = i;
-            }
-        } else if (rp.splitPsteps == true) {
-            pstepsImmature = new double[rp.N][startlocs.length + 1];
-            pstepsMature = new double[rp.N][startlocs.length + 1];
-            pstepsInst = new double[rp.N][startlocs.length + 1];
-
-            for (int i = 0; i < rp.N; i++) {
-                pstepsImmature[i][0] = i;
-                pstepsMature[i][0] = i;
-                pstepsInst[i][0] = i;
-                for (int j = 1; j < startlocs.length + 1; j++) {
-                    pstepsImmature[i][j] = 0;
-                    pstepsMature[i][j] = 0;
-                    pstepsInst[i][j] = 0;
-                }
-            }
+        // default case (non-split): two columns
+        int pstepCols = 2; 
+        // Alternatively, make a column for each source site
+        if (rp.splitPsteps == true){
+            pstepCols = startlocs.length + 1;            
+        }
+        
+        double[][] pstepsImmature = new double[rp.N][pstepCols];
+        double[][] pstepsMature = new double[rp.N][pstepCols];
+        for (int i = 0; i < rp.N; i++) {
+            pstepsImmature[i][0] = i;
+            pstepsMature[i][0] = i;
         }
 
         // --------------------------------------------------------------------------------------
@@ -448,10 +407,12 @@ public class Particle_track {
                                     if (time > dumptimes2[ot]) {
                                         System.out.println("Print particle locations to file " + ot + " " + dumptimes2[ot] + " hrs");
                                         IOUtils.particleLocsToFile1(particles, "particlelocations_" + ot + ".out", false);
-                                        for (int i = 0; i < particles.size(); i++) {
-                                            pstepsInst[particles.get(i).getElem()][1] += 1;
-                                        }
-                                        IOUtils.writeDoubleArrayToFile(pstepsInst, "elementCounts_" + ot + ".out");
+                                        
+                                        double[][] pstepsInstImmature = pstepImmatureSnapshot(particles, rp, startlocs.length);
+                                        double[][] pstepsInstMature = pstepMatureSnapshot(particles, rp, startlocs.length);
+                                        IOUtils.writeDoubleArrayToFile(pstepsInstImmature, "elementCountsImmature_" + ot + ".out");
+                                        IOUtils.writeDoubleArrayToFile(pstepsInstMature, "elementCountsMature_" + ot + ".out");
+
                                         // Once recorded, set this value to be greater than simulation length
                                         dumptimes2[ot] = simLengthHours * 2;
 
@@ -559,6 +520,81 @@ public class Particle_track {
             }
         }
     }
+    
+    /**
+     * Take a snapshot of the number of mature particles in each cell
+     * @param particles
+     * @param rp
+     * @param nSourceSites
+     * @return 
+     */
+    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
+            int nSourceSites) {   
+        int pstepCols = 2; 
+        // Alternatively, make a column for each source site
+        if (rp.splitPsteps == true){
+            pstepCols = nSourceSites + 1;            
+        }
+        double[][] pstepsInstMature = new double[rp.N][pstepCols];
+        for (int i = 0; i < rp.N; i++) {
+            pstepsInstMature[i][0] = i;
+        }
+        
+        for (Particle p : particles) {
+            if (p.getViable() == true) {
+                double d = 1;
+                if (rp.pstepsIncMort == true) {
+                    d = p.getDensity();
+                }
+                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+                int elemPart = p.getElem();
+                if (rp.splitPsteps == false) {
+                    pstepsInstMature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+                } else {
+                    pstepsInstMature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+                }
+            }
+        }
+        return pstepsInstMature;
+    } 
+    /**
+     * Take a snapshot of the number of immature particles in each cell
+     * @param particles
+     * @param rp
+     * @param nSourceSites
+     * @return 
+     */
+    public static double[][] pstepImmatureSnapshot(List<Particle> particles, RunProperties rp,
+            int nSourceSites) {   
+        int pstepCols = 2; 
+        // Alternatively, make a column for each source site
+        if (rp.splitPsteps == true){
+            pstepCols = nSourceSites + 1;
+        }
+        double[][] pstepsInstImmature = new double[rp.N][pstepCols];
+        for (int i = 0; i < rp.N; i++) {
+            pstepsInstImmature[i][0] = i;
+        }
+        
+        for (Particle p : particles) {
+            if (p.getViable() == false && p.getFree() == true) {
+                double d = 1;
+                if (rp.pstepsIncMort == true) {
+                    d = p.getDensity();
+                }
+                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+                int elemPart = p.getElem();
+                //System.out.println("Printing to pstepsImmature");
+                if (rp.splitPsteps == false) {
+                    pstepsInstImmature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+                } else {
+                    pstepsInstImmature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+                }
+            }
+        }
+        return pstepsInstImmature;
+    }
+    
 
     /**
      * work out the date from an integer in format YYYYMMDD - Mike Bedington
