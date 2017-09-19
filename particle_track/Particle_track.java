@@ -150,7 +150,7 @@ public class Particle_track {
 
         startlocs = IOUtils.setupStartLocs(rp.sitefile, rp.sitedir);
         //startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
-        endlocs = IOUtils.setupEndLocs(rp.habitat, rp.sitedir, startlocs);
+        endlocs = IOUtils.setupEndLocs(rp.habitat, rp.sitedir, startlocs, rp.endlimit);
         open_BC_locs = IOUtils.setupOpenBCLocs(rp.location, rp.datadir2);
 
         int nparts_per_site = rp.nparts;
@@ -201,7 +201,7 @@ public class Particle_track {
             // if information provided, set release time
             particles.get(i).setReleaseScenario(rp.releaseScenario, startlocs);
                         
-            System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
+            //System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
             // If provided, set particle depth
             if (startlocs[startid[i]].length > 4 && rp.setDepth == true) {
                 particles.get(i).setZ(startlocs[startid[i]][4]);

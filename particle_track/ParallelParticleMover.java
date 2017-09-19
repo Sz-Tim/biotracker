@@ -323,6 +323,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             part.setArrived(true);
                         }
                         // elements of particle_info and settle_density are only updated once by a single thread
+                        
                         particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
                         particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
                         settle_density[part.getID()][0] = part.getDensity();

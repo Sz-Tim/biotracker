@@ -75,6 +75,8 @@ public class RunProperties {
     int N = 79244; // Number of mesh element centroids
     int M = 46878; // Number of mesh nodes
     
+    int endlimit = 0;
+    
     // default constructor for lack of property file
     // NOT TESTED SINCE CODE REVISED.......
     public RunProperties(String[] args)
@@ -235,7 +237,8 @@ public class RunProperties {
         
         N = Integer.parseInt(properties.getProperty("N"));
         M = Integer.parseInt(properties.getProperty("M"));
-    
+        
+        endlimit = Integer.parseInt(properties.getProperty("endlimit"));
     }
         
 }

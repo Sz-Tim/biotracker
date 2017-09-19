@@ -75,8 +75,16 @@ public class IOUtils {
         return startlocs;
     }
     
-    // Add some extra locations at which settlement is possible
-    public static double[][] setupEndLocs(String habitat, String sitedir, double[][] startlocs)
+    /**
+     * Add some extra locations at which settlement is possible, or limit settlement to
+     * a smaller selection
+     * @param habitat
+     * @param sitedir
+     * @param startlocs
+     * @param limit  // the maximum index of "startlocs" to allow as an endlocation
+     * @return 
+     */
+    public static double[][] setupEndLocs(String habitat, String sitedir, double[][] startlocs, int limit)
     {
         double[][] endlocs = new double[10][3];
         
@@ -93,7 +101,7 @@ public class IOUtils {
                 endlocs[i] = extraEndLocs[i-startlocs.length].clone();
             }
         }
-        else
+        else if (limit==0)
         {
             endlocs = new double[startlocs.length][];
             for(int i = 0; i < startlocs.length; i++)
@@ -101,6 +109,15 @@ public class IOUtils {
                 endlocs[i] = startlocs[i].clone();
             }
         }
+        else
+        {
+            endlocs = new double[limit][];
+            for(int i = 0; i < limit; i++)
+            {
+                endlocs[i] = startlocs[i].clone();
+            }
+        }
+        System.out.println("Endlocs NLINES "+endlocs.length);
         return endlocs;
     }
     
