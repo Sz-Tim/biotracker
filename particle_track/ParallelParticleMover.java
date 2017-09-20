@@ -323,12 +323,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             part.setArrived(true);
                         }
                         // elements of particle_info and settle_density are only updated once by a single thread
-                        
-                        particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
-                        particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
-                        settle_density[part.getID()][0] = part.getDensity();
-                        // This is updated by many threads - calculation now done outside of move                        
-                        //freeViableSettleExit[2]++;
+                        // Clause to mean that the FIRST arrival of a particular particle at a particular 
+                        // destination is recorded. This means that
+                        // - behaviour in case where "endOnArrival"==TRUE is unaffected from how it's always been
+                        // - behaviour is what you would likely expect in case where "endOnArrival"==FALSE: no
+                        //   repeat arrivals at same site, and all different arrival sites recorded on first arrival
+                        if (particle_info[part.getID()][2] == 0)
+                        {
+                            particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
+                            particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
+                            settle_density[part.getID()][0] = part.getDensity();
+                            // This is updated by many threads - calculation now done outside of move                        
+                            //freeViableSettleExit[2]++;
+                        }
                         part.setSettledThisHour(true);
                         break;
                     }
