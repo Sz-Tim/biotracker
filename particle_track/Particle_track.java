@@ -453,6 +453,9 @@ public class Particle_track {
             //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
             IOUtils.particleLocsToFile1(particles, "particlelocations_end" + rp.suffix + ".out", false);
 
+            double[][] connectMatrix = connectFromParticleArrivals(particles,startlocs.length,rp.nparts);
+            IOUtils.writeDoubleArrayToFile(connectMatrix, "connectMatrix" + rp.suffix + ".out");
+            
             executorService.shutdownNow();
         } finally {
             executorService.shutdownNow();
@@ -483,6 +486,20 @@ public class Particle_track {
             freeViableSettleExit[3] += p.getBoundaryExit() ? 1 : 0;
         }
         return freeViableSettleExit;
+    }
+    
+    // calculate a connectivity matrix detailing the 
+    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int npartsPerSite)
+    {
+        double[][] connectMatrix = new double[nStartLocs][nStartLocs];
+        for (Particle part : particles)
+        {
+            for (Arrival arrival: part.getArrivals())
+            {
+                connectMatrix[arrival.getSourceLocation()][arrival.getArrivalLocation()] += arrival.getArrivalDensity()/npartsPerSite;
+            }
+        }
+        return connectMatrix;
     }
 
     /**

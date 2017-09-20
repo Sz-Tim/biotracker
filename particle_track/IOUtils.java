@@ -274,7 +274,7 @@ public class IOUtils {
             {
                 for (int j = 0; j < variable[0].length; j++)
                 {
-                    out.printf("%.4e ",variable[i][j]);
+                    out.printf("%.2e ",variable[i][j]);
                 }
                 out.printf("\n");
             }

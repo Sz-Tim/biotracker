@@ -4,6 +4,8 @@
  */
 package particle_track;
 
+import java.util.*;
+
 /**
  *
  * @author tomdude
@@ -33,6 +35,10 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
     
+    // A list to store data on the arrivals made by each particle.
+    // If rp.endOnArrival=true, this will contain a maximum of one element.
+    private List<Arrival> arrivals;
+    
     // create a new particle at a defined location, at the water surface
     public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate)
     {
@@ -43,6 +49,8 @@ public class Particle {
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
+        
+        this.arrivals = new ArrayList<Arrival>();
     }
 
     public void setReleaseScenario(int releaseScenario, double[][] startlocs)
@@ -78,6 +86,15 @@ public class Particle {
                 this.setReleaseTime(startlocs[this.id][3]);
                 break;
         }
+    }
+    
+    public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
+    {
+        arrivals.add(new Arrival(sourceLocation,arrivalLocation,arrivalTime,arrivalDensity));
+    }
+    public List<Arrival> getArrivals()
+    {
+        return this.arrivals;
     }
     
     public void setReleaseTime(double releaseTime)
