@@ -142,6 +142,12 @@ public class RunProperties {
             }
     }
     
+    /**
+     * Ultimately want to fix this so that if a property is not included in the .properties
+     * file, the default value is uses automatically and a warning raised
+     * 
+     * @param filename 
+     */
     public RunProperties(String filename)
     {
         System.out.println("GETTING PROPERTIES FROM "+filename);

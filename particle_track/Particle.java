@@ -27,6 +27,7 @@ public class Particle {
     private int depLayer = 0;
     // settlement details
     private double age = 0;
+    private int status = 0;
     private double density = 1;
     private double mortRate = 0.01; // default hourly rate, based on results of Stein et al. 2005 (copepodid, nauplii rate marginally lower = 0.0078)
     private boolean arrived = false;
@@ -91,6 +92,7 @@ public class Particle {
     public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
     {
         arrivals.add(new Arrival(sourceLocation,arrivalLocation,arrivalTime,arrivalDensity));
+        //System.out.printf("Arrival (particle %d): %d %d %f %f\n", this.getID(),sourceLocation,arrivalLocation,arrivalTime,arrivalDensity);
     }
     public List<Arrival> getArrivals()
     {
@@ -185,6 +187,20 @@ public class Particle {
     public double getDensity()
     {
         return this.density;
+    }
+    public void setStatus(int status)
+    {
+        // 0 = not free
+        // 1 = free
+        // 2 = viable (able to settle)
+        // 3 = settled
+        // 66 = boundary exit
+        // 666 = dead (exceeded lifespan)
+        this.status=status;
+    }
+    public int getStatus()
+    {
+        return this.status;
     }
     
     /** Set particle depth in the water column based on its defined behaviour and

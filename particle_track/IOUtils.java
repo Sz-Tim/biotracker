@@ -325,7 +325,9 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++)
             {
-                out.printf("%d %d %f %f %d\n",tt,particles[i].getID(),particles[i].getLocation()[0],particles[i].getLocation()[1],particles[i].getElem());
+                out.printf("%d %d %.1f %.1f %d %d\n",tt,particles[i].getID(),
+                        particles[i].getLocation()[0],particles[i].getLocation()[1],
+                        particles[i].getElem(),particles[i].getStatus());
             }
             //Close the output stream
             out.close();
@@ -343,8 +345,9 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++)
             {
-                out.printf("%d %d %f %f %d\n",tt,particles.get(i).getID(),
-                        particles.get(i).getLocation()[0],particles.get(i).getLocation()[1],particles.get(i).getElem());
+                out.printf("%d %d %.1f %.1f %d %d\n",tt,particles.get(i).getID(),
+                        particles.get(i).getLocation()[0],particles.get(i).getLocation()[1],
+                        particles.get(i).getElem(),particles.get(i).getStatus());
             }
             //Close the output stream
             out.close();
@@ -367,7 +370,8 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.length; i++)
             {
-                out.printf("%d %f %f %f %f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],particles[i].getLocation()[0],particles[i].getLocation()[1]);
+                out.printf("%d %f %f %f %f\n",i,particles[i].getStartLocation()[0],particles[i].getStartLocation()[1],
+                        particles[i].getLocation()[0],particles[i].getLocation()[1]);
             }
             //Close the output stream
             out.close();

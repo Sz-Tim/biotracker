@@ -343,7 +343,16 @@ public class Particle_track {
 
                         System.out.printf("--------- HOUR %d ----------\n",tt+1);
                         //System.out.printf("%d \n", tt + 1);
-
+                        // Append particle locations for first nSites for plotting trajectories
+                        if (rp.all_locs_out==true)
+                        {
+                            IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
+                        }
+                        else
+                        {
+                            IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
+                        }
+                        
                         boolean debug = false;
                         if (debug == true) {
                             IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_t" + tt + ".out");
@@ -426,15 +435,7 @@ public class Particle_track {
                             particles.get(i).setSettledThisHour(false);
                         }
                         printCount++;
-                        // Append particle locations for first nSites for plotting trajectories
-                        if (rp.all_locs_out==true)
-                        {
-                            IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
-                        }
-                        else
-                        {
-                            IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
-                        }
+                        
                         stepcount++;
                     }
                     System.out.printf("\n");

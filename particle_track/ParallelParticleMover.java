@@ -137,6 +137,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (time > part.getReleaseTime())
             {
                 part.setFree(true);
+                part.setStatus(1);
                 //System.out.println("Particle "+i+" released from "+particles[i].getLocation()[0]+" "+particles[i].getLocation()[1]+" at t="+time);
                 // This is updated by many threads - calculation now done outside of move
                 //freeViableSettleExit[0]++;
@@ -273,6 +274,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             {
                 //System.out.println("Particle became viable");                                  
                 part.setViable(true);
+                part.setStatus(2);
                 // This is updated by many threads - calculation now done outside of move
                 //freeViableSettleExit[1]++;
             }
@@ -281,6 +283,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (part.getAge()>rp.maxParticleAge && rp.maxParticleAge > 0)
             {
                 part.setFree(false);
+                part.setStatus(666);
             }
 
             // check whether the particle has gone within a certain range of one of the boundary nodes
@@ -294,6 +297,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         //System.out.printf("Boundary stop: %d at %d\n",i,loc);
                         //part.setArrived(true);
                         part.setBoundaryExit(true);
+                        part.setStatus(66);
                         // elements of particle_info are only updated once by a single thread
                         particle_info[part.getID()][1] = -loc;//(int)startlocs[loc][0];
                         particle_info[part.getID()][2] = (int)part.getAge();//((day-firstday)*24+tt);
@@ -321,6 +325,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         if (rp.endOnArrival==true)
                         {
                             part.setArrived(true);
+                            part.setStatus(3);
                         }
                         // elements of particle_info and settle_density are only updated once by a single thread
                         particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
