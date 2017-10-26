@@ -285,6 +285,8 @@ public class Particle_track {
             //for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
             for (int fnum = 0; fnum < numberOfDays; fnum++) {
 
+                
+                
                 for (int dayQuarter = 1; dayQuarter <= 4; dayQuarter++) // alternatively, run loop backwards
                 //for (int day = lastday; day >= firstday; day--)
                 {
@@ -417,10 +419,14 @@ public class Particle_track {
                                         System.out.println("Print particle locations to file " + ot + " " + dumptimes2[ot] + " hrs");
                                         IOUtils.particleLocsToFile1(particles, "particlelocations_" + ot + ".out", false);
                                         
+                                        // Report present density snapshots
                                         double[][] pstepsInstImmature = pstepImmatureSnapshot(particles, rp, startlocs.length);
                                         double[][] pstepsInstMature = pstepMatureSnapshot(particles, rp, startlocs.length);
                                         IOUtils.writeDoubleArrayToFile(pstepsInstImmature, "elementCountsImmature_" + ot + ".out");
                                         IOUtils.writeDoubleArrayToFile(pstepsInstMature, "elementCountsMature_" + ot + ".out");
+                                        // Report present cumulative particle time
+                                        IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmatureTemp_" + ot + ".out");
+                                        IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMatureTemp_" + ot + ".out");
 
                                         // Once recorded, set this value to be greater than simulation length
                                         dumptimes2[ot] = simLengthHours * 2;
