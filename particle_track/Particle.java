@@ -17,6 +17,10 @@ public class Particle {
     private double[] xy = new double[2];
     final private double[] startLoc = new double[2];
     private int startSiteID = 0;
+    
+    private ISO_datestr startDate;
+    private double startTime = 0;
+    
     private int elem;
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
@@ -36,6 +40,8 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
     
+    private int lastArrival = 0;
+    
     // A list to store data on the arrivals made by each particle.
     // If rp.endOnArrival=true, this will contain a maximum of one element.
     private List<Arrival> arrivals;
@@ -53,41 +59,56 @@ public class Particle {
         
         this.arrivals = new ArrayList<Arrival>();
     }
-
-    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
+    public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate, 
+            ISO_datestr startDate, double startTime)
     {
-        switch (releaseScenario) {
-            // integer to switch release scenario
-            // 0 all at time zero
-            // 1 tidal release (evenly over first 24 hours)
-            // 2 continuous release (1 per hour per site)
-            // 3 continuous release (5 per hour per site)
-            // 4 continuous release (10 per hour per site)
-            // 5 continuous release (20 per hour per site)
-            // 10 defined release times
-            case 0:
-                this.setReleaseTime(0);
-                break;
-            case 1:
-                this.setReleaseTime((this.id / startlocs.length) % 25);
-                break;
-            case 2:
-                this.setReleaseTime(Math.floor(this.id / startlocs.length));
-                break;
-            case 3:
-                this.setReleaseTime(Math.floor(this.id / (5 * startlocs.length)));
-                break;
-            case 4:
-                this.setReleaseTime(Math.floor(this.id / (10 * startlocs.length)));
-                break;
-            case 5:
-                this.setReleaseTime(Math.floor(this.id / (20 * startlocs.length)));
-                break;
-            case 10:
-                this.setReleaseTime(startlocs[this.id][3]);
-                break;
-        }
+        this.id = id;
+        this.xy[0] = xstart;
+        this.xy[1] = ystart;
+        this.startSiteID = startSiteID;
+        this.startDate = startDate;
+        this.startTime = startTime;
+        this.startLoc[0] = xstart;
+        this.startLoc[1] = ystart;
+        this.mortRate = mortalityRate;
+        
+        //this.arrivals = new ArrayList<Arrival>();
     }
+
+//    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
+//    {
+//        switch (releaseScenario) {
+//            // integer to switch release scenario
+//            // 0 all at time zero
+//            // 1 tidal release (evenly over first 24 hours)
+//            // 2 continuous release (1 per hour per site)
+//            // 3 continuous release (5 per hour per site)
+//            // 4 continuous release (10 per hour per site)
+//            // 5 continuous release (20 per hour per site)
+//            // 10 defined release times
+//            case 0:
+//                this.setReleaseTime(0);
+//                break;
+//            case 1:
+//                this.setReleaseTime((this.id / startlocs.length) % 25);
+//                break;
+//            case 2:
+//                this.setReleaseTime(Math.floor(this.id / startlocs.length));
+//                break;
+//            case 3:
+//                this.setReleaseTime(Math.floor(this.id / (5 * startlocs.length)));
+//                break;
+//            case 4:
+//                this.setReleaseTime(Math.floor(this.id / (10 * startlocs.length)));
+//                break;
+//            case 5:
+//                this.setReleaseTime(Math.floor(this.id / (20 * startlocs.length)));
+//                break;
+//            case 10:
+//                this.setReleaseTime(startlocs[this.id][3]);
+//                break;
+//        }
+//    }
     
     public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
     {
@@ -122,6 +143,14 @@ public class Particle {
     public int getStartID()
     {
         return this.startSiteID;
+    }
+    public ISO_datestr getStartDate()
+    {
+        return this.startDate;
+    }
+    public double getStartTime()
+    {
+        return this.startTime;
     }
     public void setLocation(double x, double y)
     {
@@ -297,6 +326,14 @@ public class Particle {
     public void setArrived(boolean arrived)
     {
         this.arrived = arrived;
+    }
+    public void setLastArrival(int loc)
+    {
+        this.lastArrival = loc;
+    }
+    public int getLastArrival()
+    {
+        return this.lastArrival;
     }
     public void setSettledThisHour(boolean settled)
     {

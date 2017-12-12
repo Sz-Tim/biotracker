@@ -166,49 +166,78 @@ public class Particle_track {
         int[][] particle_info = new int[nparts][3];
         double[][] settle_density = new double[nparts][1];
 
-        double[] xstart = new double[nparts];
-        double[] ystart = new double[nparts];
-        int[] startElem = new int[nparts];
-        int[] startid = new int[nparts];
-        System.out.println("nparts = " + nparts);
-        //System.out.println("hello");
-        for (int i = 0; i < nparts; i++) {
-            //startid[i]=(int)(startlocs.length*ran.raw());
-            startid[i] = i % startlocs.length;
-            xstart[i] = startlocs[startid[i]][1];
-            ystart[i] = startlocs[startid[i]][2];
-
-            // If start location is a boundary location it is not actually in the mesh/an element, so set
-            // new particle location to centre of nearest element.
-            int closest = Particle.nearestCentroid(xstart[i], ystart[i], uvnode);
-            startElem[i] = Particle.whichElement(xstart[i], ystart[i], allelems, nodexy, trinodes);
-            if (startElem[i] < 0) {
-                xstart[i] = uvnode[closest][0];
-                ystart[i] = uvnode[closest][1];
-                startElem[i] = closest;
-            }
-            //System.out.printf("start location %d = %d %.4e %.4e %d %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest,startElem[i]);
-        }
+//        double[] xstart = new double[nparts];
+//        double[] ystart = new double[nparts];
+//        int[] startElem = new int[nparts];
+//        int[] startid = new int[nparts];
+//        System.out.println("nparts = " + nparts);
+//        //System.out.println("hello");
+//        
+//        for (int i = 0; i < nparts; i++) {
+//            //startid[i]=(int)(startlocs.length*ran.raw());
+//            startid[i] = i % startlocs.length;
+//            xstart[i] = startlocs[startid[i]][1];
+//            ystart[i] = startlocs[startid[i]][2];
+//
+//            // If start location is a boundary location it is not actually in the mesh/an element, so set
+//            // new particle location to centre of nearest element.
+//            int closest = Particle.nearestCentroid(xstart[i], ystart[i], uvnode);
+//            startElem[i] = Particle.whichElement(xstart[i], ystart[i], allelems, nodexy, trinodes);
+//            if (startElem[i] < 0) {
+//                xstart[i] = uvnode[closest][0];
+//                ystart[i] = uvnode[closest][1];
+//                startElem[i] = closest;
+//            }
+//            //System.out.printf("start location %d = %d %.4e %.4e %d %d\n",i,(int)startlocs[startid[i]][0],xstart[i],ystart[i],closest,startElem[i]);
+//        }
 
         // --------------------------------------------------------------------------------------
         // Setup particles
         // --------------------------------------------------------------------------------------
-        List<Particle> particles = new ArrayList<Particle>(nparts);
-        for (int i = 0; i < nparts; i++) {
-            particles.add(new Particle(xstart[i], ystart[i], startid[i], i, rp.mortalityRate));
-            particle_info[i][0] = startid[i];//(int)startlocs[startid[i]][0];
-            particles.get(i).setElem(startElem[i]);
-            // if information provided, set release time
-            particles.get(i).setReleaseScenario(rp.releaseScenario, startlocs);
-                        
-            //System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
-            // If provided, set particle depth
-            if (startlocs[startid[i]].length > 4 && rp.setDepth == true) {
-                particles.get(i).setZ(startlocs[startid[i]][4]);
-            }
-        }
-        System.out.println("particles.length = " + particles.size());
-        IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_start.out");
+        List<Particle> particles = new ArrayList<>(nparts);
+        int numParticlesCreated = 0; // Counter to keep track of how many particles have been created
+        boolean allowRelease = true; // boolean to be switched after a single release event
+        
+        // 06/11/17 Particles to be added on the go, as simulation progresses???
+        // Need to find a way to release all at time zero if desired.
+        
+//        for (int i = 0; i < nparts; i++) {
+//            particles.add(new Particle(xstart[i], ystart[i], startid[i], i, rp.mortalityRate));
+//            particle_info[i][0] = startid[i];//(int)startlocs[startid[i]][0];
+//            particles.get(i).setElem(startElem[i]);
+//            // if information provided, set release time
+//            particles.get(i).setReleaseScenario(rp.releaseScenario, startlocs);
+//            
+//            //particles.add(new Particle(xstart[i], ystart[i], startid[i], i, rp.mortalityRate));
+//            
+//                        
+//            //System.out.println("Particle "+i+" (release site "+particles.get(i).getStartID()+") release time: "+particles.get(i).getReleaseTime());
+//            // If provided, set particle depth
+//            if (startlocs[startid[i]].length > 4 && rp.setDepth == true) {
+//                particles.get(i).setZ(startlocs[startid[i]][4]);
+//            }
+//        }
+//        System.out.println("particles.length = " + particles.size());
+
+        
+        // Logic to create and release particles all at t = 0
+//        if (rp.releaseScenario==0)
+//        {
+//            System.out.println("releaseScenario==0, releasing all at t=0");
+//            List<Particle> newParts = createNewParticles(startlocs,allelems,trinodes,nodexy,uvnode,rp,currentIsoDate,0,numParticlesCreated);
+//            particles.addAll(newParts);
+//            numParticlesCreated = numParticlesCreated+rp.nparts;
+//        }
+        
+        // add logic to day loop, hour loop, and to be checked at each hour (for specified time release)
+        
+        
+
+
+//        if (rp.oldOutput == true)
+//        {
+//            IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_start.out");
+//        }
 
         // --------------------------------------------------------------------------------------
         // Particle data arrays for model output
@@ -234,6 +263,10 @@ public class Particle_track {
         int simLengthHours = numberOfDays * 24;
         int nDumps = simLengthHours / rp.dumpInterval + 1;
         System.out.println("simLengthHours " + simLengthHours + " dumpInterval " + rp.dumpInterval + " nDumps " + nDumps);
+        if (rp.oldOutput == false)
+        {
+            System.out.println("WARNING: oldOutput = false, so this list of dumptimes is irrelevant");
+        }
         double[] dumptimes2 = new double[1];
         if (nDumps > 1) {
             dumptimes2 = new double[nDumps];
@@ -285,12 +318,11 @@ public class Particle_track {
             //for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
             for (int fnum = 0; fnum < numberOfDays; fnum++) {
 
-                
-                
                 for (int dayQuarter = 1; dayQuarter <= 4; dayQuarter++) // alternatively, run loop backwards
                 //for (int day = lastday; day >= firstday; day--)
                 {
-                    System.out.printf(currentIsoDate.getDateStr());
+                    String today = currentIsoDate.getDateStr();
+                    System.out.printf(today);
                     long currTime = System.currentTimeMillis();
                     System.out.printf("\n------ Day %d (%s) - Quarter %d - Stepcount %d (%f hrs)  - Runtime %f s ------ \n",
                             fnum + 1, currentIsoDate.getDateStr(), dayQuarter, stepcount, time, (currTime - startTime) / 1000.0);
@@ -344,22 +376,48 @@ public class Particle_track {
                         //for (int tt = lasttime; tt >= firsttime; tt--)
 
                         System.out.printf("--------- HOUR %d ----------\n",tt+1);
+                        // Calculate current time of the day (complete hours elapsed since midnight)
+                        // dayQuarter goes from 1-4
+                        // recordsPerFile is 7 (6 + 1 for overlap)
+                        int currentHour = (dayQuarter-1)*(rp.recordsPerFile-1) + tt;
                         //System.out.printf("%d \n", tt + 1);
                         // Append particle locations for first nSites for plotting trajectories
-                        if (rp.all_locs_out==true)
-                        {
-                            IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
-                        }
-                        else
-                        {
-                            IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
-                        }
                         
-                        boolean debug = false;
-                        if (debug == true) {
-                            IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_t" + tt + ".out");
+                        if (rp.oldOutput == true)
+                        {
+                            if (rp.all_locs_out==true)
+                            {
+                                IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
+                            }
+                            else
+                            {
+                                IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
+                            }
+                            boolean debug = false;
+                            if (debug == true) {
+                                IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_t" + tt + ".out");
+                            }
                         }
 
+                        // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
+                        // exact hour
+
+                        if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
+                        {
+                            System.out.printf("Release attempt: releaseScen %d, releaseTime %f, allowRelease %s \n",
+                                rp.releaseScenario,time,allowRelease);
+                            //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
+                            List<Particle> newParts = createNewParticles(startlocs,allelems,trinodes,nodexy,uvnode,
+                                    rp,currentIsoDate,currentHour,numParticlesCreated);
+                            particles.addAll(newParts);
+                            numParticlesCreated = numParticlesCreated+rp.nparts;
+                            // If only one release to be made, prevent further releases
+                            if (rp.releaseScenario==0)
+                            {
+                                allowRelease = false;
+                            }
+                        }
+                        
                         // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
                         for (int st = 0; st < rp.stepsPerStep; st++) {
 
@@ -411,34 +469,62 @@ public class Particle_track {
 
                             // --------------- End of particle loop ---------------------
                             time += subStepDt / 3600.0;
+                            
+                            if (rp.oldOutput == true)
+                            {
+                                // Dump particle locations to file at predfined times
+                                if (nDumps > 0) {
+                                    for (int ot = 0; ot < dumptimes2.length; ot++) {
+                                        if (time > dumptimes2[ot]) {
+                                            System.out.println("Print particle locations to file " + ot + " " + dumptimes2[ot] + " hrs");
+                                            IOUtils.particleLocsToFile1(particles, "particlelocations_" + ot + ".out", false);
 
-                            // Dump particle locations to file at predfined times
-                            if (nDumps > 0) {
-                                for (int ot = 0; ot < dumptimes2.length; ot++) {
-                                    if (time > dumptimes2[ot]) {
-                                        System.out.println("Print particle locations to file " + ot + " " + dumptimes2[ot] + " hrs");
-                                        IOUtils.particleLocsToFile1(particles, "particlelocations_" + ot + ".out", false);
-                                        
-                                        // Report present density snapshots
-                                        double[][] pstepsInstImmature = pstepImmatureSnapshot(particles, rp, startlocs.length);
-                                        double[][] pstepsInstMature = pstepMatureSnapshot(particles, rp, startlocs.length);
-                                        IOUtils.writeDoubleArrayToFile(pstepsInstImmature, "elementCountsImmature_" + ot + ".out");
-                                        IOUtils.writeDoubleArrayToFile(pstepsInstMature, "elementCountsMature_" + ot + ".out");
-                                        // Report present cumulative particle time
-                                        IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmatureTemp_" + ot + ".out");
-                                        IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMatureTemp_" + ot + ".out");
+                                            // Report present density snapshots
+                                            double[][] pstepsInstImmature = pstepImmatureSnapshot(particles, rp, startlocs.length);
+                                            double[][] pstepsInstMature = pstepMatureSnapshot(particles, rp, startlocs.length);
+                                            IOUtils.writeDoubleArrayToFile(pstepsInstImmature, "elementCountsImmature_" + ot + ".out");
+                                            IOUtils.writeDoubleArrayToFile(pstepsInstMature, "elementCountsMature_" + ot + ".out");
+                                            // Report present cumulative particle time
+                                            IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmatureTemp_" + ot + ".out");
+                                            IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMatureTemp_" + ot + ".out");
 
-                                        // Once recorded, set this value to be greater than simulation length
-                                        dumptimes2[ot] = simLengthHours * 2;
+                                            // Once recorded, set this value to be greater than simulation length
+                                            dumptimes2[ot] = simLengthHours * 2;
 
+                                        }
                                     }
                                 }
-                            }
+                            } 
+                            
                             // end of particle loop
                             calcCount++;
                         }
-                        for (int i = 0; i < particles.size(); i++) {
-                            particles.get(i).setSettledThisHour(false);
+                        
+                        // New output: print ALL current particle location to a separate file, once each hour
+                        if (rp.oldOutput == false)
+                        {
+                            //System.out.println("Print particle locations to file " + today + " " + currentHour);
+                            //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
+                            IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
+                        }
+                        
+                        // Clean up "dead" (666) and "exited" (66) particles
+                        for (Particle part : particles)
+                        {
+                            if (part.getStatus()==666 || part.getStatus()==66)
+                            {
+                                System.out.printf("Removing particle %d, status %d\n",part.getID(),part.getStatus());
+                                particles.remove(part);
+                            }
+                        }
+                        
+                        for (Particle part: particles) {
+                            if (part.getSettledThisHour()==true)
+                            {
+                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals.out", true);
+                                part.setSettledThisHour(false);
+                            }
+                            
                         }
                         printCount++;
                         
@@ -451,17 +537,21 @@ public class Particle_track {
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
 
-            IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmature" + rp.suffix + ".out");
-            IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMature" + rp.suffix + ".out");
-            IOUtils.writeIntegerArrayToFile(particle_info, "particle_info" + rp.suffix + ".out");
-            IOUtils.writeDoubleArrayToFile(settle_density, "settle_density" + rp.suffix + ".out");
-            //IOUtils.particleLocsToFile(particles,nparts,0,"particlelocations"+suffix+".out");
-            //IOUtils.writeDoubleArrayToFile(particle1Velocity,"particle1velocity"+suffix+".out");
-            //IOUtils.writeDoubleArrayToFile(particle1Location,"particle1location"+suffix+".out");
-            IOUtils.particleLocsToFile1(particles, "particlelocations_end" + rp.suffix + ".out", false);
+            if (rp.oldOutput == true)
+            {
+                IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmature" + rp.suffix + ".out");
+                IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMature" + rp.suffix + ".out");
+                IOUtils.writeIntegerArrayToFile(particle_info, "particle_info" + rp.suffix + ".out");
+                IOUtils.writeDoubleArrayToFile(settle_density, "settle_density" + rp.suffix + ".out");
+            
+                IOUtils.particleLocsToFile1(particles, "particlelocations_end" + rp.suffix + ".out", false);
+            }
 
-            double[][] connectMatrix = connectFromParticleArrivals(particles,startlocs.length,rp.nparts);
-            IOUtils.writeDoubleArrayToFile(connectMatrix, "connectMatrix" + rp.suffix + ".out");
+            if (rp.oldOutput == true)
+            {
+                double[][] connectMatrix = connectFromParticleArrivals(particles,startlocs.length,rp.nparts);
+                IOUtils.writeDoubleArrayToFile(connectMatrix, "connectMatrix" + rp.suffix + ".out");
+            }
             
             executorService.shutdownNow();
         } finally {
@@ -470,6 +560,53 @@ public class Particle_track {
 
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = " + (endTime - startTime) / 1000.0);
+    }
+    
+    /**
+     * Method to create new particles. These must be appended to the existing list
+     * 
+     * @param startlocs
+     * @param allelems
+     * @param trinodes
+     * @param nodexy
+     * @param uvnode
+     * @param rp
+     * @param currentDate
+     * @param currentTime
+     * @param numParticlesCreated
+     * @return List of the new particles to be appended to existing list
+     */
+    public static List<Particle> createNewParticles(double[][] startlocs,
+            int[] allelems, int[][] trinodes, double[][] nodexy, double[][] uvnode, 
+            RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated)
+    {
+        //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
+        List<Particle> newParts = new ArrayList<>(rp.nparts*startlocs.length);
+        for (int i = 0; i < rp.nparts*startlocs.length; i++)
+            {
+                int startid = i % startlocs.length;
+                double xstart = startlocs[startid][1];
+                double ystart = startlocs[startid][2];
+                // If start location is a boundary location it is not actually in the mesh/an element, so set
+                // new particle location to centre of nearest element.
+                int closest = Particle.nearestCentroid(xstart, ystart, uvnode);
+                int startElem = Particle.whichElement(xstart, ystart, allelems, nodexy, trinodes);
+                if (startElem < 0) {
+                    xstart = uvnode[closest][0];
+                    ystart = uvnode[closest][1];
+                    startElem = closest;
+                }
+            
+                Particle p = new Particle(xstart, ystart, startid, numParticlesCreated+i, rp.mortalityRate, currentDate, currentTime);
+                p.setElem(startElem);
+                // No longer set releaseScenario for individual particles since they are created at the moment of release
+                //p.setReleaseScenario(rp.releaseScenario, startlocs);
+                if (startlocs[startid].length > 4 && rp.setDepth == true) {
+                    p.setZ(startlocs[startid][4]);
+                }
+                newParts.add(p);
+            }
+        return newParts;
     }
 
     /**

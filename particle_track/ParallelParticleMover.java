@@ -321,6 +321,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             (part.getLocation()[1]-endlocs[loc][2])*(part.getLocation()[1]-endlocs[loc][2]));
                     if (dist < rp.thresh && part.getSettledThisHour()==false)
                     {
+                        //IOUtils.arrivalToFile(part, currentDate, whereami, loc, filename, true);
+                        
                         //System.out.printf("settlement: %d at %d\n",i,loc);
                         if (rp.endOnArrival==true)
                         {
@@ -328,14 +330,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             part.setStatus(3);
                         }
                         // elements of particle_info and settle_density are only updated once by a single thread
-                        particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
-                        particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
-                        settle_density[part.getID()][0] = part.getDensity();
-                        // This is updated by many threads - calculation now done outside of move                        
+//                        particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
+//                        particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
+//                        settle_density[part.getID()][0] = part.getDensity();
+//                        // This is updated by many threads - calculation now done outside of move                        
                         //freeViableSettleExit[2]++;
-                        part.reportArrival(part.getStartID(), loc, time, part.getDensity());
+                        if (rp.oldOutput == true)
+                        {
+                            part.reportArrival(part.getStartID(), loc, time, part.getDensity());
+                        }
                         
                         part.setSettledThisHour(true);
+                        part.setLastArrival(loc);
                         break;
                     }
                 }    

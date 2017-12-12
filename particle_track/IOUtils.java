@@ -399,6 +399,74 @@ public class IOUtils {
     }
     
     /**
+     * Write all current particle information to file - new output defined November 2017
+     * 
+     * @param particles
+     * @param currentHour
+     * @param filename
+     * @param append 
+     */
+    public static void particleLocsToFile_full(List<Particle> particles, int currentHour, String filename,boolean append)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,append);
+            PrintWriter out = new PrintWriter(fstream);
+            for (Particle p : particles)
+            {
+                out.printf("%d %d %s %.2f %d %.1f %.1f %d %d %f\n",
+                        currentHour,
+                        p.getID(),
+                        p.getStartDate().getDateStr(),
+                        p.getStartTime(),
+                        p.getStartID(),
+                        p.getLocation()[0],
+                        p.getLocation()[1],
+                        p.getElem(),
+                        p.getStatus(),
+                        p.getDensity()
+                );
+            }
+            
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
+    public static void arrivalToFile(Particle p, ISO_datestr currentDate, double currentTime, String filename, boolean append)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,append);
+            PrintWriter out = new PrintWriter(fstream);
+//            for (Particle p : particles)
+//            {
+                //System.out.printf("Settlement\n");
+                out.printf("%d %s %.2f %d %s %.2f %d %f\n",
+                        p.getID(),
+                        p.getStartDate().getDateStr(),
+                        p.getStartTime(),
+                        p.getStartID(),
+                        currentDate.getDateStr(),
+                        currentTime,
+                        p.getLastArrival(),
+                        p.getDensity()
+                );
+            //}
+            
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
+    
+    /**
      * Print (append) single particle location to file
      * @param time
      * @param particles

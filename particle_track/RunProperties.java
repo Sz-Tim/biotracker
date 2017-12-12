@@ -48,9 +48,11 @@ public class RunProperties {
     
     boolean parallel = false;
     boolean all_locs_out = true;
+    boolean oldOutput = false;
     
-    int releaseScenario = 5; // Instantaneous/continuous/etc release - see switch statement in main method
-    int nparts=100; // Number of particles released per site
+    int releaseScenario = 0; // Instantaneous/continuous/etc release - see switch statement in particle class
+    int nparts=100; // Number of particles per site in each release
+    double releaseTime = 0;
 
     double dt=3600; // Timestep (s) per record
     //int firstday=1; // Start day for simulation
@@ -217,11 +219,13 @@ public class RunProperties {
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel"));
+        oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
         
         all_locs_out = Boolean.parseBoolean(properties.getProperty("all_locs_out"));
     
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario"));
         nparts = Integer.parseInt(properties.getProperty("nparts"));
+        releaseTime = Double.parseDouble(properties.getProperty("releaseTime"));
 
         dt = Double.parseDouble(properties.getProperty("dt"));
 
