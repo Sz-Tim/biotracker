@@ -299,8 +299,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         part.setBoundaryExit(true);
                         part.setStatus(66);
                         // elements of particle_info are only updated once by a single thread
-                        particle_info[part.getID()][1] = -loc;//(int)startlocs[loc][0];
-                        particle_info[part.getID()][2] = (int)part.getAge();//((day-firstday)*24+tt);
+                        //particle_info[part.getID()][1] = -loc;//(int)startlocs[loc][0];
+                        //particle_info[part.getID()][2] = (int)part.getAge();//((day-firstday)*24+tt);
                         // This is updated by many threads - calculation now done outside of move
                         //freeViableSettleExit[3]++;
                         break;

@@ -56,7 +56,7 @@ public class IOUtils {
         return trim.split("\\w+").length;
     }
     
-    public static double[][] setupStartLocs(String filename, String sitedir)
+    public static double[][] setupStartLocs(String filename, String sitedir, boolean makeLocalCopy)
     {
         double startlocs[][] = new double[10][3];
         System.out.println("Startlocations defined in file: "+filename);
@@ -72,6 +72,12 @@ public class IOUtils {
             System.out.println("Cannot open "+sitedir+filename);
         }
         startlocs = IOUtils.readFileDoubleArray(sitedir+filename,nLines,5," ",true);
+        
+        if (makeLocalCopy == true)
+        {
+            IOUtils.writeDoubleArrayToFile(startlocs, "startlocs.dat",true); 
+        }
+        
         return startlocs;
     }
     
@@ -262,8 +268,35 @@ public class IOUtils {
         return myInt;
     }
     
- 
-    public static void writeDoubleArrayToFile(double[][] variable, String filename)
+    /**
+     * Print a predetermined string of characters to a file. Also ensures a new 
+     * file is started for a given day for particle locations
+     * @param headerString
+     * @param filename 
+     */
+    public static void printFileHeader(String headerString, String filename)
+    {
+        try
+        {
+            FileWriter fstream = new FileWriter(filename);
+            PrintWriter out = new PrintWriter(fstream);
+            out.printf(headerString);
+            out.printf("\n");
+            out.close();
+        } 
+        catch (Exception e)
+        {//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Print an array of doubles directly to a file, 
+     * @param variable
+     * @param filename 
+     * @param asInt
+     */
+    public static void writeDoubleArrayToFile(double[][] variable, String filename, boolean asInt)
     {
         try
         {
@@ -273,8 +306,15 @@ public class IOUtils {
             for (int i = 0; i < variable.length; i++)
             {
                 for (int j = 0; j < variable[0].length; j++)
-                {
-                    out.printf("%.2e ",variable[i][j]);
+                {   
+                    if (asInt==false)
+                    {
+                        out.printf("%.2e ",variable[i][j]);
+                    }
+                    else
+                    {
+                        out.printf("%d ",(int)variable[i][j]);
+                    }
                 }
                 out.printf("\n");
             }
@@ -284,6 +324,32 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
+//    /**
+//     * As previous method but as floats
+//     * @param variable
+//     * @param filename 
+//     */
+//    public static void writeDoubleArrayToFile2(double[][] variable, String filename)
+//    {
+//        try
+//        {
+//            // Create file 
+//            FileWriter fstream = new FileWriter(filename);
+//            PrintWriter out = new PrintWriter(fstream);
+//            for (int i = 0; i < variable.length; i++)
+//            {
+//                for (int j = 0; j < variable[0].length; j++)
+//                {
+//                    out.printf("%f ",variable[i][j]);
+//                }
+//                out.printf("\n");
+//            }
+//            //Close the output stream
+//            out.close();
+//        }catch (Exception e){//Catch exception if any
+//            System.err.println("Error: " + e.getMessage());
+//        }
+//    }
     public static void writeIntegerArrayToFile(int[][] variable, String filename)
     {
         try
@@ -415,7 +481,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.2f %d %.1f %.1f %d %d %f\n",
+                out.printf("%d %d %s %.1f %d %.0f %.0f %d %d %.2f\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -446,7 +512,7 @@ public class IOUtils {
 //            for (Particle p : particles)
 //            {
                 //System.out.printf("Settlement\n");
-                out.printf("%d %s %.2f %d %s %.2f %d %f\n",
+                out.printf("%d %s %.2f %d %s %.2f %d %f %f\n",
                         p.getID(),
                         p.getStartDate().getDateStr(),
                         p.getStartTime(),
@@ -454,6 +520,7 @@ public class IOUtils {
                         currentDate.getDateStr(),
                         currentTime,
                         p.getLastArrival(),
+                        p.getAge(),
                         p.getDensity()
                 );
             //}
