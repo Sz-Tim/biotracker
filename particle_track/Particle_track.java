@@ -162,10 +162,6 @@ public class Particle_track {
             //System.out.println(startlocs[i][0]+" "+startlocs[i][1]+" "+startlocs[i][2]);
         }
 
-        // array to save source, destination, and transport time for each particle
-        int[][] particle_info = new int[nparts][3];
-        double[][] settle_density = new double[nparts][1];
-
         // --------------------------------------------------------------------------------------
         // Setup particles
         // --------------------------------------------------------------------------------------
@@ -196,23 +192,8 @@ public class Particle_track {
         // Set up times at which to print particle locations to file 
         // --------------------------------------------------------------------------------------
         int simLengthHours = numberOfDays * 24;
-        int nDumps = simLengthHours / rp.dumpInterval + 1;
-        System.out.println("simLengthHours " + simLengthHours + " dumpInterval " + rp.dumpInterval + " nDumps " + nDumps);
-        if (rp.oldOutput == false)
-        {
-            System.out.println("WARNING: oldOutput = false, so this list of dumptimes is irrelevant");
-        }
-        double[] dumptimes2 = new double[1];
-        if (nDumps > 1) {
-            dumptimes2 = new double[nDumps];
-            for (int i = 0; i < nDumps; i++) {
-                dumptimes2[i] = i * rp.dumpInterval;
-                System.out.println("Dumptime set: " + dumptimes2[i]);
-            }
-        } else {
-            dumptimes2[0] = simLengthHours * 2;
-            System.out.println("No dumptimes set: ");
-        }
+        System.out.println("simLengthHours " + simLengthHours);
+        
 
         // --------------------------------------------------------------------------------------
         // Final setup bits
@@ -325,27 +306,9 @@ public class Particle_track {
                         // recordsPerFile is 7 (6 + 1 for overlap)
                         int currentHour = (dayQuarter-1)*(rp.recordsPerFile-1) + tt;
                         //System.out.printf("%d \n", tt + 1);
-                        // Append particle locations for first nSites for plotting trajectories
-                        
-                        if (rp.oldOutput == true)
-                        {
-                            if (rp.all_locs_out==true)
-                            {
-                                IOUtils.particleLocsToFile(particles, startlocs.length * nparts_per_site, printCount, "particlelocations_all" + rp.suffix + ".out");
-                            }
-                            else
-                            {
-                                IOUtils.particleLocsToFile(particles, startlocs.length * nTracksSavedPerSite, printCount, "particlelocations_all" + rp.suffix + ".out");
-                            }
-                            boolean debug = false;
-                            if (debug == true) {
-                                IOUtils.particleLocsToFile(particles, nparts, 0, "particlelocations_t" + tt + ".out");
-                            }
-                        }
-
+                                               
                         // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                         // exact hour
-
                         if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
                         {
                             System.out.printf("Release attempt: releaseScen %d, releaseTime %f, allowRelease %s nuParticlesCreated %d \n",
@@ -388,7 +351,7 @@ public class Particle_track {
                                             u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2,
                                             startlocs, endlocs, open_BC_locs,
                                             searchCounts,
-                                            particle_info, settle_density, minMaxDistTrav));
+                                            minMaxDistTrav));
                                     
                                 }
                                 for (Callable<List<Particle>> callable : callables) {
@@ -406,61 +369,32 @@ public class Particle_track {
                                             u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2,
                                             startlocs, endlocs, open_BC_locs,
                                             searchCounts,
-                                            particle_info, settle_density, minMaxDistTrav);
+                                            minMaxDistTrav);
 
                                 }
                             }
 
                             // --------------- End of particle loop ---------------------
                             time += subStepDt / 3600.0;
-                            
-                            if (rp.oldOutput == true)
-                            {
-                                // Dump particle locations to file at predfined times
-                                if (nDumps > 0) {
-                                    for (int ot = 0; ot < dumptimes2.length; ot++) {
-                                        if (time > dumptimes2[ot]) {
-                                            System.out.println("Print particle locations to file " + ot + " " + dumptimes2[ot] + " hrs");
-                                            IOUtils.particleLocsToFile1(particles, "particlelocations_" + ot + ".out", false);
-
-                                            // Report present density snapshots
-                                            double[][] pstepsInstImmature = pstepImmatureSnapshot(particles, rp, startlocs.length);
-                                            double[][] pstepsInstMature = pstepMatureSnapshot(particles, rp, startlocs.length);
-                                            IOUtils.writeDoubleArrayToFile(pstepsInstImmature, "elementCountsImmature_" + ot + ".out",false);
-                                            IOUtils.writeDoubleArrayToFile(pstepsInstMature, "elementCountsMature_" + ot + ".out",false);
-                                            // Report present cumulative particle time
-                                            IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmatureTemp_" + ot + ".out",false);
-                                            IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMatureTemp_" + ot + ".out",false);
-
-                                            // Once recorded, set this value to be greater than simulation length
-                                            dumptimes2[ot] = simLengthHours * 2;
-
-                                        }
-                                    }
-                                }
-                            } 
-                            
+                                                        
                             // end of particle loop
                             calcCount++;
                         }
                         
                         // New output: print ALL current particle location to a separate file, once each hour
-                        if (rp.oldOutput == false)
-                        {
-                            //System.out.println("Print particle locations to file " + today + " " + currentHour);
-                            //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
-                            IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
-                            // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
-                            for (Particle part: particles) {
-                                if (part.getSettledThisHour()==true && rp.oldOutput == false)
-                                {
-                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".out", true);
-                                    part.setSettledThisHour(false);
-                                }
-
+                        
+                        //System.out.println("Print particle locations to file " + today + " " + currentHour);
+                        //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
+                        IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
+                        // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
+                        for (Particle part: particles) {
+                            if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
+                            {
+                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".out", true);
+                                part.setSettledThisHour(false);
                             }
                         }
-                        
+       
                         // Clean up "dead" (666) and "exited" (66) particles
                         List<Particle> particlesToRemove = new ArrayList<>(0);
                         for (Particle part : particles)
@@ -472,10 +406,8 @@ public class Particle_track {
                             }
                         }
                         particles.removeAll(particlesToRemove);
-                        
-                        
-                        printCount++;
-                        
+  
+                        printCount++;                    
                         stepcount++;
                     }
                     System.out.printf("\n");
@@ -484,21 +416,7 @@ public class Particle_track {
             }
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
-
-            // NOTE (09/02/2018): Particle_info is now non longer updated with boundary exits
-            // The reporting of arrivals to particle info was already removed previously
-            if (rp.oldOutput == true)
-            {
-                IOUtils.writeDoubleArrayToFile(pstepsImmature, "pstepsImmature" + rp.suffix + ".out",false);
-                IOUtils.writeDoubleArrayToFile(pstepsMature, "pstepsMature" + rp.suffix + ".out",false);
-                IOUtils.writeIntegerArrayToFile(particle_info, "particle_info" + rp.suffix + ".out");
-                IOUtils.writeDoubleArrayToFile(settle_density, "settle_density" + rp.suffix + ".out",false);            
-                IOUtils.particleLocsToFile1(particles, "particlelocations_end" + rp.suffix + ".out", false);
-
-                double[][] connectMatrix = connectFromParticleArrivals(particles,startlocs.length,rp.nparts);
-                IOUtils.writeDoubleArrayToFile(connectMatrix, "connectMatrix" + rp.suffix + ".out",false);
-            }
-            
+           
             executorService.shutdownNow();
         } finally {
             executorService.shutdownNow();

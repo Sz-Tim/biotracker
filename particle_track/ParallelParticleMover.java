@@ -40,8 +40,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final double[][] endlocs;
     private final double[][] open_BC_locs;
     private final int[] searchCounts;
-    private final int[][] particle_info;
-    private final double[][] settle_density;
     private final double[] minMaxDistTrav;
     
     public ParallelParticleMover(List<Particle> particles, double time, int tt, int st, double subStepDt,
@@ -52,7 +50,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[][] bathymetry, double[] sigvec2, double[][] startlocs,
             double[][] endlocs, double[][] open_BC_locs,
             int[] searchCounts,
-            int[][] particle_info, double[][] settle_density,
             double[] minMaxDistTrav)
     {
         this.particles=particles;
@@ -74,8 +71,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.endlocs=endlocs;
         this.open_BC_locs=open_BC_locs;
         this.searchCounts=searchCounts;
-        this.particle_info=particle_info;
-        this.settle_density=settle_density;
         this.minMaxDistTrav=minMaxDistTrav;
     }
     
@@ -87,7 +82,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                     u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
                                     startlocs, endlocs, open_BC_locs,
                                     searchCounts, 
-                                    particle_info, settle_density, minMaxDistTrav);
+                                    minMaxDistTrav);
         }
         return new ArrayList<Particle>();
     }
@@ -128,7 +123,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[][] bathymetry, double[] sigvec2, double[][] startlocs,
             double[][] endlocs, double[][] open_BC_locs,
             int[] searchCounts,
-            int[][] particle_info, double[][] settle_density,
             double[] minMaxDistTrav)
     {
         // Set particles free once they pass thier defined release time (hours)
@@ -298,11 +292,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         //part.setArrived(true);
                         part.setBoundaryExit(true);
                         part.setStatus(66);
-                        // elements of particle_info are only updated once by a single thread
-                        //particle_info[part.getID()][1] = -loc;//(int)startlocs[loc][0];
-                        //particle_info[part.getID()][2] = (int)part.getAge();//((day-firstday)*24+tt);
-                        // This is updated by many threads - calculation now done outside of move
-                        //freeViableSettleExit[3]++;
                         break;
 
                     }
@@ -329,17 +318,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             part.setArrived(true);
                             part.setStatus(3);
                         }
-                        // elements of particle_info and settle_density are only updated once by a single thread
-//                        particle_info[part.getID()][1] = loc;//(int)startlocs[loc][0];
-//                        particle_info[part.getID()][2] = (int)time;//((day-firstday)*24+tt);
-//                        settle_density[part.getID()][0] = part.getDensity();
-//                        // This is updated by many threads - calculation now done outside of move                        
-                        //freeViableSettleExit[2]++;
-                        if (rp.oldOutput == true)
-                        {
-                            part.reportArrival(part.getStartID(), loc, time, part.getDensity());
-                        }
-                        
+
                         part.setSettledThisHour(true);
                         part.setLastArrival(loc);
                         break;
