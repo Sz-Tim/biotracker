@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.LineNumberReader;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import java.util.*;
         
@@ -80,6 +82,65 @@ public class IOUtils {
         
         return startlocs;
     }
+    
+    public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy)
+    {
+        List<HabitatSite> habitat = new ArrayList<>();
+        System.out.println("Habitat defined in file: "+filename);
+        File file = new File(sitedir+filename);
+        int nLines = 0;
+        try
+        {
+            nLines = countLines(file);
+            System.out.println("FILE "+file+" NLINES "+nLines);
+        }
+        catch (Exception e)
+        {
+            System.err.println("Cannot open "+sitedir+filename);
+        }
+        
+        // try to create habitat from file
+        try
+        {
+            BufferedReader in = new BufferedReader(new FileReader(file));	//reading files in specified directory
+ 
+            String line;
+            //boolean printWarning=true;
+            int count = 0;
+            
+            while ((line = in.readLine()) != null)	//file reading
+            {
+                //int numEntries = countWords(line);
+                String[] values = line.split("\t");
+                HabitatSite site = new HabitatSite(values[0],Double.parseDouble(values[1]),Double.parseDouble(values[2]),Double.parseDouble(values[3]),Double.parseDouble(values[scaleCol]));
+                habitat.add(site);
+                count++;
+            }
+            in.close();
+            System.out.println("Created "+count+" habitat sites");
+        }
+        catch (Exception e)
+        {
+            System.err.println("Cannot create habitat sites from "+sitedir+filename);
+        }
+        
+        // Make a copy if required
+        if (makeLocalCopy == true)
+        {
+            String outName = "startlocs.dat";
+            try
+            {
+                Files.copy(file.toPath(), Paths.get(outName));
+            }
+            catch (Exception e)
+            {
+                System.err.println("Cannot copy "+sitedir+filename+" to "+outName);
+            }
+        }
+        
+        return habitat;
+    }
+    
     
     /**
      * Add some extra locations at which settlement is possible, or limit settlement to
@@ -481,11 +542,11 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %d %.0f %.0f %d %d %.2f\n",
+                out.printf("%d %d %s %.1f %s %.0f %.0f %d %d %.2f\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
-                        p.getStartTime(),
+                        p.getAge(),
                         p.getStartID(),
                         p.getLocation()[0],
                         p.getLocation()[1],
@@ -512,7 +573,7 @@ public class IOUtils {
 //            for (Particle p : particles)
 //            {
                 //System.out.printf("Settlement\n");
-                out.printf("%d %s %.2f %d %s %.2f %d %f %f\n",
+                out.printf("%d %s %.2f %s %s %.2f %s %f %f\n",
                         p.getID(),
                         p.getStartDate().getDateStr(),
                         p.getStartTime(),

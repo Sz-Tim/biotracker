@@ -144,14 +144,26 @@ public class Particle_track {
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
         // load array of start node IDs (as stored by matlab)
-        double startlocs[][] = new double[10][3];
+        double startlocs[][] = new double[10][3];       
         double endlocs[][] = new double[10][3];
         double open_BC_locs[][] = new double[1][3];
 
-        startlocs = IOUtils.setupStartLocs(rp.sitefile, rp.sitedir, true);
+        //startlocs = IOUtils.setupStartLocs(rp.sitefile, rp.sitedir, true);
         //startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
-        endlocs = IOUtils.setupEndLocs(rp.habitat, rp.sitedir, startlocs, rp.endlimit);
+        //endlocs = IOUtils.setupEndLocs(rp.habitat, rp.sitedir, startlocs, rp.endlimit);
         open_BC_locs = IOUtils.setupOpenBCLocs(rp.location, rp.datadir2);
+        
+        // A new way of creating habitat sites, allowing use of more information
+        List<HabitatSite> habitat = new ArrayList<>();
+        habitat = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
+        for (HabitatSite site : habitat)
+        {
+            System.out.println(site.toString());
+        }
+        // Need a list of end sites - have just used the same list for now
+        List<HabitatSite> habitatEnd = new ArrayList<>();
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
+        
 
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -226,7 +238,7 @@ public class Particle_track {
         //final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
-        String locationHeader = "hour ID startDate startTime startLocation x y elem status density";
+        String locationHeader = "hour ID startDate age startLocation x y elem status density";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
         IOUtils.printFileHeader(arrivalHeader,"arrivals.out");
@@ -314,10 +326,10 @@ public class Particle_track {
                             System.out.printf("Release attempt: releaseScen %d, releaseTime %f, allowRelease %s nuParticlesCreated %d \n",
                                 rp.releaseScenario,time,allowRelease,numParticlesCreated);
                             //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
-                            List<Particle> newParts = createNewParticles(startlocs,allelems,trinodes,nodexy,uvnode,
+                            List<Particle> newParts = createNewParticles(habitat,allelems,trinodes,nodexy,uvnode,
                                     rp,currentIsoDate,currentHour,numParticlesCreated);
                             particles.addAll(newParts);
-                            numParticlesCreated = numParticlesCreated+(rp.nparts*startlocs.length);
+                            numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
                             // If only one release to be made, prevent further releases
                             if (rp.releaseScenario==0)
                             {
@@ -329,7 +341,7 @@ public class Particle_track {
                         for (int st = 0; st < rp.stepsPerStep; st++) {
 
                             // Update the element count arrays
-                            pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
+                            //pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
 
                             //System.out.print(",");
                             //System.out.println("nfreeparts = "+nfreeparts);
@@ -349,7 +361,7 @@ public class Particle_track {
                                     }
                                     callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
                                             u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2,
-                                            startlocs, endlocs, open_BC_locs,
+                                            habitatEnd, open_BC_locs,
                                             searchCounts,
                                             minMaxDistTrav));
                                     
@@ -367,7 +379,7 @@ public class Particle_track {
                                     // Can just use the move method that was shipped out to the ParallelParticleMover class
                                     ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
                                             u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2,
-                                            startlocs, endlocs, open_BC_locs,
+                                            habitatEnd, open_BC_locs,
                                             searchCounts,
                                             minMaxDistTrav);
 
@@ -385,6 +397,7 @@ public class Particle_track {
                         
                         //System.out.println("Print particle locations to file " + today + " " + currentHour);
                         //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
+                        
                         IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
                         // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                         for (Particle part: particles) {
@@ -394,7 +407,7 @@ public class Particle_track {
                                 part.setSettledThisHour(false);
                             }
                         }
-       
+                           
                         // Clean up "dead" (666) and "exited" (66) particles
                         List<Particle> particlesToRemove = new ArrayList<>(0);
                         for (Particle part : particles)
@@ -440,17 +453,23 @@ public class Particle_track {
      * @param numParticlesCreated
      * @return List of the new particles to be appended to existing list
      */
-    public static List<Particle> createNewParticles(double[][] startlocs,
+    public static List<Particle> createNewParticles(List<HabitatSite> habitat,
             int[] allelems, int[][] trinodes, double[][] nodexy, double[][] uvnode, 
             RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated)
     {
         //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
-        List<Particle> newParts = new ArrayList<>(rp.nparts*startlocs.length);
-        for (int i = 0; i < rp.nparts*startlocs.length; i++)
+        List<Particle> newParts = new ArrayList<>(rp.nparts*habitat.size());
+        for (int i = 0; i < rp.nparts*habitat.size(); i++)
             {
-                int startid = i % startlocs.length;
-                double xstart = startlocs[startid][1];
-                double ystart = startlocs[startid][2];
+                int startid = i % habitat.size();
+                double xstart = habitat.get(startid).getLocation()[0];
+                double ystart = habitat.get(startid).getLocation()[1];
+                
+                //System.out.println(xstart+" "+ystart);
+                
+                //double xstart = startlocs[startid][1];
+                //double ystart = startlocs[startid][2];
+                
                 // If start location is a boundary location it is not actually in the mesh/an element, so set
                 // new particle location to centre of nearest element.
                 int closest = Particle.nearestCentroid(xstart, ystart, uvnode);
@@ -461,14 +480,18 @@ public class Particle_track {
                     startElem = closest;
                 }
             
-                Particle p = new Particle(xstart, ystart, startid, numParticlesCreated+i, rp.mortalityRate, currentDate, currentTime);
+                Particle p = new Particle(xstart, ystart, habitat.get(startid).getID(), numParticlesCreated+i, rp.mortalityRate, currentDate, currentTime);
                 p.setElem(startElem);
                 // No longer set releaseScenario for individual particles since they are created at the moment of release
                 //p.setReleaseScenario(rp.releaseScenario, startlocs);
-                if (startlocs[startid].length > 4 && rp.setDepth == true) {
-                    p.setZ(startlocs[startid][4]);
+//                if (startlocs[startid].length > 4 && rp.setDepth == true) {
+//                    p.setZ(startlocs[startid][4]);
+//                }
+                if (rp.setDepth == true) {
+                    p.setZ(habitat.get(startid).getDepth());
                 }
                 newParts.add(p);
+                //System.out.println(p.toString());
             }
         return newParts;
     }
@@ -510,41 +533,41 @@ public class Particle_track {
         return connectMatrix;
     }
 
-    /**
-     * Make additions to the element presence counts (PSTEPS)
-     *
-     * @param particles
-     * @param rp
-     * @param pstepsMature
-     * @param pstepsImmature
-     * @param subStepDt
-     */
-    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
-            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
-        for (Particle p : particles) {
-            double d = 1;
-            if (rp.pstepsIncMort == true) {
-                d = p.getDensity();
-            }
-            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-            int elemPart = p.getElem();
-            // psteps arrays are updated by lots of threads
-            if (p.getViable() == true) {
-                if (rp.splitPsteps == false) {
-                    pstepsMature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-                } else {
-                    pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-                }
-            } else if (p.getFree() == true) {
-                //System.out.println("Printing to pstepsImmature");
-                if (rp.splitPsteps == false) {
-                    pstepsImmature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-                } else {
-                    pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-                }
-            }
-        }
-    }
+//    /**
+//     * Make additions to the element presence counts (PSTEPS)
+//     *
+//     * @param particles
+//     * @param rp
+//     * @param pstepsMature
+//     * @param pstepsImmature
+//     * @param subStepDt
+//     */
+//    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
+//            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
+//        for (Particle p : particles) {
+//            double d = 1;
+//            if (rp.pstepsIncMort == true) {
+//                d = p.getDensity();
+//            }
+//            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//            int elemPart = p.getElem();
+//            // psteps arrays are updated by lots of threads
+//            if (p.getViable() == true) {
+//                if (rp.splitPsteps == false) {
+//                    pstepsMature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                }
+//            } else if (p.getFree() == true) {
+//                //System.out.println("Printing to pstepsImmature");
+//                if (rp.splitPsteps == false) {
+//                    pstepsImmature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//    }
     
     /**
      * Take a snapshot of the number of mature particles in each cell
@@ -553,72 +576,73 @@ public class Particle_track {
      * @param nSourceSites
      * @return 
      */
-    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
-            int nSourceSites) {   
-        int pstepCols = 2; 
-        // Alternatively, make a column for each source site
-        if (rp.splitPsteps == true){
-            pstepCols = nSourceSites + 1;            
-        }
-        double[][] pstepsInstMature = new double[rp.N][pstepCols];
-        for (int i = 0; i < rp.N; i++) {
-            pstepsInstMature[i][0] = i;
-        }
-        
-        for (Particle p : particles) {
-            if (p.getViable() == true) {
-                double d = 1;
-                if (rp.pstepsIncMort == true) {
-                    d = p.getDensity();
-                }
-                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-                int elemPart = p.getElem();
-                if (rp.splitPsteps == false) {
-                    pstepsInstMature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
-                } else {
-                    pstepsInstMature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
-                }
-            }
-        }
-        return pstepsInstMature;
-    } 
-    /**
-     * Take a snapshot of the number of immature particles in each cell
-     * @param particles
-     * @param rp
-     * @param nSourceSites
-     * @return 
-     */
-    public static double[][] pstepImmatureSnapshot(List<Particle> particles, RunProperties rp,
-            int nSourceSites) {   
-        int pstepCols = 2; 
-        // Alternatively, make a column for each source site
-        if (rp.splitPsteps == true){
-            pstepCols = nSourceSites + 1;
-        }
-        double[][] pstepsInstImmature = new double[rp.N][pstepCols];
-        for (int i = 0; i < rp.N; i++) {
-            pstepsInstImmature[i][0] = i;
-        }
-        
-        for (Particle p : particles) {
-            if (p.getViable() == false && p.getFree() == true) {
-                double d = 1;
-                if (rp.pstepsIncMort == true) {
-                    d = p.getDensity();
-                }
-                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-                int elemPart = p.getElem();
-                //System.out.println("Printing to pstepsImmature");
-                if (rp.splitPsteps == false) {
-                    pstepsInstImmature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
-                } else {
-                    pstepsInstImmature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
-                }
-            }
-        }
-        return pstepsInstImmature;
-    }
+//    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
+//            int nSourceSites) {   
+//        int pstepCols = 2; 
+//        // Alternatively, make a column for each source site
+//        if (rp.splitPsteps == true){
+//            pstepCols = nSourceSites + 1;            
+//        }
+//        double[][] pstepsInstMature = new double[rp.N][pstepCols];
+//        for (int i = 0; i < rp.N; i++) {
+//            pstepsInstMature[i][0] = i;
+//        }
+//        
+//        for (Particle p : particles) {
+//            if (p.getViable() == true) {
+//                double d = 1;
+//                if (rp.pstepsIncMort == true) {
+//                    d = p.getDensity();
+//                }
+//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//                int elemPart = p.getElem();
+//                if (rp.splitPsteps == false) {
+//                    pstepsInstMature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsInstMature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//        return pstepsInstMature;
+//    } 
+    
+//    /**
+//     * Take a snapshot of the number of immature particles in each cell
+//     * @param particles
+//     * @param rp
+//     * @param nSourceSites
+//     * @return 
+//     */
+//    public static double[][] pstepImmatureSnapshot(List<Particle> particles, RunProperties rp,
+//            int nSourceSites) {   
+//        int pstepCols = 2; 
+//        // Alternatively, make a column for each source site
+//        if (rp.splitPsteps == true){
+//            pstepCols = nSourceSites + 1;
+//        }
+//        double[][] pstepsInstImmature = new double[rp.N][pstepCols];
+//        for (int i = 0; i < rp.N; i++) {
+//            pstepsInstImmature[i][0] = i;
+//        }
+//        
+//        for (Particle p : particles) {
+//            if (p.getViable() == false && p.getFree() == true) {
+//                double d = 1;
+//                if (rp.pstepsIncMort == true) {
+//                    d = p.getDensity();
+//                }
+//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//                int elemPart = p.getElem();
+//                //System.out.println("Printing to pstepsImmature");
+//                if (rp.splitPsteps == false) {
+//                    pstepsInstImmature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsInstImmature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//        return pstepsInstImmature;
+//    }
     
 
     /**

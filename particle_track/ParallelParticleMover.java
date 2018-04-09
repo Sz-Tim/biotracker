@@ -36,8 +36,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final int[] allelems;
     private final double[][] bathymetry;
     private final double[] sigvec2;
-    private final double[][] startlocs;
-    private final double[][] endlocs;
+    private final List<HabitatSite> habitatEnd;
     private final double[][] open_BC_locs;
     private final int[] searchCounts;
     private final double[] minMaxDistTrav;
@@ -47,8 +46,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[][] u, double[][] v,
             int[][] neighbours, double[][] uvnode,  double[][] nodexy, 
             int[][] trinodes, int[] allelems,
-            double[][] bathymetry, double[] sigvec2, double[][] startlocs,
-            double[][] endlocs, double[][] open_BC_locs,
+            double[][] bathymetry, double[] sigvec2, 
+            List<HabitatSite> habitatEnd, double[][] open_BC_locs,
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
@@ -67,8 +66,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.allelems=allelems;
         this.bathymetry=bathymetry;
         this.sigvec2=sigvec2;
-        this.startlocs=startlocs;
-        this.endlocs=endlocs;
+        this.habitatEnd=habitatEnd;
         this.open_BC_locs=open_BC_locs;
         this.searchCounts=searchCounts;
         this.minMaxDistTrav=minMaxDistTrav;
@@ -80,7 +78,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             //System.out.println("Time "+time+" - Moving particle "+part.getID());
             move(part, time, tt, st, subStepDt, rp, 
                                     u, v, neighbours, uvnode, nodexy, trinodes, allelems, bathymetry, sigvec2, 
-                                    startlocs, endlocs, open_BC_locs,
+                                    habitatEnd, open_BC_locs,
                                     searchCounts, 
                                     minMaxDistTrav);
         }
@@ -107,7 +105,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param allelems
      * @param bathymetry
      * @param sigvec2
-     * @param startlocs
      * @param endlocs
      * @param open_BC_locs
      * @param searchCounts
@@ -120,11 +117,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[][] u, double[][] v,
             int[][] neighbours, double[][] uvnode,  double[][] nodexy, 
             int[][] trinodes, int[] allelems,
-            double[][] bathymetry, double[] sigvec2, double[][] startlocs,
-            double[][] endlocs, double[][] open_BC_locs,
+            double[][] bathymetry, double[] sigvec2,
+            List<HabitatSite> habitatEnd, double[][] open_BC_locs,
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
+        //System.out.println("movepart");
         // Set particles free once they pass thier defined release time (hours)
         if (part.getFree()==false)
         {
@@ -304,10 +302,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             {
                 //System.out.println(particles[i].getViable());
 
-                for (int loc = 0; loc < endlocs.length; loc++)
+                for (HabitatSite site : habitatEnd)
                 {
-                    double dist = Math.sqrt((part.getLocation()[0]-endlocs[loc][1])*(part.getLocation()[0]-endlocs[loc][1])+
-                            (part.getLocation()[1]-endlocs[loc][2])*(part.getLocation()[1]-endlocs[loc][2]));
+//                    double dist = Math.sqrt((part.getLocation()[0]-endlocs[loc][1])*(part.getLocation()[0]-endlocs[loc][1])+
+//                            (part.getLocation()[1]-endlocs[loc][2])*(part.getLocation()[1]-endlocs[loc][2]));
+                    //System.out.println("In habitatEnd check "+part.getLocation()[0]+" "+part.getLocation()[1]);
+                    double dist = Math.sqrt((part.getLocation()[0]-site.getLocation()[0])*(part.getLocation()[0]-site.getLocation()[0])+
+                            (part.getLocation()[1]-site.getLocation()[1])*(part.getLocation()[1]-site.getLocation()[1]));
                     if (dist < rp.thresh && part.getSettledThisHour()==false)
                     {
                         //IOUtils.arrivalToFile(part, currentDate, whereami, loc, filename, true);
@@ -320,7 +321,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         }
 
                         part.setSettledThisHour(true);
-                        part.setLastArrival(loc);
+                        part.setLastArrival(site.getID());
                         break;
                     }
                 }    

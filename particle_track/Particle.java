@@ -16,7 +16,7 @@ public class Particle {
     // horizontal position
     private double[] xy = new double[2];
     final private double[] startLoc = new double[2];
-    private int startSiteID = 0;
+    private String startSiteID = "0";
     
     private ISO_datestr startDate;
     private double startTime = 0;
@@ -40,14 +40,14 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
     
-    private int lastArrival = 0;
+    private String lastArrival = "0";
     
     // A list to store data on the arrivals made by each particle.
     // If rp.endOnArrival=true, this will contain a maximum of one element.
     private List<Arrival> arrivals;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate)
+    public Particle(double xstart, double ystart, String startSiteID, int id, double mortalityRate)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -57,9 +57,9 @@ public class Particle {
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
         
-        this.arrivals = new ArrayList<Arrival>();
+        this.arrivals = new ArrayList<>();
     }
-    public Particle(double xstart, double ystart, int startSiteID, int id, double mortalityRate, 
+    public Particle(double xstart, double ystart, String startSiteID, int id, double mortalityRate, 
             ISO_datestr startDate, double startTime)
     {
         this.id = id;
@@ -110,6 +110,12 @@ public class Particle {
 //        }
 //    }
     
+    @Override
+    public String toString()
+    {
+        return this.getID()+" "+this.xy.toString();
+    }
+    
     public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
     {
         arrivals.add(new Arrival(sourceLocation,arrivalLocation,arrivalTime,arrivalDensity));
@@ -140,7 +146,7 @@ public class Particle {
     {
         return this.startLoc;
     }
-    public int getStartID()
+    public String getStartID()
     {
         return this.startSiteID;
     }
@@ -327,11 +333,11 @@ public class Particle {
     {
         this.arrived = arrived;
     }
-    public void setLastArrival(int loc)
+    public void setLastArrival(String loc)
     {
         this.lastArrival = loc;
     }
-    public int getLastArrival()
+    public String getLastArrival()
     {
         return this.lastArrival;
     }
