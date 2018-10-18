@@ -44,6 +44,7 @@ public class Particle {
     
     // A list to store data on the arrivals made by each particle.
     // If rp.endOnArrival=true, this will contain a maximum of one element.
+    // --- Not presently used ---
     private List<Arrival> arrivals;
     
     // create a new particle at a defined location, at the water surface
@@ -116,6 +117,7 @@ public class Particle {
         return this.getID()+" "+this.xy.toString();
     }
     
+    // Not presently used
     public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
     {
         arrivals.add(new Arrival(sourceLocation,arrivalLocation,arrivalTime,arrivalDensity));
