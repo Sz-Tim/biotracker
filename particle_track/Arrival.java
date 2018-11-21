@@ -11,6 +11,8 @@ package particle_track;
  * of the simulation-wide arrays. This avoid concurrent updating, but requires postprocessing
  * at the end of the run to count arrivals.
  * 
+ * NOT PRESENTLY USED 21/11/18
+ * 
  * @author sa01ta
  */
 public class Arrival {
