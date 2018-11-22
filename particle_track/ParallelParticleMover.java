@@ -165,7 +165,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             {
                 double salinity = 0;
                 double mort = 0;
-//                                if (calcMort == true)
+//                                if (rp.salinityMort == true)
 //                                {
 //                                    salinity = particles[i].salinity(tt,sal,trinodes);
 //                                    particles[i].setMortRate(salinity);
