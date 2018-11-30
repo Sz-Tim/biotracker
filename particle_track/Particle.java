@@ -173,7 +173,7 @@ public class Particle {
     {
         return this.elem;
     }
-    public void setNrList(double[][] uvnode)
+    public void setNrList(float[][] uvnode)
     {
         this.nrList = nearestCentroidList(this.xy[0], this.xy[1], uvnode);
     }
@@ -305,7 +305,7 @@ public class Particle {
      * @param localDepth  element bathymetry value
      * @param layers 
      */
-    public void setLayerFromDepth(double localDepth, double[] layers)
+    public void setLayerFromDepth(double localDepth, float[] layers)
     {
         int depNearest = 0;
         double dZmin = 1000;
@@ -405,7 +405,7 @@ public class Particle {
         double weight3 = 1.0/(dist3*dist3);
         double weightSum = weight1+weight2+weight3;
         
-        s = (1.0/weightSum)*(weight1*salinity[tt][trinodes[elem][0]]+weight2*salinity[tt][trinodes[elem][1]]+weight3*salinity[tt][trinodes[elem][2]]);
+        s = (1.0/weightSum)*(weight1*salinity[tt][trinodes[0][elem]]+weight2*salinity[tt][trinodes[1][elem]]+weight3*salinity[tt][trinodes[2][elem]]);
         
         return s;
     }
@@ -442,14 +442,14 @@ public class Particle {
      * @param uvnode
      * @return 
      */
-    public static int nearestCentroid(double x, double y, double[][] uvnode)
+    public static int nearestCentroid(double x, double y, float[][] uvnode)
     {
         int nearest = -1;
         double dist=10000000;
     
         for (int i = 0; i < uvnode.length; i++)
         {
-            double distnew = Math.sqrt((x-uvnode[i][0])*(x-uvnode[i][0])+(y-uvnode[i][1])*(y-uvnode[i][1]));
+            double distnew = Math.sqrt((x-uvnode[0][i])*(x-uvnode[0][i])+(y-uvnode[1][i])*(y-uvnode[1][i]));
             if (distnew<dist)
             {
                 dist=distnew;
@@ -466,7 +466,7 @@ public class Particle {
      * @param uvnode
      * @return 
      */
-    public static double[][] nearestCentroidList(double x, double y, double[][] uvnode)
+    public static double[][] nearestCentroidList(double x, double y, float[][] uvnode)
     {
         double[][] nearestList = new double[5][2];
         int nearest = -1;
@@ -474,7 +474,7 @@ public class Particle {
     
         for (int i = 0; i < uvnode.length; i++)
         {
-            double distnew = Math.sqrt((x-uvnode[i][0])*(x-uvnode[i][0])+(y-uvnode[i][1])*(y-uvnode[i][1]));
+            double distnew = Math.sqrt((x-uvnode[0][i])*(x-uvnode[0][i])+(y-uvnode[1][i])*(y-uvnode[1][i]));
             if (distnew<dist)
             {
                 dist=distnew;
@@ -528,7 +528,7 @@ public class Particle {
      * @return 
      */
     public static double[] velocityInterpAtLoc(int tt, double xy[], int elemPart0, double u[][],double v[][],
-            int[][] neighbours, double[][] uvnode, double[][] nodexy, int[][] trinodes, int[] allelems, int depLayer)
+            int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems, int depLayer)
     {
         double[] velocity = new double[2];
         // elemPart0 is the starting search element. Set = 1 if outside range.
@@ -595,7 +595,7 @@ public class Particle {
      * @param trinodes
      * @return 
      */
-    public static int whichElement(double x, double y, int[] elems, double[][] nodexy, int[][] trinodes)
+    public static int whichElement(double x, double y, int[] elems, float[][] nodexy, int[][] trinodes)
     {
         int which = -1;
         int res = 0;
@@ -608,8 +608,8 @@ public class Particle {
             {
                 //int elem=elems[i];
                 
-                 xt[j]=nodexy[trinodes[elems[i]][j]][0];
-                 yt[j]=nodexy[trinodes[elems[i]][j]][1];
+                 xt[j]=nodexy[0][trinodes[j][elems[i]]];
+                 yt[j]=nodexy[1][trinodes[j][elems[i]]];
             }
             // check whether (x,y) lies within this
             //fprintf('check %d\n', possibleElems(i));
@@ -661,7 +661,7 @@ public class Particle {
      * @return 
      */
     public static int[] findContainingElement(double newlocx, double newlocy, int elemPart,
-            double[][] nodexy, int[][] trinodes, int[][] neighbours, int[] allelems)
+            float[][] nodexy, int[][] trinodes, int[][] neighbours, int[] allelems)
     {
         int[] c = new int[6];
         int[] elems = new int[1];
@@ -721,26 +721,26 @@ public class Particle {
      * @param neighbours
      * @param uvnode 
      */
-    public void setNrListToNeighbourCells(int[][] neighbours, double[][] uvnode)
+    public void setNrListToNeighbourCells(int[][] neighbours, float[][] uvnode)
     {      
         // distance to elem
         //int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
         int elem = this.elem;
         this.nrList[0][0] = elem;
-        this.nrList[0][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[elem][0],uvnode[elem][1]);
+        this.nrList[0][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][elem],uvnode[1][elem]);
         // distance to neighbouring elems
         this.nrList[1][0] = neighbours[elem][0];
-        this.nrList[1][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][0]][0],uvnode[neighbours[elem][0]][1]);
+        this.nrList[1][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[0][elem]],uvnode[1][neighbours[0][elem]]);
         this.nrList[2][0] = neighbours[elem][1];
-        this.nrList[2][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][1]][0],uvnode[neighbours[elem][1]][1]);
+        this.nrList[2][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[1][elem]],uvnode[1][neighbours[1][elem]]);
         this.nrList[3][0] = neighbours[elem][2];
-        this.nrList[3][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[neighbours[elem][2]][0],uvnode[neighbours[elem][2]][1]);   
+        this.nrList[3][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[2][elem]],uvnode[1][neighbours[2][elem]]);   
         this.nrList[4][0] = 0;
         this.nrList[4][1] = 1000000;     
     }
     
     public static double[][] neighbourCellsList(double xy[], int elemPart0, 
-            int[][] neighbours, double[][] uvnode, double[][] nodexy, int[][] trinodes, int[] allelems)
+            int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems)
     {      
         double[][] nrList = new double[5][2];
         // distance to elem
@@ -759,11 +759,11 @@ public class Particle {
         nrList[0][1] = distanceEuclid(xy[0],xy[1],uvnode[thisElem][0],uvnode[thisElem][1]);
         // distance to neighbouring elems
         nrList[1][0] = neighbours[thisElem][0];
-        nrList[1][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[thisElem][0]][0],uvnode[neighbours[thisElem][0]][1]);   
+        nrList[1][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[0][thisElem]][0],uvnode[neighbours[0][thisElem]][1]);   
         nrList[2][0] = neighbours[thisElem][1];
-        nrList[2][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[thisElem][1]][0],uvnode[neighbours[thisElem][1]][1]);    
+        nrList[2][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[1][thisElem]][0],uvnode[neighbours[1][thisElem]][1]);    
         nrList[3][0] = neighbours[thisElem][2];
-        nrList[3][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[thisElem][2]][0],uvnode[neighbours[thisElem][2]][1]);      
+        nrList[3][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[2][thisElem]][0],uvnode[neighbours[2][thisElem]][1]);      
         nrList[4][0] = 0;
         nrList[4][1] = 1000000; 
         
@@ -780,7 +780,7 @@ public class Particle {
      *              Replace velplus1[] calculation with direct calculation
      */
     public double[] rk4Step(double[][] u, double[][] v, // velocities
-            int[][] neighbours, double[][] uvnode, double[][] nodexy, 
+            int[][] neighbours, float[][] uvnode, float[][] nodexy, 
             int[][] trinodes, int[] allelems,      // other mesh info
             int tt, int st, double dt,                                  // locate particle in space and time
             int stepsPerStep, int numLayers)   // info on simulation length
@@ -865,7 +865,7 @@ public class Particle {
      * 14/02/17 --- REMOVED double[][] u1, double[][] v1, from arguments
      */
     public static double[] stepAhead(double[] xy, int elemPart, int dep, double timeStepAhead,
-            int[][] neighbours, double[][] uvnode, double[][] nodexy, int[][] trinodes, int[] allelems,
+            int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems,
             double[][] u, double[][] v, 
             int tt, int st, double dt,
             int stepsPerStep, int numLayers)
@@ -932,7 +932,7 @@ public class Particle {
     }
 
     public double[] eulerStepOld(double[][] u, double[][] v, double[][] u1, double[][] v1, // velocities
-            int[][] neighbours, double[][] uvnode,                                               // other mesh info
+            int[][] neighbours, float[][] uvnode,                                               // other mesh info
             int tt, int st, double dt,                                          // locate particle in space and time
             int stepsPerStep, int recordsPerFile, int fnum, int lastday, int depthLayers,   // info on simulation length
             boolean spatialInterpolate, boolean timeInterpolate)                            // interpolate or not?

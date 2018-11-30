@@ -16,6 +16,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import java.util.*;
+
+import ucar.ma2.ArrayFloat;
+import ucar.ma2.ArrayInt;
+import ucar.ma2.InvalidRangeException;
+import ucar.nc2.NetcdfFile;
+import ucar.nc2.Variable;
         
 // import netcdf reading libraries for alternative data import
 // https://publicwiki.deltares.nl/display/FEWSDOC/Reading+and+writing+netcdf+gridded+data+with+Java
@@ -188,21 +194,166 @@ public class IOUtils {
         return endlocs;
     }
     
-    public static double[][] setupOpenBCLocs(String location, String datadir2)
+//    public static double[][] setupOpenBCLocs(String location, String datadir2)
+//    {
+//        double open_BC_locs[][] = new double[10][3];
+//        if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
+//        {
+//            //String sitedir=basedir+"minch_sites/";
+//            //open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
+//            open_BC_locs = IOUtils.readFileDoubleArray(datadir2+"open_boundary_locs_os.dat",137,3," ",true);
+//        } 
+//        else
+//        {
+//            open_BC_locs = IOUtils.readFileDoubleArray("C:\\Users\\sa01ta\\Documents\\lorn\\120903_renewableimpact\\131107_revision\\open_boundary_locs.dat",93,3," ",true);
+//        }
+//        return open_BC_locs;
+//    }
+    
+    public static int[] readFileInt1D(String fullFileName) throws Exception
     {
-        double open_BC_locs[][] = new double[10][3];
-        if (location.equalsIgnoreCase("minch") || location.equalsIgnoreCase("minch_continuous") || location.equalsIgnoreCase("minch_jelly"))
+        //double open_BC_locs[][] = new double[10][3];
+        int nLines = countLines(new File(fullFileName));
+        int[][] vals = IOUtils.readFileIntArray(fullFileName,nLines,1," ",true);
+        int[] valsOut = new int[nLines];
+        for (int i = 0; i < nLines; i++)
         {
-            //String sitedir=basedir+"minch_sites/";
-            //open_BC_locs = IOUtils.readFileDoubleArray(sitedir+"open_boundary_locs.dat",120,3," ",true);
-            open_BC_locs = IOUtils.readFileDoubleArray(datadir2+"open_boundary_locs_os.dat",137,3," ",true);
-        } 
-        else
-        {
-            open_BC_locs = IOUtils.readFileDoubleArray("C:\\Users\\sa01ta\\Documents\\lorn\\120903_renewableimpact\\131107_revision\\open_boundary_locs.dat",93,3," ",true);
+            valsOut[i] = vals[i][0];
         }
-        return open_BC_locs;
+        return valsOut;
     }
+    
+    
+    public static float[] readNetcdfFloat1D(String filename, String variable) throws IOException, InvalidRangeException
+    {
+        System.out.println("Reading variable: "+variable);
+        float[] floatOut;
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.out.println("Cant find Variable: "+variable);
+            }   
+            
+            int[] shape = dataVar.getShape();
+            //int origin = 0;
+            ArrayFloat.D1 dataArray = (ArrayFloat.D1) dataVar.read();
+            // Put the values into a native array
+            floatOut = new float[shape[0]];
+            for (int d1 = 0; d1 < shape[0]; d1++) {
+                floatOut[d1] = dataArray.get(d1);
+            }
+        }
+        return floatOut;
+    }
+    public static int[] readNetcdfInteger1D(String filename, String variable) throws IOException, InvalidRangeException
+    {
+        System.out.println("Reading variable: "+variable);
+        int[] intOut;
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.out.println("Can't find Variable: "+variable);
+            }   
+            
+            int[] shape = dataVar.getShape();
+            //int origin = 0;
+            ArrayInt.D1 dataArray = (ArrayInt.D1) dataVar.read();
+            // Put the values into a native array
+            intOut = new int[shape[0]];
+            for (int d1 = 0; d1 < shape[0]; d1++) {
+                intOut[d1] = dataArray.get(d1);
+            }
+        }
+        return intOut;
+    }
+    
+    /**
+     * Method to read NetCDF variable
+     * 
+     * @param filename
+     * @param variable
+     * @return
+     * @throws IOException
+     * @throws InvalidRangeException 
+     */
+    public static float[][] readNetcdfFloat2D(String filename, String variable) throws IOException, InvalidRangeException
+    {
+        System.out.println("Reading variable: "+variable);
+        float[][] floatOut;
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.out.println("Can't find Variable: "+variable);
+            }   int[] shape = dataVar.getShape();
+            int[] origin = new int[2];
+            ArrayFloat.D2 dataArray = (ArrayFloat.D2) dataVar.read(origin, shape);
+            // Put the values into a native array
+            floatOut = new float[shape[0]][shape[1]];
+            for (int d1 = 0; d1 < shape[0]; d1++) {
+                for (int d2 = 0; d2 < shape[1]; d2++) {
+                    floatOut[d1][d2] = dataArray.get(d1, d2);
+                }
+            }
+        }
+        return floatOut;
+    }
+    
+    public static int[][] readNetcdfInteger2D(String filename, String variable) throws IOException, InvalidRangeException
+    {
+        System.out.println("Reading variable: "+variable);
+        int[][] intOut;
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.out.println("Can't find Variable: "+variable);
+            }   
+            
+            int[] shape = dataVar.getShape();
+            int[] origin = new int[2];
+            ArrayInt.D2 dataArray = (ArrayInt.D2) dataVar.read(origin, shape);
+            // Put the values into a native array
+            intOut = new int[shape[0]][shape[1]];
+            for (int d1 = 0; d1 < shape[0]; d1++) {
+                for (int d2 = 0; d2 < shape[1]; d2++) {
+                    intOut[d1][d2] = dataArray.get(d1, d2);
+                }
+            }
+        }
+        return intOut;
+    }
+    
+    /**
+     * 
+     * @param filename
+     * @param variable
+     * @return
+     * @throws IOException
+     * @throws InvalidRangeException 
+     */
+    public static float[][][] readNetcdfFloat3D(String filename, String variable) throws IOException, InvalidRangeException
+    {
+        System.out.println("Reading variable: "+variable);
+        float[][][] floatOut;
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.out.println("Can't find Variable: "+variable);
+            }   int[] shape = dataVar.getShape();
+            int[] origin = new int[3];
+            ArrayFloat.D3 dataArray = (ArrayFloat.D3) dataVar.read(origin, shape);
+            // Put the values into a native array
+            floatOut = new float[shape[0]][shape[1]][shape[2]];
+            for (int d1 = 0; d1 < shape[0]; d1++) {
+                for (int d2 = 0; d2 < shape[1]; d2++) {
+                    for (int d3 = 0; d3 < shape[1]; d3++) {
+                        floatOut[d1][d2][d3] = dataArray.get(d1, d2, d3);
+                    }
+                }
+            }
+        }
+        return floatOut;
+    }
+    
     
     public static double[][] readFileDoubleArray(String filename, int rows, int cols, String sep, boolean note)
     {
