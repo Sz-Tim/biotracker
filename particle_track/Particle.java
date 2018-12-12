@@ -503,7 +503,7 @@ public class Particle {
      * @param v
      * @return 
      */
-    public double[] velPart(int tt, double u[][], double v[][])
+    public double[] velPart(int tt, float u[][][], float v[][][])
     {
         double[] velocity = new double[2];
         velocity = velocityFromNearestList(this.nrList,tt,u,v,10,1);
@@ -527,7 +527,7 @@ public class Particle {
      * @param allelems
      * @return 
      */
-    public static double[] velocityInterpAtLoc(int tt, double xy[], int elemPart0, double u[][],double v[][],
+    public static double[] velocityInterpAtLoc(int tt, double xy[], int elemPart0, float u[][][], float v[][][],
             int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems, int depLayer)
     {
         double[] velocity = new double[2];
@@ -552,7 +552,7 @@ public class Particle {
      * @param depLayer
      * @return 
      */
-    public static double[] velocityFromNearestList(double[][] nrList, int tt, double u[][],double v[][], int numLayers, int depLayer)
+    public static double[] velocityFromNearestList(double[][] nrList, int tt, float u[][][], float v[][][], int numLayers, int depLayer)
     {
         double[] velocity = new double[2];
         double[] weights = new double[nrList.length];
@@ -575,8 +575,10 @@ public class Particle {
             }
             //System.out.printf("tt %d i %d",tt,i);
             //System.out.printf(" --- elem %d dist %.4f weight %.4f --- vel = %.4f %.4f\n",(int)this.nrList[i][0],this.nrList[i][1],weights[i],u[tt][(int)this.nrList[i][0]*numLayers+this.depLayer],v[tt][(int)this.nrList[i][0]*numLayers+this.depLayer]);
-            usum=usum+weights[i]*u[tt][(int)nrList[i][0]*numLayers+depLayer];
-            vsum=vsum+weights[i]*v[tt][(int)nrList[i][0]*numLayers+depLayer];
+            usum=usum+weights[i]*u[tt][depLayer][(int)nrList[i][0]];
+            vsum=vsum+weights[i]*v[tt][depLayer][(int)nrList[i][0]];
+//            usum=usum+weights[i]*u[tt][(int)nrList[i][0]*numLayers+depLayer];
+//            vsum=vsum+weights[i]*v[tt][(int)nrList[i][0]*numLayers+depLayer];
             sum=sum+weights[i];
         }
         usum=usum/sum;
@@ -756,14 +758,14 @@ public class Particle {
         int thisElem = elem[0]; 
         //int elem = this.elem;
         nrList[0][0] = thisElem;
-        nrList[0][1] = distanceEuclid(xy[0],xy[1],uvnode[thisElem][0],uvnode[thisElem][1]);
+        nrList[0][1] = distanceEuclid(xy[0],xy[1],uvnode[0][thisElem],uvnode[1][thisElem]);
         // distance to neighbouring elems
         nrList[1][0] = neighbours[thisElem][0];
-        nrList[1][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[0][thisElem]][0],uvnode[neighbours[0][thisElem]][1]);   
+        nrList[1][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[0][thisElem]],uvnode[1][neighbours[0][thisElem]]);   
         nrList[2][0] = neighbours[thisElem][1];
-        nrList[2][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[1][thisElem]][0],uvnode[neighbours[1][thisElem]][1]);    
+        nrList[2][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[1][thisElem]],uvnode[1][neighbours[1][thisElem]]);    
         nrList[3][0] = neighbours[thisElem][2];
-        nrList[3][1] = distanceEuclid(xy[0],xy[1],uvnode[neighbours[2][thisElem]][0],uvnode[neighbours[2][thisElem]][1]);      
+        nrList[3][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[2][thisElem]],uvnode[1][neighbours[2][thisElem]]);      
         nrList[4][0] = 0;
         nrList[4][1] = 1000000; 
         
@@ -779,7 +781,7 @@ public class Particle {
      *              Removed from method calls stepAhead
      *              Replace velplus1[] calculation with direct calculation
      */
-    public double[] rk4Step(double[][] u, double[][] v, // velocities
+    public double[] rk4Step(float u[][][], float v[][][], // velocities
             int[][] neighbours, float[][] uvnode, float[][] nodexy, 
             int[][] trinodes, int[] allelems,      // other mesh info
             int tt, int st, double dt,                                  // locate particle in space and time
@@ -866,7 +868,7 @@ public class Particle {
      */
     public static double[] stepAhead(double[] xy, int elemPart, int dep, double timeStepAhead,
             int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems,
-            double[][] u, double[][] v, 
+            float u[][][], float v[][][], 
             int tt, int st, double dt,
             int stepsPerStep, int numLayers)
     {   
@@ -888,148 +890,148 @@ public class Particle {
         return xy_step;
     }
     
-    /**
-     * THIS IS THE OLD METHOD FOR 6 ROW VELOCITY FILES
-     * 
-     * Get the relevant next velocity to compute a time interpolation (which depends on 
-     * current time in relation to the records stored in the input arrays) 
-     * in the spatial interpolation case
-     * @param tt
-     * @param recordsPerFile
-     * @param fnum
-     * @param lastday
-     * @param nrList
-     * @param u
-     * @param v
-     * @param u1
-     * @param v1
-     * @param numLayers
-     * @param depLayer
-     * @return 
-     */
-    public static double[] getNextVel(int tt, int recordsPerFile, int fnum, int lastday, double[][] nrList,
-            double[][] u, double[][] v, double[][] u1, double[][] v1, int numLayers, int depLayer)
-    {
-        double[] velplus1 = new double[2];
-        if (tt < recordsPerFile-1)
-        {
-            velplus1 = velocityFromNearestList(nrList,tt+1,u,v,numLayers,depLayer);
-        }
-        else
-        {
-            if (fnum < lastday)
-            {
-                velplus1 = velocityFromNearestList(nrList,0,u1,v1,numLayers,depLayer);
-            }
-            // Very last timestep: just fix velocity to be same over entire last hour 
-            // (as there is no extra file to read in)
-            else
-            {
-                velplus1 = velocityFromNearestList(nrList,tt,u,v,numLayers,depLayer);
-            }
-        }
-        return velplus1;
-    }
-
-    public double[] eulerStepOld(double[][] u, double[][] v, double[][] u1, double[][] v1, // velocities
-            int[][] neighbours, float[][] uvnode,                                               // other mesh info
-            int tt, int st, double dt,                                          // locate particle in space and time
-            int stepsPerStep, int recordsPerFile, int fnum, int lastday, int depthLayers,   // info on simulation length
-            boolean spatialInterpolate, boolean timeInterpolate)                            // interpolate or not?
-    {
-        int elemPart = this.getElem();
-        int dep = this.getDepthLayer();
-        double[] advectStep = new double[2];
-        // Set velocity array here first and fill with the right values. Need an array with velocity "now" 
-        // and one with velocity at "next" time step, to be populated before go to time interpolation bit 
-        // (which should happen last, after any possible spatial interpolation).
-        double water_U = 0;
-        double water_V = 0;
-        // Moved old methods for spatial/temporal interpolation
-        if (spatialInterpolate==false)
-        {
-            // output from matlab is in rows for each time
-            // and then columns for each depth within each element
-            water_U = u[tt][elemPart*depthLayers+dep];
-            water_V = v[tt][elemPart*depthLayers+dep];
-            //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,water_U,water_V);
-            if (timeInterpolate == true)
-            {
-                if (tt < recordsPerFile-1)
-                {
-                    water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u[tt+1][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep]);
-                    water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v[tt+1][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);
-                } 
-                else
-                {
-                    //water_U = u[tt][elemPart*depthLayers+dep];
-                    //water_V = v[tt][elemPart*depthLayers+dep];
-                    if (fnum < lastday)
-                    {
-                        water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u1[0][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep] );
-                        water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v1[0][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);                             
-                    }
-                    // Very last timestep: just fix velocity to be same over entire last hour
-                    else
-                    {
-                        water_U = u[tt][elemPart*depthLayers+dep];
-                        water_V = v[tt][elemPart*depthLayers+dep];
-                    }
-                }
-            } 
-        }
-        else if (spatialInterpolate == true)
-        {
-            // Print element values for comparison
-            //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,u[tt][elemPart*10+dep],v[tt][elemPart*10+dep]);
-//                                int nearest = Particle.nearestCentroid(particles[i].getLocation()[0], particles[i].getLocation()[1], uvnode);
-//                                int which = Particle.whichElement(particles[i].getLocation()[0], particles[i].getLocation()[1], allelems, nodexy, trinodes);
-            this.setNrListToNeighbourCells(neighbours,uvnode);
-//            if (nearest != which)
-//            {
-//                System.out.printf("Particle "+i+" Elem "+particles[i].getElem()+" nearest "+nearest+" whichElem "+which+"\n");
-//                double d1 = Particle.distanceEuclid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode[which][0],uvnode[which][1]);
-//                double d2 = Particle.distanceEuclid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode[nearest][0],uvnode[nearest][1]);
-//                System.out.printf("dist(elemPart) = "+d1+" dist(nearest) = "+d2+"\n");
-//                double[][] a = particles[i].getNrList();
-//                System.out.printf("Neighbour cells: \n"+a[0][0]+" "+a[0][1]+"\n"+a[1][0]+" "+a[1][1]+"\n"+a[2][0]+" "+a[2][1]+"\n"+a[3][0]+" "+a[3][1]+"\n");
-//            }
-            //particles[i].setNrList(uvnode);
-            double[] vel = this.velPart(tt,u,v);
-            water_U = vel[0];
-            water_V = vel[1];
-            if (timeInterpolate == true)
-            {
-                double[] velplus1 = new double[2];
-                if (tt < recordsPerFile-1)
-                {
-                    velplus1 = this.velPart(tt+1,u,v);
-                }
-                else
-                {
-                    //velplus1 = particles[i].velocityFromNearestList(0,u1,v1);
-                    if (fnum < lastday)
-                    {
-                        velplus1 = this.velPart(0,u1,v1);
-                    }
-                    // Very last timestep: just fix velocity to be same over entire last hour
-                    else
-                    {
-                        velplus1 = this.velPart(tt,u,v);
-                    }
-                }
-                water_U = vel[0] + ((double)st/(double)stepsPerStep)*(velplus1[0]-vel[0]);
-                water_V = vel[1] + ((double)st/(double)stepsPerStep)*(velplus1[1]-vel[1]);
-            }
-        }
-//        if (st == 1)
+//    /**
+//     * THIS IS THE OLD METHOD FOR 6 ROW VELOCITY FILES
+//     * 
+//     * Get the relevant next velocity to compute a time interpolation (which depends on 
+//     * current time in relation to the records stored in the input arrays) 
+//     * in the spatial interpolation case
+//     * @param tt
+//     * @param recordsPerFile
+//     * @param fnum
+//     * @param lastday
+//     * @param nrList
+//     * @param u
+//     * @param v
+//     * @param u1
+//     * @param v1
+//     * @param numLayers
+//     * @param depLayer
+//     * @return 
+//     */
+//    public static double[] getNextVel(int tt, int recordsPerFile, int fnum, int lastday, double[][] nrList,
+//            double[][] u, double[][] v, double[][] u1, double[][] v1, int numLayers, int depLayer)
+//    {
+//        double[] velplus1 = new double[2];
+//        if (tt < recordsPerFile-1)
 //        {
-//            System.out.printf("Vel (particle %d element %d) = %.4f %.4f\n",this.ID,elemPart,water_U,water_V);
+//            velplus1 = velocityFromNearestList(nrList,tt+1,u,v,numLayers,depLayer);
 //        }
-        advectStep[0]=dt*water_U;
-        advectStep[1]=dt*water_V;
-        
-        return advectStep;
-    }
+//        else
+//        {
+//            if (fnum < lastday)
+//            {
+//                velplus1 = velocityFromNearestList(nrList,0,u1,v1,numLayers,depLayer);
+//            }
+//            // Very last timestep: just fix velocity to be same over entire last hour 
+//            // (as there is no extra file to read in)
+//            else
+//            {
+//                velplus1 = velocityFromNearestList(nrList,tt,u,v,numLayers,depLayer);
+//            }
+//        }
+//        return velplus1;
+//    }
+
+//    public double[] eulerStepOld(double[][] u, double[][] v, double[][] u1, double[][] v1, // velocities
+//            int[][] neighbours, float[][] uvnode,                                               // other mesh info
+//            int tt, int st, double dt,                                          // locate particle in space and time
+//            int stepsPerStep, int recordsPerFile, int fnum, int lastday, int depthLayers,   // info on simulation length
+//            boolean spatialInterpolate, boolean timeInterpolate)                            // interpolate or not?
+//    {
+//        int elemPart = this.getElem();
+//        int dep = this.getDepthLayer();
+//        double[] advectStep = new double[2];
+//        // Set velocity array here first and fill with the right values. Need an array with velocity "now" 
+//        // and one with velocity at "next" time step, to be populated before go to time interpolation bit 
+//        // (which should happen last, after any possible spatial interpolation).
+//        double water_U = 0;
+//        double water_V = 0;
+//        // Moved old methods for spatial/temporal interpolation
+//        if (spatialInterpolate==false)
+//        {
+//            // output from matlab is in rows for each time
+//            // and then columns for each depth within each element
+//            water_U = u[tt][elemPart*depthLayers+dep];
+//            water_V = v[tt][elemPart*depthLayers+dep];
+//            //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,water_U,water_V);
+//            if (timeInterpolate == true)
+//            {
+//                if (tt < recordsPerFile-1)
+//                {
+//                    water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u[tt+1][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep]);
+//                    water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v[tt+1][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);
+//                } 
+//                else
+//                {
+//                    //water_U = u[tt][elemPart*depthLayers+dep];
+//                    //water_V = v[tt][elemPart*depthLayers+dep];
+//                    if (fnum < lastday)
+//                    {
+//                        water_U = u[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(u1[0][elemPart*10+dep]-u[tt][elemPart*depthLayers+dep] );
+//                        water_V = v[tt][elemPart*depthLayers+dep] + ((double)st/(double)stepsPerStep)*(v1[0][elemPart*10+dep]-v[tt][elemPart*depthLayers+dep]);                             
+//                    }
+//                    // Very last timestep: just fix velocity to be same over entire last hour
+//                    else
+//                    {
+//                        water_U = u[tt][elemPart*depthLayers+dep];
+//                        water_V = v[tt][elemPart*depthLayers+dep];
+//                    }
+//                }
+//            } 
+//        }
+//        else if (spatialInterpolate == true)
+//        {
+//            // Print element values for comparison
+//            //System.out.printf("Vel(element %d) = %.4f %.4f\n",elemPart,u[tt][elemPart*10+dep],v[tt][elemPart*10+dep]);
+////                                int nearest = Particle.nearestCentroid(particles[i].getLocation()[0], particles[i].getLocation()[1], uvnode);
+////                                int which = Particle.whichElement(particles[i].getLocation()[0], particles[i].getLocation()[1], allelems, nodexy, trinodes);
+//            this.setNrListToNeighbourCells(neighbours,uvnode);
+////            if (nearest != which)
+////            {
+////                System.out.printf("Particle "+i+" Elem "+particles[i].getElem()+" nearest "+nearest+" whichElem "+which+"\n");
+////                double d1 = Particle.distanceEuclid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode[which][0],uvnode[which][1]);
+////                double d2 = Particle.distanceEuclid(particles[i].getLocation()[0],particles[i].getLocation()[1],uvnode[nearest][0],uvnode[nearest][1]);
+////                System.out.printf("dist(elemPart) = "+d1+" dist(nearest) = "+d2+"\n");
+////                double[][] a = particles[i].getNrList();
+////                System.out.printf("Neighbour cells: \n"+a[0][0]+" "+a[0][1]+"\n"+a[1][0]+" "+a[1][1]+"\n"+a[2][0]+" "+a[2][1]+"\n"+a[3][0]+" "+a[3][1]+"\n");
+////            }
+//            //particles[i].setNrList(uvnode);
+//            double[] vel = this.velPart(tt,u,v);
+//            water_U = vel[0];
+//            water_V = vel[1];
+//            if (timeInterpolate == true)
+//            {
+//                double[] velplus1 = new double[2];
+//                if (tt < recordsPerFile-1)
+//                {
+//                    velplus1 = this.velPart(tt+1,u,v);
+//                }
+//                else
+//                {
+//                    //velplus1 = particles[i].velocityFromNearestList(0,u1,v1);
+//                    if (fnum < lastday)
+//                    {
+//                        velplus1 = this.velPart(0,u1,v1);
+//                    }
+//                    // Very last timestep: just fix velocity to be same over entire last hour
+//                    else
+//                    {
+//                        velplus1 = this.velPart(tt,u,v);
+//                    }
+//                }
+//                water_U = vel[0] + ((double)st/(double)stepsPerStep)*(velplus1[0]-vel[0]);
+//                water_V = vel[1] + ((double)st/(double)stepsPerStep)*(velplus1[1]-vel[1]);
+//            }
+//        }
+////        if (st == 1)
+////        {
+////            System.out.printf("Vel (particle %d element %d) = %.4f %.4f\n",this.ID,elemPart,water_U,water_V);
+////        }
+//        advectStep[0]=dt*water_U;
+//        advectStep[1]=dt*water_V;
+//        
+//        return advectStep;
+//    }
     
 }

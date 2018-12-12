@@ -224,10 +224,10 @@ public class IOUtils {
     }
     
     
-    public static float[] readNetcdfFloat1D(String filename, String variable) throws IOException, InvalidRangeException
+    public static float[] readNetcdfFloat1D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        float[] floatOut;
+        float[] floatOut = new float[10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
@@ -242,13 +242,17 @@ public class IOUtils {
             for (int d1 = 0; d1 < shape[0]; d1++) {
                 floatOut[d1] = dataArray.get(d1);
             }
-        }
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
         return floatOut;
     }
-    public static int[] readNetcdfInteger1D(String filename, String variable) throws IOException, InvalidRangeException
+    public static int[] readNetcdfInteger1D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        int[] intOut;
+        int[] intOut = new int[10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
@@ -263,7 +267,11 @@ public class IOUtils {
             for (int d1 = 0; d1 < shape[0]; d1++) {
                 intOut[d1] = dataArray.get(d1);
             }
-        }
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
         return intOut;
     }
     
@@ -276,10 +284,10 @@ public class IOUtils {
      * @throws IOException
      * @throws InvalidRangeException 
      */
-    public static float[][] readNetcdfFloat2D(String filename, String variable) throws IOException, InvalidRangeException
+    public static float[][] readNetcdfFloat2D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        float[][] floatOut;
+        float[][] floatOut = new float[2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
@@ -294,14 +302,18 @@ public class IOUtils {
                     floatOut[d1][d2] = dataArray.get(d1, d2);
                 }
             }
-        }
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
         return floatOut;
     }
     
-    public static int[][] readNetcdfInteger2D(String filename, String variable) throws IOException, InvalidRangeException
+    public static int[][] readNetcdfInteger2D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        int[][] intOut;
+        int[][] intOut = new int[2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
@@ -318,7 +330,11 @@ public class IOUtils {
                     intOut[d1][d2] = dataArray.get(d1, d2);
                 }
             }
-        }
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
         return intOut;
     }
     
@@ -330,10 +346,10 @@ public class IOUtils {
      * @throws IOException
      * @throws InvalidRangeException 
      */
-    public static float[][][] readNetcdfFloat3D(String filename, String variable) throws IOException, InvalidRangeException
+    public static float[][][] readNetcdfFloat3D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        float[][][] floatOut;
+        float[][][] floatOut = new float[2][2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
@@ -350,7 +366,11 @@ public class IOUtils {
                     }
                 }
             }
-        }
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
         return floatOut;
     }
     

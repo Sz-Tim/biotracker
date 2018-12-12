@@ -27,8 +27,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final int st;
     private final double subStepDt;
     private final RunProperties rp;
-    private final double[][] u; 
-    private final double[][] v;
+    private final float[][][] u; 
+    private final float[][][] v;
     private final int[][] neighbours;
     private final float[][] uvnode;
     private final float[][] nodexy;
@@ -43,7 +43,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     
     public ParallelParticleMover(List<Particle> particles, double time, int tt, int st, double subStepDt,
             RunProperties rp, 
-            double[][] u, double[][] v,
+            float u[][][], float v[][][],
             int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
             int[][] trinodes, int[] allelems,
             float[] depthUvnode, float[] sigvec2, 
@@ -114,7 +114,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      */
     public static void move(Particle part, double time, int tt, int st, double subStepDt,
             RunProperties rp, 
-            double[][] u, double[][] v,
+            float u[][][], float v[][][],
             int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
             int[][] trinodes, int[] allelems,
             float[] depthUvnode, float[] sigvec2,

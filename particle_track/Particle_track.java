@@ -23,11 +23,25 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ThreadLocalRandom;
+//import java.util.concurrent.ThreadLocalRandom;
 //import java.lang.InterruptedException;
 
 //import edu.cornell.lassp.houle.RngPack.*;
 //import static particle_track.IOUtils.countLines;
+
+ 
+import java.io.IOException;
+//import java.nio.file.Files;
+//import java.nio.file.Path;
+//import java.nio.file.Paths;
+//import java.util.stream.Stream;
+import org.apache.commons.io.FileUtils;
+//import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
+ 
+
+
+
 /**
  *
  * @author tomdude
@@ -74,7 +88,7 @@ public class Particle_track {
         System.out.printf("Habitat            = %s\n", rp.habitat);
         System.out.printf("N_parts/site       = %d\n", rp.nparts);
         System.out.printf("hydromod dt (s)    = %f\n", rp.dt);
-        System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile);
+        System.out.printf("hydromod rec/file  = %d, %d\n", rp.recordsPerFile1, rp.recordsPerFile2);
         System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
         System.out.printf("firstfile          = %d\n", rp.start_ymd);
         System.out.printf("lastfile           = %d\n", rp.end_ymd);
@@ -151,6 +165,9 @@ public class Particle_track {
         System.out.println("Particle subStepDt = " + subStepDt + " dev_perstep = " + dev_perstep);
         System.out.println("behaviour = " + rp.behaviour);
 
+        //Need
+        
+        
         // --------------------------------------------------------------------------------------
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
@@ -166,6 +183,7 @@ public class Particle_track {
         
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
+        System.out.println("Creating start sites");
         habitat = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
         for (HabitatSite site : habitat)
         {
@@ -173,6 +191,7 @@ public class Particle_track {
         }
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
+        System.out.println("Creating end sites");
         habitatEnd = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
         
 
@@ -254,6 +273,15 @@ public class Particle_track {
         
         IOUtils.printFileHeader(arrivalHeader,"arrivals.out");
         
+        HydroField hydroField1,hydroField2;
+        // Set an initial values for the field. Subsequent value setting will produce arrays that have one more element in the time dimension
+        List<File> files = (List<File>) FileUtils.listFiles(
+                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                null);    
+        String[] varNames = {"u","v","salinity","temp","zeta"};
+        hydroField1 = new HydroField(files.get(0).getCanonicalPath(),varNames);
+        
         try {
             // --------------------------------------------------------------------------------------
             // Start time loop
@@ -263,180 +291,192 @@ public class Particle_track {
             for (int fnum = 0; fnum < numberOfDays; fnum++) {
 
                 String today = currentIsoDate.getDateStr();
-                System.out.printf(today);
+                System.out.println(today);
                 IOUtils.printFileHeader(locationHeader,"locations_" + today + ".out");
                 IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".out");
                 
-                for (int dayQuarter = 1; dayQuarter <= 4; dayQuarter++) // alternatively, run loop backwards
-                //for (int day = lastday; day >= firstday; day--)
-                {
-                    long splitTime = System.currentTimeMillis();
-                    System.out.printf("\n------ Day %d (%s) - Quarter %d - Stepcount %d (%f hrs) ------ \n",
-                            fnum + 1, currentIsoDate.getDateStr(), dayQuarter, stepcount, time);
-                    System.out.println("Elapsed  time (s) = " + (splitTime - startTime) / 1000.0);
-                    System.out.println("Last 6hr time (s) = " + (splitTime - currTime) / 1000.0);
-                    currTime = System.currentTimeMillis();
-                    // clear any old data
-                    //clear FVCOM1
-                    // load the new data file. this puts variables straight into the
-                    // workspace
-                    //int depthLayers = 10;       
-                    String ufile = "";
-                    String vfile = "";
-                    String elfile = "";
+                long splitTime = System.currentTimeMillis();
+                System.out.printf("\n------ Day %d (%s) - Stepcount %d (%f hrs) ------ \n",
+                        fnum + 1, currentIsoDate.getDateStr(), stepcount, time);
+                System.out.println("Elapsed  time (s) = " + (splitTime - startTime) / 1000.0);
+                System.out.println("Last 6hr time (s) = " + (splitTime - currTime) / 1000.0);
+                currTime = System.currentTimeMillis();
+                
+                // set an initial tide state
+                String tideState = "flood";
 
-                    double[][] u = new double[rp.recordsPerFile][rp.N * rp.depthLayers];
-                    double[][] v = new double[rp.recordsPerFile][rp.N * rp.depthLayers];
-                    //double[][] el = new double[recordsPerFile][N*depthLayers];
-                    //double[][] u1 = new double[recordsPerFile][N*depthLayers];
-                    //double[][] v1 = new double[recordsPerFile][N*depthLayers];
-                    //double[][] el1 = new double[recordsPerFile][N*depthLayers];
+                // COUNT the number of particles in different states
+                freeViableSettleExit = particleCounts(particles);
+                System.out.println("Free particles    = " + freeViableSettleExit[0]);
+                System.out.println("Viable particles  = " + freeViableSettleExit[1]);
+                System.out.println("Arrival count     = " + freeViableSettleExit[2]);
+                System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
 
-                    //System.out.println("t=0 Reading t: "+filenums);
-                    //ufile = rp.datadir+"u_"+filenums+".dat";
-                    //vfile = rp.datadir+"v_"+filenums+".dat";
-                    // Use Mike's file reading method to avoid use of the filelist for reading in
-                    ufile = rp.datadir + "u_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
-                    vfile = rp.datadir + "v_" + currentIsoDate.getDateStr() + "_" + dayQuarter + ".dat";
-                    //String viscfile = datadir+"\\viscofm_"+fnum+".dat";
-                    //elfile = datadir+"el_"+filenums+".dat";
-                    //System.out.println(ufile+" "+vfile+" "+elfile);
-                    u = IOUtils.readFileDoubleArray(ufile, rp.recordsPerFile, rp.N * rp.depthLayers, " ", true);
-                    v = IOUtils.readFileDoubleArray(vfile, rp.recordsPerFile, rp.N * rp.depthLayers, " ", true);
-                    //double[][] viscofm = readFileDoubleArray(viscfile,recordsPerFile,N*10," ",false);
-                    //el = readFileDoubleArray(elfile,recordsPerFile,M*depthLayers," ",false);
-                    //double[][] sal = readFileDoubleArray(sfile,recordsPerFile,M*10," ",false);
+                // default, run loop forwards
+                // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
+                for (int tt = 0; tt < 24; tt++) {
+                    // alternatively, run loop backwards
+                    //for (int tt = lasttime; tt >= firsttime; tt--)
 
-                    // set an initial tide state
-                    String tideState = "flood";
+                    System.out.printf("--------- HOUR %d ----------\n",tt+1);
+                    // Calculate current time of the day (complete hours elapsed since midnight)
+                    int currentHour = tt;
+                    //System.out.printf("%d \n", tt + 1);
+                    
+                    // Read the PRIMARY hydrodynamic output file - ASSUME THAT THIS IS ONE FILE PER DAY
+                    if (tt%rp.recordsPerFile1 == 0){
+                        System.out.println("Reading file "+tt);
+                        // Dima file naming format: minch2_20171229_0003.nc
+                        List<File> files1 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                                new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                                null);    
+                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
+                        //hydroField1 = new HydroField(files1.get(0).getCanonicalPath(),varNames1);
+                        
+                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+                        
+                        // Check dates
+//                        System.out.println("Today: "+currentIsoDate.getDateStr());
+//                        System.out.println("Tomorrow: "+tomorrow.getDateStr());
 
-                    // COUNT the number of particles in different states
-                    freeViableSettleExit = particleCounts(particles);
-                    System.out.println("Free particles    = " + freeViableSettleExit[0]);
-                    System.out.println("Viable particles  = " + freeViableSettleExit[1]);
-                    System.out.println("Arrival count     = " + freeViableSettleExit[2]);
-                    System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
-                   
-                    // default, run loop forwards
-                    // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
-                    for (int tt = 0; tt <= rp.recordsPerFile - 2; tt++) {
-                        // alternatively, run loop backwards
-                        //for (int tt = lasttime; tt >= firsttime; tt--)
+                        List<File> files2 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+System.getProperty("file.separator")),
+                                new WildcardFileFilter("minch2_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                                null);                           
+                        // Read both files and combine
+                        hydroField1 = new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1);
+                    }   
+                    
+                    
+//                    if (tt%rp.recordsPerFile2 == 0){
+//
+//                        // Dima file naming format: minch2_20171229_0003.nc
+//                        List<File> files = (List<File>) FileUtils.listFiles(
+//                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+//                                new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+//                                null);    
+//                        //List<File> files = (List<File>) FileUtils.listFiles(dir, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
+//                        for (File file : files) {
+//                            System.out.println("file: " + file.getCanonicalPath());
+//                        }
+//
+//                        String[] varNames2 = {"u","v","salt","temp","zeta"};
+//                        hydroField2 = new HydroField(files.get(0).getCanonicalPath(),varNames2);
+//                    } 
+                    
+                    
 
-                        System.out.printf("--------- HOUR %d ----------\n",tt+1);
-                        // Calculate current time of the day (complete hours elapsed since midnight)
-                        // dayQuarter goes from 1-4
-                        // recordsPerFile is 7 (6 + 1 for overlap)
-                        int currentHour = (dayQuarter-1)*(rp.recordsPerFile-1) + tt;
-                        //System.out.printf("%d \n", tt + 1);
-                                               
-                        // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
-                        // exact hour
-                        if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
+
+
+
+                    // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
+                    // exact hour
+                    if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
+                    {
+                        System.out.printf("Release attempt: releaseScen %d, releaseTime %f, allowRelease %s nuParticlesCreated %d \n",
+                            rp.releaseScenario,time,allowRelease,numParticlesCreated);
+                        //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
+                        List<Particle> newParts = createNewParticles(habitat,allelems,mesh1.getTrinodes(),mesh1.getNodexy(),mesh1.getUvnode(),
+                                rp,currentIsoDate,currentHour,numParticlesCreated);
+                        particles.addAll(newParts);
+                        numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
+                        // If only one release to be made, prevent further releases
+                        if (rp.releaseScenario==0)
                         {
-                            System.out.printf("Release attempt: releaseScen %d, releaseTime %f, allowRelease %s nuParticlesCreated %d \n",
-                                rp.releaseScenario,time,allowRelease,numParticlesCreated);
-                            //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
-                            List<Particle> newParts = createNewParticles(habitat,allelems,mesh1.getTrinodes(),mesh1.getNodexy(),mesh1.getUvnode(),
-                                    rp,currentIsoDate,currentHour,numParticlesCreated);
-                            particles.addAll(newParts);
-                            numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
-                            // If only one release to be made, prevent further releases
-                            if (rp.releaseScenario==0)
-                            {
-                                allowRelease = false;
-                            }
+                            allowRelease = false;
                         }
-                        
-                        // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
-                        for (int st = 0; st < rp.stepsPerStep; st++) {
-
-                            // Update the element count arrays
-                            //pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
-
-                            //System.out.print(",");
-                            //System.out.println("nfreeparts = "+nfreeparts);
-                            // MOVE the particles
-                            if (rp.parallel == true) {
-                                int particlesSize = particles.size();
-                                int listStep = particlesSize / numberOfExecutorThreads;
-                                for (int i = 0; i < numberOfExecutorThreads; i++) {
-                                    List<Particle> subList;
-                                    if(i==numberOfExecutorThreads-1){
-                                        // Note: ArrayList.subList(a,b) is inclusive of a but exclusive of b => 
-                                        subList = particles.subList(i * listStep, particlesSize);
-                                        //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+(particlesSize-1));
-                                    }else{
-                                        subList = particles.subList(i * listStep, (i + 1) * listStep);
-                                        //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+((i + 1) * listStep - 1));
-                                    }
-                                    callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
-                                            u, v, mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
-                                            habitatEnd, mesh1.getOpenBoundaryNodes(),
-                                            searchCounts,
-                                            minMaxDistTrav));
-                                    
-                                }
-                                for (Callable<List<Particle>> callable : callables) {
-                                    executorCompletionService.submit(callable);
-                                }
-                                for (Callable<List<Particle>> callable : callables) {
-                                    executorCompletionService.take().get();
-                                }
-                                callables.clear();
-                            } else {
-                                // Normal serial loop
-                                for (Particle part : particles) {
-                                    // Can just use the move method that was shipped out to the ParallelParticleMover class
-                                    ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
-                                            u, v, mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), 
-                                            allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
-                                            habitatEnd, mesh1.getOpenBoundaryNodes(),
-                                            searchCounts,
-                                            minMaxDistTrav);
-
-                                }
-                            }
-
-                            // --------------- End of particle loop ---------------------
-                            time += subStepDt / 3600.0;
-                                                        
-                            // end of particle loop
-                            calcCount++;
-                        }
-                        
-                        // New output: print ALL current particle location to a separate file, once each hour
-                        
-                        //System.out.println("Print particle locations to file " + today + " " + currentHour);
-                        //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
-                        
-                        IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
-                        // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
-                        for (Particle part: particles) {
-                            if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
-                            {
-                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".out", true);
-                                part.setSettledThisHour(false);
-                            }
-                        }
-                           
-                        // Clean up "dead" (666) and "exited" (66) particles
-                        List<Particle> particlesToRemove = new ArrayList<>(0);
-                        for (Particle part : particles)
-                        {
-                            if (part.getStatus()==666 || part.getStatus()==66)
-                            {
-                                //System.out.printf("Removing particle %d, status %d\n",part.getID(),part.getStatus());
-                                particlesToRemove.add(part);
-                            }
-                        }
-                        particles.removeAll(particlesToRemove);
-  
-                        printCount++;                    
-                        stepcount++;
                     }
-                    System.out.printf("\n");
+
+                    // ---- INTERPOLATE BETWEEN ENTRIES IN THE HYDRO OUTPUT ------------------------
+                    for (int st = 0; st < rp.stepsPerStep; st++) {
+
+                        // Update the element count arrays
+                        //pstepUpdater(particles, rp, pstepsMature, pstepsImmature, subStepDt);
+
+                        //System.out.print(",");
+                        //System.out.println("nfreeparts = "+nfreeparts);
+                        // MOVE the particles
+                        if (rp.parallel == true) {
+                            int particlesSize = particles.size();
+                            int listStep = particlesSize / numberOfExecutorThreads;
+                            for (int i = 0; i < numberOfExecutorThreads; i++) {
+                                List<Particle> subList;
+                                if(i==numberOfExecutorThreads-1){
+                                    // Note: ArrayList.subList(a,b) is inclusive of a but exclusive of b => 
+                                    subList = particles.subList(i * listStep, particlesSize);
+                                    //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+(particlesSize-1));
+                                }else{
+                                    subList = particles.subList(i * listStep, (i + 1) * listStep);
+                                    //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+((i + 1) * listStep - 1));
+                                }
+                                callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
+                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
+                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+                                        searchCounts,
+                                        minMaxDistTrav));
+
+                            }
+                            for (Callable<List<Particle>> callable : callables) {
+                                executorCompletionService.submit(callable);
+                            }
+                            for (Callable<List<Particle>> callable : callables) {
+                                executorCompletionService.take().get();
+                            }
+                            callables.clear();
+                        } else {
+                            // Normal serial loop
+                            for (Particle part : particles) {
+                                // Can just use the move method that was shipped out to the ParallelParticleMover class
+                                ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
+                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), 
+                                        allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
+                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+                                        searchCounts,
+                                        minMaxDistTrav);
+
+                            }
+                        }
+
+                        // --------------- End of particle loop ---------------------
+                        time += subStepDt / 3600.0;
+
+                        // end of particle loop
+                        calcCount++;
+                    }
+
+                    // New output: print ALL current particle location to a separate file, once each hour
+
+                    //System.out.println("Print particle locations to file " + today + " " + currentHour);
+                    //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
+
+                    IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
+                    // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
+                    for (Particle part: particles) {
+                        if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
+                        {
+                            IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".out", true);
+                            part.setSettledThisHour(false);
+                        }
+                    }
+
+                    // Clean up "dead" (666) and "exited" (66) particles
+                    List<Particle> particlesToRemove = new ArrayList<>(0);
+                    for (Particle part : particles)
+                    {
+                        if (part.getStatus()==666 || part.getStatus()==66)
+                        {
+                            //System.out.printf("Removing particle %d, status %d\n",part.getID(),part.getStatus());
+                            particlesToRemove.add(part);
+                        }
+                    }
+                    particles.removeAll(particlesToRemove);
+
+                    printCount++;                    
+                    stepcount++;
                 }
+                System.out.printf("\n");
+                
                 currentIsoDate.addDay();
             }
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
@@ -487,8 +527,8 @@ public class Particle_track {
                 int closest = Particle.nearestCentroid(xstart, ystart, uvnode);
                 int startElem = Particle.whichElement(xstart, ystart, allelems, nodexy, trinodes);
                 if (startElem < 0) {
-                    xstart = uvnode[closest][0];
-                    ystart = uvnode[closest][1];
+                    xstart = uvnode[0][closest];
+                    ystart = uvnode[1][closest];
                     startElem = closest;
                 }
             

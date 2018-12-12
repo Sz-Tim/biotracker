@@ -36,7 +36,7 @@ public class RunProperties {
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
-            recordsPerFile, // Number of records per velocity file
+            recordsPerFile1, recordsPerFile2, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
             depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
             dumpInterval, // Interval in hours for printing particle locations and elements to file
@@ -147,7 +147,8 @@ public class RunProperties {
         
         // 21/11/2018 --- Ideally want to remove this. If using two models for hydro 
         // would ideally sense from the hydro file
-        recordsPerFile = Integer.parseInt(properties.getProperty("recordsPerFile","7"));
+        recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1","25"));
+        recordsPerFile2 = Integer.parseInt(properties.getProperty("recordsPerFile2","4"));
         
         stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep","25"));
         
