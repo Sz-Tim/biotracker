@@ -158,7 +158,7 @@ public class Particle_track {
 //        for (int j = 0; j < uvnode.length; j++) {
 //            allelems[j] = j;
 //        }
-        int[] allelems = IntStream.rangeClosed(1, mesh1.getUvnode()[0].length).toArray();
+        int[] allelems = IntStream.rangeClosed(0, mesh1.getUvnode()[0].length-1).toArray();
         
         double subStepDt = rp.dt / (double) rp.stepsPerStep; // number of seconds per substep
         double dev_perstep = Math.pow(0.1, subStepDt);
@@ -318,7 +318,7 @@ public class Particle_track {
                     // alternatively, run loop backwards
                     //for (int tt = lasttime; tt >= firsttime; tt--)
 
-                    System.out.printf("--------- HOUR %d ----------\n",tt+1);
+                    System.out.printf("--------- HOUR %d ----------\n",tt);
                     // Calculate current time of the day (complete hours elapsed since midnight)
                     int currentHour = tt;
                     //System.out.printf("%d \n", tt + 1);

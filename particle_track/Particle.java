@@ -610,8 +610,15 @@ public class Particle {
             {
                 //int elem=elems[i];
                 
-                 xt[j]=nodexy[0][trinodes[j][elems[i]]];
-                 yt[j]=nodexy[1][trinodes[j][elems[i]]];
+                try
+                {
+                    xt[j]=nodexy[0][trinodes[j][elems[i]]];
+                    yt[j]=nodexy[1][trinodes[j][elems[i]]];
+                }
+                catch (Exception e)
+                {
+                    System.err.println(i+" "+j+" "+elems[i]+" "+trinodes[j][elems[i]]+" "+nodexy[0][trinodes[j][elems[i]]]);
+                }
             }
             // check whether (x,y) lies within this
             //fprintf('check %d\n', possibleElems(i));

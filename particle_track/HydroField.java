@@ -10,6 +10,7 @@ import ucar.ma2.InvalidRangeException;
 
 import java.io.File;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -79,11 +80,13 @@ public class HydroField {
             t = new float[s1.length+1][s1[1].length][s1[0][1].length];
             el = new float[s1.length+1][s1[0][1].length];
             
+            double sumU = 0;
             for (int tt = 0; tt < u1.length; tt++) {
                 for (int dep = 0; dep < u1[1].length; dep++) {
                     for (int elem = 0; elem < u1[0][1].length; elem++) {
                         u[tt][dep][elem] = u1[tt][dep][elem];
                         v[tt][dep][elem] = v1[tt][dep][elem];
+                        sumU += u[tt][dep][elem];
                     }
                     for (int node = 0; node < s1[0][1].length; node++) {
                         s[tt][dep][node] = s1[tt][dep][node];
@@ -99,6 +102,7 @@ public class HydroField {
                 for (int elem = 0; elem < u1[0][1].length; elem++) {
                     u[u.length-1][dep][elem] = u2[0][dep][elem];
                     v[u.length-1][dep][elem] = v2[0][dep][elem];
+                    sumU+=u[u.length-1][dep][elem];
                 }
                 for (int node = 0; node < s1[0][1].length; node++) {
                     s[u.length-1][dep][node] = s2[0][dep][node];
@@ -109,7 +113,18 @@ public class HydroField {
                     }
                 }
             }
-        
+            
+            System.out.println("Combined files to single arrays (e.g. velocity dimensions "+u.length+" "+u[1].length+" "+u[0][1].length+"; sum = "+sumU+")");
+//            sumIndex(u,0,0,true);
+//            sumIndex(u,0,3,true);
+//            sumIndex(u,0,6,true);
+//            sumIndex(u,0,9,true);
+//            sumIndex(u,0,12,true);
+//            sumIndex(u,1,0,true);
+//            sumIndex(u,1,5,true);
+//            sumIndex(u,1,9,true);
+//            sumIndex(u,2,0,true);
+//            sumIndex(u,2,79243,true);
     }
     
     
@@ -138,6 +153,58 @@ public class HydroField {
     public float[][] getEl()
     {
         return el;
+    }
+    
+    /**
+     * Compute a sum of an array over a particular dimension, for a particular 
+     * index of that dimension
+     * 
+     * @param var
+     * @param dimension
+     * @param index
+     * @param print
+     * @return 
+     */
+    public float sumIndex(float[][][] var, int dimension, int index, boolean print)
+    {
+        float s = 0;
+        
+        int[] d0Range, d1Range, d2Range;
+        
+        // Set ranges and indices for sum
+        if (dimension==0){
+            d0Range = new int[1];
+            d0Range[0] = index;
+        } else {
+            d0Range = IntStream.rangeClosed(0, var.length-1).toArray();
+        }
+        if (dimension==1){
+            d1Range = new int[1];
+            d1Range[0] = index;  
+        } else {
+            d1Range = IntStream.rangeClosed(0, var[1].length-1).toArray();
+        }
+        if (dimension==2){
+            d2Range = new int[1];
+            d2Range[0] = index;  
+        } else {
+            d2Range = IntStream.rangeClosed(0, var[0][1].length-1).toArray();
+        }
+        
+        for (int d0 = 0; d0 < d0Range.length; d0++) {
+            for (int d1 = 0; d1 < d1Range.length; d1++) {
+                for (int d2 = 0; d2 < d2Range.length; d2++) {
+                    s += var[d0Range[d0]][d1Range[d1]][d2Range[d2]];
+                }
+            }
+        }
+        
+        if (print == true)
+        {
+            System.out.println("Array sum (dimension:"+dimension+" index:"+index+") = "+s);
+        }
+        
+        return s;
     }
     
 }

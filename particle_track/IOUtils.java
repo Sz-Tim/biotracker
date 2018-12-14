@@ -361,7 +361,7 @@ public class IOUtils {
             floatOut = new float[shape[0]][shape[1]][shape[2]];
             for (int d1 = 0; d1 < shape[0]; d1++) {
                 for (int d2 = 0; d2 < shape[1]; d2++) {
-                    for (int d3 = 0; d3 < shape[1]; d3++) {
+                    for (int d3 = 0; d3 < shape[2]; d3++) {
                         floatOut[d1][d2][d3] = dataArray.get(d1, d2, d3);
                     }
                 }
