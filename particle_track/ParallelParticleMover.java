@@ -214,7 +214,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[] behave_uv = part.behaveVelocity(rp.behaviour);
 
             //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-            System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" Y "+advectStep[1]+" "+diff_Y);
+            //System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" Y "+advectStep[1]+" "+diff_Y);
 
             double dx = advectStep[0]+subStepDt*behave_uv[0]+diff_X;
             double dy = advectStep[1]+subStepDt*behave_uv[1]+diff_Y;
@@ -238,7 +238,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
 
             // find element containing particle and update seach counts for diagnosis
-            int[] c = Particle.findContainingElement(newlocx, newlocy, elemPart, 
+            int[] c = Particle.findContainingElement(new double[]{newlocx,newlocy}, elemPart, 
                     nodexy, trinodes, neighbours, allelems);
             int whereami = c[0];
             for (int j = 0; j < 4; j++)
@@ -399,5 +399,40 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         distanceDegrees[1] = distanceMetres[1]/latlen;
         
         return distanceDegrees;
+    }
+    
+    /**
+     * Convert a difference in lat/longs to a distance in metres.
+     * Essentially the inverse function of distanceMetresToDegrees2.
+     * 
+     * @param distanceDegrees
+     * @param location
+     * @return 
+     */
+    public static double[] distanceDegreesToMetres(double[] distanceDegrees, double[] location)
+    {
+        double[] distanceMetres = new double[2];
+        
+        // Set up "Constants" for calculating distances
+        double m1 = 111132.92;     // latitude calculation term 1
+        double m2 = -559.82;       // latitude calculation term 2
+        double m3 = 1.175;         // latitude calculation term 3
+        double m4 = -0.0023;       // latitude calculation term 4
+        double p1 = 111412.84;     // longitude calculation term 1
+        double p2 = -93.5;         // longitude calculation term 2
+        double p3 = 0.118;         // longitude calculation term 3
+
+        double latRad = 2*Math.PI*location[1]/360.0;
+        
+        // Calculate the length of a degree of latitude and longitude in meters
+        double latlen = m1 + (m2 * Math.cos(2 * latRad)) + (m3 * Math.cos(4 * latRad)) +
+                (m4 * Math.cos(6 * latRad));
+        double longlen = (p1 * Math.cos(latRad)) + (p2 * Math.cos(3 * latRad)) +
+                    (p3 * Math.cos(5 * latRad));
+        
+        distanceMetres[0] = distanceDegrees[0]*longlen;
+        distanceMetres[1] = distanceDegrees[1]*latlen;
+        
+        return distanceMetres;
     }
 }

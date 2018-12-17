@@ -451,6 +451,7 @@ public class Particle_track {
                     //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
 
                     IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
+                                        
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                     for (Particle part: particles) {
                         if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
@@ -525,14 +526,15 @@ public class Particle_track {
                 // If start location is a boundary location it is not actually in the mesh/an element, so set
                 // new particle location to centre of nearest element.
                 int closest = Particle.nearestCentroid(xstart, ystart, uvnode);
-                int startElem = Particle.whichElement(xstart, ystart, allelems, nodexy, trinodes);
+                int startElem = Particle.whichElement(new double[]{xstart,ystart}, allelems, nodexy, trinodes);
                 if (startElem < 0) {
                     xstart = uvnode[0][closest];
                     ystart = uvnode[1][closest];
                     startElem = closest;
                 }
             
-                Particle p = new Particle(xstart, ystart, habitat.get(startid).getID(), numParticlesCreated+i, rp.mortalityRate, currentDate, currentTime);
+                Particle p = new Particle(xstart, ystart, habitat.get(startid).getID(), numParticlesCreated+i, 
+                        rp.mortalityRate, currentDate, currentTime, rp.coordRef);
                 p.setElem(startElem);
                 // No longer set releaseScenario for individual particles since they are created at the moment of release
                 //p.setReleaseScenario(rp.releaseScenario, startlocs);

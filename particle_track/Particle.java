@@ -18,6 +18,8 @@ public class Particle {
     final private double[] startLoc = new double[2];
     private String startSiteID = "0";
     
+    private String coordRef;
+    
     private ISO_datestr startDate;
     private double startTime = 0;
     
@@ -48,7 +50,7 @@ public class Particle {
     private List<Arrival> arrivals;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, String startSiteID, int id, double mortalityRate)
+    public Particle(double xstart, double ystart, String startSiteID, int id, double mortalityRate, String coordRef)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -59,9 +61,11 @@ public class Particle {
         this.mortRate = mortalityRate;
         
         this.arrivals = new ArrayList<>();
+        
+        this.coordRef = coordRef;
     }
     public Particle(double xstart, double ystart, String startSiteID, int id, double mortalityRate, 
-            ISO_datestr startDate, double startTime)
+            ISO_datestr startDate, double startTime, String coordRef)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -72,6 +76,8 @@ public class Particle {
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
+        
+        this.coordRef = coordRef;
         
         //this.arrivals = new ArrayList<Arrival>();
     }
@@ -588,17 +594,18 @@ public class Particle {
         //System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
         return velocity;
     }
+    
+    
     /**
      * Find which element a particle resides within (edge checking)
-     * @param x
-     * @param y
+     * @param xy
      * @param elems
      * @param nodexy
      * @param trinodes
      * @return 
      */
-    public static int whichElement(double x, double y, int[] elems, float[][] nodexy, int[][] trinodes)
-    {
+    public static int whichElement(double[] xy, int[] elems, float[][] nodexy, int[][] trinodes)
+    {        
         int which = -1;
         int res = 0;
         for (int i = 0; i < elems.length; i++)
@@ -623,9 +630,9 @@ public class Particle {
             // check whether (x,y) lies within this
             //fprintf('check %d\n', possibleElems(i));
             
-            double f1 = (y-yt[0])*(xt[1]-xt[0]) - (x-xt[0])*(yt[1]-yt[0]);
-            double f2 = (y-yt[2])*(xt[0]-xt[2]) - (x-xt[2])*(yt[0]-yt[2]);
-            double f3 = (y-yt[1])*(xt[2]-xt[1]) - (x-xt[1])*(yt[2]-yt[1]);
+            double f1 = (xy[1]-yt[0])*(xt[1]-xt[0]) - (xy[0]-xt[0])*(yt[1]-yt[0]);
+            double f2 = (xy[1]-yt[2])*(xt[0]-xt[2]) - (xy[0]-xt[2])*(yt[0]-yt[2]);
+            double f3 = (xy[1]-yt[1])*(xt[2]-xt[1]) - (xy[0]-xt[1])*(yt[2]-yt[1]);
             if(f1*f3 >= 0.0 && f3*f2 >= 0.0) 
             {
                 res = 1;
@@ -641,6 +648,7 @@ public class Particle {
         //System.out.printf("whichElement: particle in %d\n", which);
         return which;
     }
+    
     /**
      * Euclidean distance between two points
      * @param x1
@@ -654,6 +662,37 @@ public class Particle {
         double dist = Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
         return dist;
     }
+    
+    /**
+     * Compute the Euclidean distance (in metres) between two points.
+     * If the supplied points are WGS84 coordinates, convert their x,y separation 
+     * to metres prior to calculating the Euclidean distance.
+     * 
+     * @param x1
+     * @param y1
+     * @param x2
+     * @param y2
+     * @param coordRef
+     * @return 
+     */
+    public static double distanceEuclid2(double x1, double y1, double x2, double y2, String coordRef)
+    {
+        double dx = x1-x2;
+        double dy = y1-y2;
+        
+        double[] distXY = new double[]{dx,dy};
+        
+        if (coordRef.equalsIgnoreCase("WGS84"))
+        {
+            distXY = ParallelParticleMover.distanceDegreesToMetres(distXY,new double[]{x1,y2});
+        }
+                
+        double dist = Math.sqrt(distXY[0]*distXY[0] + distXY[1]*distXY[1]);
+        return dist;
+    }
+    
+    
+    
     /**
      * Search through lists of elements progressively further away from the last known
      * location in order to find the new location.
@@ -669,21 +708,21 @@ public class Particle {
      * @param allelems
      * @return 
      */
-    public static int[] findContainingElement(double newlocx, double newlocy, int elemPart,
+    public static int[] findContainingElement(double[] xy, int elemPart,
             float[][] nodexy, int[][] trinodes, int[][] neighbours, int[] allelems)
     {
         int[] c = new int[6];
         int[] elems = new int[1];
         elems[0] = elemPart;
         //System.out.println("findContainingElement: elems[0]="+elems[0]);
-        int whereami=Particle.whichElement(newlocx,newlocy,elems,nodexy,trinodes);
+        int whereami=whichElement(xy,elems,nodexy,trinodes);
         //System.out.println("findContainingElement: whereami="+whereami);
         c[1]=1;
         if (whereami==-1)
         {
             //int[] elems0 = neighbours[elemPart];
             c[2]=1;
-            whereami=Particle.whichElement(newlocx,newlocy,new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]},nodexy,trinodes);
+            whereami=whichElement(xy,new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]},nodexy,trinodes);
             // if fails, look in nearest 10 (id numerical)
             if (whereami==-1)
             {
@@ -693,7 +732,7 @@ public class Particle {
                 {
                     elems1[j] = Math.min(Math.max(elemPart-5+j,0),allelems.length-1);
                 }
-                whereami=Particle.whichElement(newlocx,newlocy,elems1,nodexy,trinodes);
+                whereami=whichElement(xy,elems1,nodexy,trinodes);
                 // if fails, look in nearest 500 (id numerical)
                 if (whereami==-1)
                 {
@@ -703,12 +742,12 @@ public class Particle {
                     {
                         elems2[j] = Math.min(Math.max(elemPart-250+j,0),allelems.length-1);
                     }
-                    whereami=Particle.whichElement(newlocx,newlocy,elems2,nodexy,trinodes);
+                    whereami=whichElement(xy,elems2,nodexy,trinodes);
                     // if this fails, look in all elements
                     if (whereami==-1)
                     {
                         c[5]=1;
-                        whereami=Particle.whichElement(newlocx,newlocy,allelems,nodexy,trinodes);
+                        whereami=whichElement(xy,allelems,nodexy,trinodes);
                     }
                 }
             }
@@ -748,13 +787,13 @@ public class Particle {
         this.nrList[4][1] = 1000000;     
     }
     
-    public static double[][] neighbourCellsList(double xy[], int elemPart0, 
+    public static double[][] neighbourCellsList(double[] xy, int elemPart0, 
             int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems)
     {      
         double[][] nrList = new double[5][2];
         // distance to elem
         //int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
-        int elem[] = findContainingElement(xy[0], xy[1], elemPart0,
+        int elem[] = findContainingElement(xy, elemPart0,
             nodexy, trinodes, neighbours, allelems);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
@@ -812,24 +851,42 @@ public class Particle {
         // 3. Compute k_2 (spatial interpolation at half step, temporal interp at half step)
         // Estimated half-step location using Euler
         //System.out.println("Half step (k1 -> k2)");
+        // NOTE that here, for the purposes of identifying the elements containing the part-step locations,
+        // the steps in degrees are calculated. These are separate of the actual half-step values in metres
+        // which are retained and summed at the end of the method to give a transport distance in metres
+        double[] k1Deg = new double[]{k1[0],k1[1]};
+        if (this.coordRef.equalsIgnoreCase("WGS84"))
+        {
+            k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg,this.getLocation());
+        }
         double[] k2 = stepAhead(
-                new double[]{this.getLocation()[0]+k1[0]/2.0,this.getLocation()[1]+k1[1]/2.0},
+                new double[]{this.getLocation()[0]+k1Deg[0]/2.0,this.getLocation()[1]+k1Deg[1]/2.0},
                 elemPart,dep,1.0/2.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,numLayers);
 
         // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
         //System.out.println("Half step (k2 -> k3)");
+        double[] k2Deg = new double[]{k2[0],k2[1]};
+        if (this.coordRef.equalsIgnoreCase("WGS84"))
+        {
+            k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg,this.getLocation());
+        }
         double[] k3 = stepAhead(
-                new double[]{this.getLocation()[0]+k2[0]/2.0,this.getLocation()[1]+k2[1]/2.0},
+                new double[]{this.getLocation()[0]+k2Deg[0]/2.0,this.getLocation()[1]+k2Deg[1]/2.0},
                 elemPart,dep,1.0/2.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,numLayers);              
         
         // 5. Compute k_4 (spatial interpolation at end step)
         //System.out.println("End step (k3 -> k4)");
+        double[] k3Deg = new double[]{k3[0],k3[1]};
+        if (this.coordRef.equalsIgnoreCase("WGS84"))
+        {
+            k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg,this.getLocation());
+        }
         double[] k4 = stepAhead(
-                new double[]{this.getLocation()[0]+k3[0],this.getLocation()[1]+k3[1]},
+                new double[]{this.getLocation()[0]+k3Deg[0],this.getLocation()[1]+k3Deg[1]},
                 elemPart,dep,1.0,
                 neighbours,uvnode,nodexy,trinodes,allelems,u,v,
                 tt,st,dt,stepsPerStep,numLayers);
@@ -849,7 +906,7 @@ public class Particle {
     }
     /**
      * Calculate the correction steps required for the RK4 algorithm
-     * @param xy                Location of new velocity to be used (current location plus spatial step)
+     * @param xy             Location of new velocity to be used (current location plus spatial step)
      * @param elemPart
      * @param dep
      * @param timeStepAhead   Time step ahead i.e. "2.0" if half-step ahead, "1.0" if full step ahead
@@ -880,8 +937,10 @@ public class Particle {
             int stepsPerStep, int numLayers)
     {   
         double[] xy_step = new double[2];
+        
         // Generate a "nearest list" for this location
         double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems);
+        
         // If predicted location of particle is outside mesh, return zero velocity
         if (xNrList[0][0] == 0)
         {
