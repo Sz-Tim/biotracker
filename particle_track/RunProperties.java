@@ -18,7 +18,8 @@ public class RunProperties {
             datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
             datadir2, datadir2Prefix, datadir2Suffix, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories 
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
-            location, sitefile, habitat, suffix; // Descriptive strings
+            location, sitefile, habitat, suffix, // Descriptive strings
+            coordRef; // Coordinate reference system
             
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             timeInterpolate, spatialInterpolate, // interpolate between hydro file data values?
@@ -90,7 +91,9 @@ public class RunProperties {
         sitefile = properties.getProperty("sitefile","startlocations.dat");
         location = properties.getProperty("location","minch_continuous");
         habitat = properties.getProperty("habitat","");
-        suffix = properties.getProperty("suffix","");     
+        suffix = properties.getProperty("suffix",""); 
+        
+        coordRef = properties.getProperty("coordRef","WGS84"); 
         
         start_ymd = Integer.parseInt(properties.getProperty("start_ymd","20180101"));
         numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays","0"));

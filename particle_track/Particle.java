@@ -681,9 +681,9 @@ public class Particle {
         c[1]=1;
         if (whereami==-1)
         {
-            int[] elems0 = neighbours[elemPart];
+            //int[] elems0 = neighbours[elemPart];
             c[2]=1;
-            whereami=Particle.whichElement(newlocx,newlocy,elems0,nodexy,trinodes);
+            whereami=Particle.whichElement(newlocx,newlocy,new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]},nodexy,trinodes);
             // if fails, look in nearest 10 (id numerical)
             if (whereami==-1)
             {
@@ -738,11 +738,11 @@ public class Particle {
         this.nrList[0][0] = elem;
         this.nrList[0][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][elem],uvnode[1][elem]);
         // distance to neighbouring elems
-        this.nrList[1][0] = neighbours[elem][0];
+        this.nrList[1][0] = neighbours[0][elem];
         this.nrList[1][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[0][elem]],uvnode[1][neighbours[0][elem]]);
-        this.nrList[2][0] = neighbours[elem][1];
+        this.nrList[2][0] = neighbours[1][elem];
         this.nrList[2][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[1][elem]],uvnode[1][neighbours[1][elem]]);
-        this.nrList[3][0] = neighbours[elem][2];
+        this.nrList[3][0] = neighbours[2][elem];
         this.nrList[3][1] = distanceEuclid(this.xy[0],this.xy[1],uvnode[0][neighbours[2][elem]],uvnode[1][neighbours[2][elem]]);   
         this.nrList[4][0] = 0;
         this.nrList[4][1] = 1000000;     
@@ -767,11 +767,11 @@ public class Particle {
         nrList[0][0] = thisElem;
         nrList[0][1] = distanceEuclid(xy[0],xy[1],uvnode[0][thisElem],uvnode[1][thisElem]);
         // distance to neighbouring elems
-        nrList[1][0] = neighbours[thisElem][0];
+        nrList[1][0] = neighbours[0][thisElem];
         nrList[1][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[0][thisElem]],uvnode[1][neighbours[0][thisElem]]);   
-        nrList[2][0] = neighbours[thisElem][1];
+        nrList[2][0] = neighbours[1][thisElem];
         nrList[2][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[1][thisElem]],uvnode[1][neighbours[1][thisElem]]);    
-        nrList[3][0] = neighbours[thisElem][2];
+        nrList[3][0] = neighbours[2][thisElem];
         nrList[3][1] = distanceEuclid(xy[0],xy[1],uvnode[0][neighbours[2][thisElem]],uvnode[1][neighbours[2][thisElem]]);      
         nrList[4][0] = 0;
         nrList[4][1] = 1000000; 

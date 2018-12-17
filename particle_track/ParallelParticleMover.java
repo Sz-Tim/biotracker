@@ -214,11 +214,27 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[] behave_uv = part.behaveVelocity(rp.behaviour);
 
             //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-            //System.out.println("Distances travelled: X "+subStepDt*water_U+" "+diff_X*ran1+" Y "+subStepDt*water_U+" "+diff_Y*ran2);
+            System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" Y "+advectStep[1]+" "+diff_Y);
 
+            double dx = advectStep[0]+subStepDt*behave_uv[0]+diff_X;
+            double dy = advectStep[1]+subStepDt*behave_uv[1]+diff_Y;
+            
+            if (rp.coordRef.equalsIgnoreCase("WGS84"))
+            {
+                // The two methods always give the same first significant figure and generally the second, later sig. figs. differ in general
+                //double[] dXY1 = distanceMetresToDegrees1(new double[]{dx,dy}, part.getLocation());
+                double[] dXY2 = distanceMetresToDegrees2(new double[]{dx,dy}, part.getLocation());
+                
+//                System.out.printf("distance %.04f %.04f (lat: %.04f) --- Method1 x: %.04e y: %.04e --- Method2 x: %.04e y: %.04e\n",
+//                        dx,dy,part.getLocation()[1],dXY1[0],dXY1[1],dXY2[0],dXY2[1]);
+                
+                dx = dXY2[0];
+                dy = dXY2[1];
+            }
+            
             // 4. update particle location
-            double newlocx=part.getLocation()[0]+advectStep[0]+subStepDt*behave_uv[0]+diff_X; // simplest possible "Euler"
-            double newlocy=part.getLocation()[1]+advectStep[1]+subStepDt*behave_uv[1]+diff_Y;
+            double newlocx=part.getLocation()[0] + dx; // simplest possible "Euler"
+            double newlocy=part.getLocation()[1] + dy;
             //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
 
             // find element containing particle and update seach counts for diagnosis
@@ -327,5 +343,61 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }    
             }            
         }
+    }
+    
+    /**
+     * Calculate a transport distance, provided in metres, in degrees.
+     * This uses the equirectangular method (https://www.movable-type.co.uk/scripts/latlong.html),
+     * which is not particularly accurate but should be OK for short distances.
+     * 
+     * @param distanceMetres    calculated transport distance [dx,dy]
+     * @param location          particle location in degrees [lon,lat]
+     * @return 
+     */
+    public static double[] distanceMetresToDegrees1(double[] distanceMetres, double[] location)
+    {
+        double[] distanceDegrees = new double[2];
+        // Distance per degree of longitude changes with latitude
+        distanceDegrees[0] = distanceMetres[0] / (111206*Math.cos(2*Math.PI*location[1]/360)); 
+        // Distance per degree of latitude remains broadly constant
+        distanceDegrees[1] = distanceMetres[1] / 111206; // 111206 = average radius of earth (6371000) * tan(1deg)
+        
+        return distanceDegrees;
+    }
+    
+    /**
+     * Calculate a transport distance, provided in metres, in degrees.
+     * This should be more accurate than the equirectangular approximation.
+     * (http://www.csgnetwork.com/degreelenllavcalc.html; view source).
+     * 
+     * @param distanceMetres    calculated transport distance [dx,dy]
+     * @param location          particle location in degrees [lon,lat]
+     * @return 
+     */
+    public static double[] distanceMetresToDegrees2(double[] distanceMetres, double[] location)
+    {
+        double[] distanceDegrees = new double[2];
+        
+        // Set up "Constants" for calculating distances
+        double m1 = 111132.92;     // latitude calculation term 1
+        double m2 = -559.82;       // latitude calculation term 2
+        double m3 = 1.175;         // latitude calculation term 3
+        double m4 = -0.0023;       // latitude calculation term 4
+        double p1 = 111412.84;     // longitude calculation term 1
+        double p2 = -93.5;         // longitude calculation term 2
+        double p3 = 0.118;         // longitude calculation term 3
+
+        double latRad = 2*Math.PI*location[1]/360.0;
+        
+        // Calculate the length of a degree of latitude and longitude in meters
+        double latlen = m1 + (m2 * Math.cos(2 * latRad)) + (m3 * Math.cos(4 * latRad)) +
+                (m4 * Math.cos(6 * latRad));
+        double longlen = (p1 * Math.cos(latRad)) + (p2 * Math.cos(3 * latRad)) +
+                    (p3 * Math.cos(5 * latRad));
+        
+        distanceDegrees[0] = distanceMetres[0]/longlen;
+        distanceDegrees[1] = distanceMetres[1]/latlen;
+        
+        return distanceDegrees;
     }
 }

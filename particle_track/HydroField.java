@@ -157,7 +157,7 @@ public class HydroField {
     
     /**
      * Compute a sum of an array over a particular dimension, for a particular 
-     * index of that dimension
+     * index of that dimension - to assist in validation of data read in
      * 
      * @param var
      * @param dimension

@@ -74,7 +74,7 @@ public class Mesh {
         //int x[][][]=new int[5][8][10];
         //System.out.println(x.length+" "+x[1].length+" "+x[0][1].length);
         // Prints 5 8 10
-        //System.out.println("trinodes: "+trinodes.length+" "+trinodes[1].length);      
+        System.out.println("neighbours: "+neighbours.length+" "+neighbours[1].length);      
     }
     
     /**
