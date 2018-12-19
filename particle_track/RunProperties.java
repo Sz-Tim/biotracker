@@ -39,20 +39,23 @@ public class RunProperties {
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, recordsPerFile2, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
-            depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
+            //depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
             dumpInterval, // Interval in hours for printing particle locations and elements to file
             thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
-            endlimit, // Maximum ID of startlocs to use as a destination (0 = use all)
-            N, // Number of mesh element centroids - IDEALLY DEPRECATE
-            M; // Number of mesh nodes - IDEALLY DEPRECATE
+            endlimit; // Maximum ID of startlocs to use as a destination (0 = use all)
+            //N, // Number of mesh element centroids - IDEALLY DEPRECATE
+            //M; // Number of mesh nodes - IDEALLY DEPRECATE
 
     double releaseTime, viabletime, // Time of particle release (if releaseScenario == "0"), Time to attain settlement competency
             dt, // Timestep (s) per record
             D_h, // Horizontal diffuision parameter
+            D_hVert, // Vertical diffuision parameter
             diffusionMultiplier, // Additional diffusion transport distance linear multiplier
             mortalityRate, // Hourly mortality rate of particles
-            maxParticleAge; // Maximum age for particles. Set to <=0 and it will be ignored.
+            maxParticleAge, // Maximum age for particles. Set to <=0 and it will be ignored.
+            sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
+            startDepth; // Particle initiation depth
   
     /**
      * 
@@ -119,8 +122,9 @@ public class RunProperties {
         
         // Set variable values based on contents of the properties object
         backwards = Boolean.parseBoolean(properties.getProperty("backwards","false"));
-        timeInterpolate = Boolean.parseBoolean(properties.getProperty("timeInterpolate","true"));
-        spatialInterpolate = Boolean.parseBoolean(properties.getProperty("spatialInterpolate","true"));
+        // DEPRECATED
+        //timeInterpolate = Boolean.parseBoolean(properties.getProperty("timeInterpolate","true"));
+        //spatialInterpolate = Boolean.parseBoolean(properties.getProperty("spatialInterpolate","true"));
     
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4","true"));
         cluster = Boolean.parseBoolean(properties.getProperty("cluster","true"));
@@ -157,7 +161,7 @@ public class RunProperties {
         
         // 21/11/2018 --- possible to remove? If using two models for hydro 
         // would ideally sense from the hydro file
-        depthLayers = Integer.parseInt(properties.getProperty("depthLayers","10"));
+        //depthLayers = Integer.parseInt(properties.getProperty("depthLayers","10"));
         
         dumpInterval = Integer.parseInt(properties.getProperty("dumpInterval","24"));
 
@@ -166,14 +170,18 @@ public class RunProperties {
         behaviour = Integer.parseInt(properties.getProperty("behaviour","1"));
         
         D_h = Double.parseDouble(properties.getProperty("D_h","0.1"));
+        D_hVert = Double.parseDouble(properties.getProperty("D_hVert","0.005"));
         diffusionMultiplier = Double.parseDouble(properties.getProperty("diffusionMultiplier","1"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate","0.01"));
         maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","-1"));
         
+        sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean","0"));
+        sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd","0"));
+        
         // 21/11/2018 --- possible to remove? If using two models for hydro 
         // would ideally sense from the hydro file
-        N = Integer.parseInt(properties.getProperty("N","79244"));
-        M = Integer.parseInt(properties.getProperty("M","46878"));
+        //N = Integer.parseInt(properties.getProperty("N","79244"));
+        //M = Integer.parseInt(properties.getProperty("M","46878"));
         
         endlimit = Integer.parseInt(properties.getProperty("endlimit","0"));
         

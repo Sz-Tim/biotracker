@@ -104,8 +104,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param trinodes
      * @param allelems
      * @param depthUvnode
-     * @param sigvec2
-     * @param endlocs
+     * @param siglay
+     * @param habitatEnd
      * @param open_BC_locs
      * @param searchCounts
      * @param particle_info
@@ -117,7 +117,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float u[][][], float v[][][],
             int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
             int[][] trinodes, int[] allelems,
-            float[] depthUvnode, float[] sigvec2,
+            float[] depthUvnode, float[] siglay,
             List<HabitatSite> habitatEnd, int[] open_BC_locs,
             int[] searchCounts,
             double[] minMaxDistTrav)
@@ -145,17 +145,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int elemPart = part.getElem();
             //System.out.printf("%d\n",elemPart);
             // set and get the DEPTH layer for the particle based on tide state
-//                            if (tt>0)
-//                            {
-//                                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
-//                                {
-//                                    particles[i].setDepthLayer(behaviour,"flood");
-//                                } else {
-//                                    particles[i].setDepthLayer(behaviour,"ebb");
-//                                }
-//                            }
-            // set depth layer based on fixed depth in metres
-            part.setLayerFromDepth(depthUvnode[elemPart],sigvec2);
+//            if (tt>0)
+//            {
+//                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
+//                {
+//                    particles[i].setDepthLayer(behaviour,"flood");
+//                } else {
+//                    particles[i].setDepthLayer(behaviour,"ebb");
+//                }
+//            }
+            part.setDepth(rp.D_hVert,rp.sinkingRateMean,rp.sinkingRateStd,subStepDt,depthUvnode[elemPart]);
+
+            // set depth layer based on depth in metres
+            part.setLayerFromDepth(depthUvnode[elemPart],siglay);
 
             // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
             // This is stored at NODES as opposed to ELEMENT CENTROIDS.
@@ -174,21 +176,21 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             double advectStep[] = new double[2];
-//                            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
-//                                    advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
+
             if (rp.rk4==true)
             {
                 advectStep = part.rk4Step(u, v, 
                     neighbours, uvnode,  nodexy, trinodes, allelems,
-                    tt, st, subStepDt, rp.stepsPerStep, rp.depthLayers);   
+                    tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);   
             }
             else
             {
-                System.err.println("Euler step not calculated --- edit method to work with 7 row velocities");
-//                                    advectStep = particles[i].eulerStepOld(u, v, u1, v1, neighbours, uvnode, 
-//                                        tt, st, subStepDt, stepsPerStep, recordsPerFile, fnum, lastday, depthLayers, 
-//                                        spatialInterpolate, timeInterpolate);
+                advectStep = part.eulerStep(u, v, 
+                    neighbours, uvnode,  nodexy, trinodes, allelems,
+                    tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             }
+//            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
+//                advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
 
             // Reverse velocities if running backwards
             if (rp.backwards == true)
@@ -221,7 +223,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             
             if (rp.coordRef.equalsIgnoreCase("WGS84"))
             {
-                // The two methods always give the same first significant figure and generally the second, later sig. figs. differ in general
+                // These two methods always give the same first significant figure and generally the second, later sig. figs. differ in general
                 //double[] dXY1 = distanceMetresToDegrees1(new double[]{dx,dy}, part.getLocation());
                 double[] dXY2 = distanceMetresToDegrees2(new double[]{dx,dy}, part.getLocation());
                 
@@ -298,9 +300,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // (make it settle there, even if it is inviable)
             for (int loc = 0; loc < open_BC_locs.length; loc++)
                 {
-                    double dist = Math.sqrt((part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])*(part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])+
-                            (part.getLocation()[1]-nodexy[1][open_BC_locs[loc]])*(part.getLocation()[1]-nodexy[1][open_BC_locs[loc]]));
-                    if (dist < 1500)
+//                    double dist = Math.sqrt((part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])*(part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])+
+//                            (part.getLocation()[1]-nodexy[1][open_BC_locs[loc]])*(part.getLocation()[1]-nodexy[1][open_BC_locs[loc]]));
+                    double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
+                            nodexy[0][open_BC_locs[loc]], nodexy[1][open_BC_locs[loc]], rp.coordRef);
+                    //System.out.println("dist to OBC loc = "+dist);
+                    
+                    double distThresh = 2000;
+//                    if (rp.coordRef.equalsIgnoreCase("WGS84"))
+//                    {
+//                        distThresh = distThresh / 111206;
+//                    }
+                    if (dist < distThresh)
                     {
                         //System.out.printf("Boundary stop: %d at %d\n",i,loc);
                         //part.setArrived(true);
@@ -320,12 +331,20 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
                 for (HabitatSite site : habitatEnd)
                 {
-//                    double dist = Math.sqrt((part.getLocation()[0]-endlocs[loc][1])*(part.getLocation()[0]-endlocs[loc][1])+
-//                            (part.getLocation()[1]-endlocs[loc][2])*(part.getLocation()[1]-endlocs[loc][2]));
                     //System.out.println("In habitatEnd check "+part.getLocation()[0]+" "+part.getLocation()[1]);
-                    double dist = Math.sqrt((part.getLocation()[0]-site.getLocation()[0])*(part.getLocation()[0]-site.getLocation()[0])+
-                            (part.getLocation()[1]-site.getLocation()[1])*(part.getLocation()[1]-site.getLocation()[1]));
-                    if (dist < rp.thresh && part.getSettledThisHour()==false)
+//                    double dist = Math.sqrt((part.getLocation()[0]-site.getLocation()[0])*(part.getLocation()[0]-site.getLocation()[0])+
+//                            (part.getLocation()[1]-site.getLocation()[1])*(part.getLocation()[1]-site.getLocation()[1]));
+                    double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
+                            site.getLocation()[0], site.getLocation()[1], rp.coordRef);
+                    
+                    double distThresh = rp.thresh;
+                    // Correct the threshold distance to a value in degrees, if required - REMOVED
+//                    if (rp.coordRef.equalsIgnoreCase("WGS84"))
+//                    {
+//                        distThresh = distThresh / 111206;
+//                    }
+                    
+                    if (dist < distThresh && part.getSettledThisHour()==false)
                     {
                         //IOUtils.arrivalToFile(part, currentDate, whereami, loc, filename, true);
                         

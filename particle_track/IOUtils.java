@@ -704,7 +704,7 @@ public class IOUtils {
      * @param filename
      * @param append 
      */
-    public static void particleLocsToFile_full(List<Particle> particles, int currentHour, String filename,boolean append)
+    public static void particleLocsToFile_full(List<Particle> particles, int currentHour, String filename, boolean append)
     {
         try
         {
@@ -733,6 +733,15 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
+    
+    
+    public static void particleLocsToNetcdfFile()
+    {
+        // https://www.unidata.ucar.edu/software/netcdf/examples/programs/Simple_xy_wr.java
+        // What about appending data? Need to check how that would work.
+    }
+    
+    
     
     public static void arrivalToFile(Particle p, ISO_datestr currentDate, double currentTime, String filename, boolean append)
     {
