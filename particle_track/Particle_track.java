@@ -113,15 +113,16 @@ public class Particle_track {
 //        String datadir = dirList[3];
 //        String datadir2 = dirList[4];
 
-        Mesh mesh1 = new Mesh(rp.mesh1);
-        Mesh mesh2;
+        
+        List<Mesh> meshes = new ArrayList<>();
+        meshes.add(new Mesh(rp.mesh1,rp.mesh1Type));
         if (rp.mesh2.equals("") != true)
         {
-            mesh2 = new Mesh(rp.mesh2);
+            meshes.add(new Mesh(rp.mesh2,rp.mesh2Type));
         }
 
 
-        int[] allelems = IntStream.rangeClosed(0, mesh1.getUvnode()[0].length-1).toArray();
+        int[] allelems = IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray();
         
         double subStepDt = rp.dt / (double) rp.stepsPerStep; // number of seconds per substep
         double dev_perstep = Math.pow(0.1, subStepDt);
@@ -318,7 +319,7 @@ public class Particle_track {
                         System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreated %d \n",
                             rp.releaseScenario,time,allowRelease,numParticlesCreated);
                         //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
-                        List<Particle> newParts = createNewParticles(habitat,allelems,mesh1.getTrinodes(),mesh1.getNodexy(),mesh1.getUvnode(),
+                        List<Particle> newParts = createNewParticles(habitat,meshes.get(0),
                                 rp,currentIsoDate,currentHour,numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
@@ -351,10 +352,16 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                     //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+((i + 1) * listStep - 1));
                                 }
+//                                callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
+//                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), 
+//                                        mesh1.getTrinodes(), allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
+//                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+//                                        searchCounts,
+//                                        minMaxDistTrav));
                                 callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
-                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), 
-                                        mesh1.getTrinodes(), allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
-                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+                                        hydroField1.getU(), hydroField1.getV(), meshes.get(0).getNeighbours(), meshes.get(0).getUvnode(), meshes.get(0).getNodexy(), 
+                                        meshes.get(0).getTrinodes(), allelems, meshes.get(0).getDepthUvnode(), meshes.get(0).getSiglay(),
+                                        habitatEnd, meshes.get(0).getOpenBoundaryNodes(),
                                         searchCounts,
                                         minMaxDistTrav));
 
@@ -370,10 +377,16 @@ public class Particle_track {
                             // Normal serial loop
                             for (Particle part : particles) {
                                 // Can just use the move method that was shipped out to the ParallelParticleMover class
+//                                ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
+//                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), 
+//                                        allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
+//                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+//                                        searchCounts,
+//                                        minMaxDistTrav);
                                 ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
-                                        hydroField1.getU(), hydroField1.getV(), mesh1.getNeighbours(), mesh1.getUvnode(), mesh1.getNodexy(), mesh1.getTrinodes(), 
-                                        allelems, mesh1.getDepthUvnode(), mesh1.getSiglay(),
-                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
+                                        hydroField1.getU(), hydroField1.getV(), meshes.get(0).getNeighbours(), meshes.get(0).getUvnode(), meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), 
+                                        allelems, meshes.get(0).getDepthUvnode(), meshes.get(0).getSiglay(),
+                                        habitatEnd, meshes.get(0).getOpenBoundaryNodes(),
                                         searchCounts,
                                         minMaxDistTrav);
 
@@ -439,19 +452,15 @@ public class Particle_track {
     /**
      * Method to create new particles. These must be appended to the existing list
      * 
-     * @param startlocs
-     * @param allelems
-     * @param trinodes
-     * @param nodexy
-     * @param uvnode
+     * @param habitat
+     * @param mesh
      * @param rp
      * @param currentDate
      * @param currentTime
      * @param numParticlesCreated
      * @return List of the new particles to be appended to existing list
      */
-    public static List<Particle> createNewParticles(List<HabitatSite> habitat,
-            int[] allelems, int[][] trinodes, float[][] nodexy, float[][] uvnode, 
+    public static List<Particle> createNewParticles(List<HabitatSite> habitat, Mesh mesh, 
             RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated)
     {
         //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
@@ -469,11 +478,13 @@ public class Particle_track {
                 
                 // If start location is a boundary location it is not actually in the mesh/an element, so set
                 // new particle location to centre of nearest element.
-                int closest = Particle.nearestCentroid(xstart, ystart, uvnode);
-                int startElem = Particle.whichElement(new double[]{xstart,ystart}, allelems, nodexy, trinodes);
+                int closest = Particle.nearestCentroid(xstart, ystart, mesh.getUvnode());
+                int startElem = Particle.whichElement(new double[]{xstart,ystart}, 
+                        IntStream.rangeClosed(0, mesh.getUvnode()[0].length-1).toArray(), 
+                        mesh.getNodexy(), mesh.getTrinodes());
                 if (startElem < 0) {
-                    xstart = uvnode[0][closest];
-                    ystart = uvnode[1][closest];
+                    xstart = mesh.getUvnode()[0][closest];
+                    ystart = mesh.getUvnode()[1][closest];
                     startElem = closest;
                 }
             

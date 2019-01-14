@@ -18,6 +18,7 @@ public class RunProperties {
             datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
             datadir2, datadir2Prefix, datadir2Suffix, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories 
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
+            mesh1Type, mesh2Type,
             location, sitefile, habitat, suffix, // Descriptive strings
             coordRef; // Coordinate reference system
             
@@ -90,6 +91,8 @@ public class RunProperties {
         
         mesh1 = properties.getProperty("mesh1","/home/sa01ta/particle_track/WestCOMS_mesh.nc");
         mesh2 = properties.getProperty("mesh2","");
+        mesh1Type = properties.getProperty("mesh1Type","");
+        mesh2Type = properties.getProperty("mesh2Type","");
     
         sitefile = properties.getProperty("sitefile","startlocations.dat");
         location = properties.getProperty("location","minch_continuous");

@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 
 import java.util.*;
 
+import ucar.ma2.ArrayDouble;
 import ucar.ma2.ArrayFloat;
 import ucar.ma2.ArrayInt;
 import ucar.ma2.InvalidRangeException;
@@ -64,30 +65,30 @@ public class IOUtils {
         return trim.split("\\w+").length;
     }
     
-    public static double[][] setupStartLocs(String filename, String sitedir, boolean makeLocalCopy)
-    {
-        double startlocs[][] = new double[10][3];
-        System.out.println("Startlocations defined in file: "+filename);
-        File file = new File(sitedir+filename);
-        int nLines = 0;
-        try
-        {
-            nLines = countLines(file);
-            System.out.println("FILE "+file+" NLINES "+nLines);
-        }
-        catch (Exception e)
-        {
-            System.out.println("Cannot open "+sitedir+filename);
-        }
-        startlocs = IOUtils.readFileDoubleArray(sitedir+filename,nLines,5," ",true);
-        
-        if (makeLocalCopy == true)
-        {
-            IOUtils.writeDoubleArrayToFile(startlocs, "startlocs.dat",true); 
-        }
-        
-        return startlocs;
-    }
+//    public static double[][] setupStartLocs(String filename, String sitedir, boolean makeLocalCopy)
+//    {
+//        double startlocs[][] = new double[10][3];
+//        System.out.println("Startlocations defined in file: "+filename);
+//        File file = new File(sitedir+filename);
+//        int nLines = 0;
+//        try
+//        {
+//            nLines = countLines(file);
+//            System.out.println("FILE "+file+" NLINES "+nLines);
+//        }
+//        catch (Exception e)
+//        {
+//            System.out.println("Cannot open "+sitedir+filename);
+//        }
+//        startlocs = IOUtils.readFileDoubleArray(sitedir+filename,nLines,5," ",true);
+//        
+//        if (makeLocalCopy == true)
+//        {
+//            IOUtils.writeFloatArrayToFile((startlocs, "startlocs.dat",true); 
+//        }
+//        
+//        return startlocs;
+//    }
     
     public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy)
     {
@@ -236,12 +237,27 @@ public class IOUtils {
             
             int[] shape = dataVar.getShape();
             //int origin = 0;
-            ArrayFloat.D1 dataArray = (ArrayFloat.D1) dataVar.read();
-            // Put the values into a native array
-            floatOut = new float[shape[0]];
-            for (int d1 = 0; d1 < shape[0]; d1++) {
-                floatOut[d1] = dataArray.get(d1);
+            
+            try
+            {
+                ArrayFloat.D1 dataArray = (ArrayFloat.D1) dataVar.read();
+                // Put the values into a native array
+                floatOut = new float[shape[0]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    floatOut[d1] = dataArray.get(d1);
+                }
             }
+            catch (ClassCastException e)
+            {
+                ArrayDouble.D1 dataArray = (ArrayDouble.D1) dataVar.read();
+                // Put the values into a native array
+                floatOut = new float[shape[0]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    floatOut[d1] = (float)dataArray.get(d1);
+                }
+            }
+            
+            
         } catch (IOException ioe) {
 	    ioe.printStackTrace();
         } catch (Exception e) {
@@ -294,14 +310,30 @@ public class IOUtils {
                 System.out.println("Can't find Variable: "+variable);
             }   int[] shape = dataVar.getShape();
             int[] origin = new int[2];
-            ArrayFloat.D2 dataArray = (ArrayFloat.D2) dataVar.read(origin, shape);
-            // Put the values into a native array
-            floatOut = new float[shape[0]][shape[1]];
-            for (int d1 = 0; d1 < shape[0]; d1++) {
-                for (int d2 = 0; d2 < shape[1]; d2++) {
-                    floatOut[d1][d2] = dataArray.get(d1, d2);
+            
+            try
+            {
+                ArrayFloat.D2 dataArray = (ArrayFloat.D2) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        floatOut[d1][d2] = dataArray.get(d1, d2);
+                    }
                 }
             }
+            catch (ClassCastException e)
+            {
+                ArrayDouble.D2 dataArray = (ArrayDouble.D2) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        floatOut[d1][d2] = (float)dataArray.get(d1, d2);
+                    }
+                }
+            }
+            
         } catch (IOException ioe) {
 	    ioe.printStackTrace();
         } catch (Exception e) {
@@ -339,6 +371,40 @@ public class IOUtils {
     }
     
     /**
+     * Reshape a two dimensional array of floating point numbers
+     * 
+     * @param A
+     * @param m
+     * @param n
+     * @return 
+     */
+    public static float[][] reshapeFloat(float[][] A, int m, int n) {
+        int origM = A.length;
+        int origN = A[0].length;
+        if(origM*origN != m*n){
+            throw new IllegalArgumentException("New matrix must be of same area as matix A");
+        }
+        float[][] B = new float[m][n];
+        float[] A1D = new float[A.length * A[0].length];
+
+        int index = 0;
+        for(int i = 0;i<A.length;i++){
+            for(int j = 0;j<A[0].length;j++){
+                A1D[index++] = A[i][j];
+            }
+        }
+
+        index = 0;
+        for(int i = 0;i<n;i++){
+            for(int j = 0;j<m;j++){
+                B[j][i] = A1D[index++];
+            }
+
+        }
+        return B;
+    }
+    
+    /**
      * 
      * @param filename
      * @param variable
@@ -356,16 +422,34 @@ public class IOUtils {
                 System.out.println("Can't find Variable: "+variable);
             }   int[] shape = dataVar.getShape();
             int[] origin = new int[3];
-            ArrayFloat.D3 dataArray = (ArrayFloat.D3) dataVar.read(origin, shape);
-            // Put the values into a native array
-            floatOut = new float[shape[0]][shape[1]][shape[2]];
-            for (int d1 = 0; d1 < shape[0]; d1++) {
-                for (int d2 = 0; d2 < shape[1]; d2++) {
-                    for (int d3 = 0; d3 < shape[2]; d3++) {
-                        floatOut[d1][d2][d3] = dataArray.get(d1, d2, d3);
+            
+            try
+            {
+                ArrayFloat.D3 dataArray = (ArrayFloat.D3) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]][shape[2]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        for (int d3 = 0; d3 < shape[2]; d3++) {
+                            floatOut[d1][d2][d3] = dataArray.get(d1, d2, d3);
+                        }
                     }
                 }
             }
+            catch (ClassCastException e)
+            {
+                ArrayDouble.D3 dataArray = (ArrayDouble.D3) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]][shape[2]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        for (int d3 = 0; d3 < shape[2]; d3++) {
+                            floatOut[d1][d2][d3] = (float)dataArray.get(d1, d2, d3);
+                        }
+                    }
+                }
+            }
+   
         } catch (IOException ioe) {
 	    ioe.printStackTrace();
         } catch (Exception e) {
@@ -528,7 +612,7 @@ public class IOUtils {
      * @param filename 
      * @param asInt
      */
-    public static void writeDoubleArrayToFile(double[][] variable, String filename, boolean asInt)
+    public static void writeFloatArrayToFile(float[][] variable, String filename, boolean asInt)
     {
         try
         {
@@ -541,7 +625,7 @@ public class IOUtils {
                 {   
                     if (asInt==false)
                     {
-                        out.printf("%.2e ",variable[i][j]);
+                        out.printf("%.4e ",variable[i][j]);
                     }
                     else
                     {
