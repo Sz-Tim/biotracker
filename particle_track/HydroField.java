@@ -32,16 +32,32 @@ public class HydroField {
      * 
      * @param filename 
      * @param varNames
+     * @param origin
+     * @param shape
      */
-    public HydroField(String filename, String[] varNames)
+    public HydroField(String filename, String[] varNames, int[] origin, int[] shape)
     {
         System.out.println("Reading hydro file: "+filename);
 
-        u = IOUtils.readNetcdfFloat3D(filename,varNames[0]);
-        v = IOUtils.readNetcdfFloat3D(filename,varNames[1]);
-        s = IOUtils.readNetcdfFloat3D(filename,varNames[2]);
-        t = IOUtils.readNetcdfFloat3D(filename,varNames[3]);
-        el = IOUtils.readNetcdfFloat2D(filename,varNames[4]); 
+        // Create additional shape matrices for the 2D variables (elevation)
+        int[] origin2 = null;
+        if (origin != null)
+        {
+            origin2[0] = origin[0];
+            origin2[1] = origin[2];
+        }
+        int[] shape2 = null;
+        if (shape != null)
+        {
+            shape2[0] = shape[0];
+            shape2[1] = shape[2];
+        }
+        
+        u = IOUtils.readNetcdfFloat3D(filename,varNames[0],origin,shape);
+        v = IOUtils.readNetcdfFloat3D(filename,varNames[1],origin,shape);
+        s = IOUtils.readNetcdfFloat3D(filename,varNames[2],origin,shape);
+        t = IOUtils.readNetcdfFloat3D(filename,varNames[3],origin,shape);
+        el = IOUtils.readNetcdfFloat2D(filename,varNames[4],origin2,shape2); // origin and shape need to lose a dimension here 
     }
     
     /**
@@ -50,27 +66,46 @@ public class HydroField {
      * @param filename1
      * @param filename2 
      * @param varNames
+     * @param origin
+     * @param shape
      */
-    public HydroField(String filename1, String filename2, String[] varNames)
+    public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape)
     {
             if (varNames.length != 5)
             {
                 System.err.println("Incorrect number of variable names for hydro data extraction");
             }
+            
+            // Create additional shape matrices for the 2D variables (elevation)
+            int[] origin2 = null;
+            if (origin != null)
+            {
+                origin2[0] = origin[0];
+                origin2[1] = origin[2];
+            }
+            int[] shape2 = null;
+            if (shape != null)
+            {
+                shape2[0] = shape[0];
+                shape2[1] = shape[2];
+            }
+            
             System.out.println("Reading two hydro files and combining");
             System.out.println("Reading hydro file: "+filename1);
-            float[][][] u1 = IOUtils.readNetcdfFloat3D(filename1,varNames[0]);
-            float[][][] v1 = IOUtils.readNetcdfFloat3D(filename1,varNames[1]);
-            float[][][] s1 = IOUtils.readNetcdfFloat3D(filename1,varNames[2]);
-            float[][][] t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3]);
-            float[][] el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4]); 
+            float[][][] u1 = IOUtils.readNetcdfFloat3D(filename1,varNames[0],origin,shape);
+            float[][][] v1 = IOUtils.readNetcdfFloat3D(filename1,varNames[1],origin,shape);
+            float[][][] s1 = IOUtils.readNetcdfFloat3D(filename1,varNames[2],origin,shape);
+            float[][][] t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shape);
+            
+            float[][] el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4],origin2,shape2);  // origin and shape need to lose a dimension (middle one) here
         
             System.out.println("Reading hydro file: "+filename2);
-            float[][][] u2 = IOUtils.readNetcdfFloat3D(filename2,varNames[0]);
-            float[][][] v2 = IOUtils.readNetcdfFloat3D(filename2,varNames[1]);
-            float[][][] s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2]);
-            float[][][] t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3]);
-            float[][] el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4]);
+            float[][][] u2 = IOUtils.readNetcdfFloat3D(filename2,varNames[0],origin,shape);
+            float[][][] v2 = IOUtils.readNetcdfFloat3D(filename2,varNames[1],origin,shape);
+            float[][][] s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2],origin,shape);
+            float[][][] t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3],origin,shape);
+            
+            float[][] el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shape2);  // origin and shape need to lose a dimension here
             
             // These two are recorded at element centroids in FVCOM
             u = new float[u1.length+1][u1[1].length][u1[0][1].length];
@@ -126,10 +161,6 @@ public class HydroField {
 //            sumIndex(u,2,0,true);
 //            sumIndex(u,2,79243,true);
     }
-    
-    
-    
-    
     
     /**
      * Public getter methods for each internal field

@@ -9,7 +9,11 @@ import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
 import ucar.ma2.*;
 
+import java.awt.geom.Path2D;
+
 import java.io.IOException;
+
+import extUtils.ConcaveHull;
 
 /**
  *
@@ -40,6 +44,7 @@ public class Mesh {
     // Variables used in all cases
     private float[] siglay;
     private float[][] convexHull;
+    private float[][] concaveHull;
     
     /**
      * Create a Mesh from a NetCDF file, and supplementary text files detailing 
@@ -54,8 +59,8 @@ public class Mesh {
         meshType = type;
         if (type.equalsIgnoreCase("triangular") || type.equalsIgnoreCase("FVCOM"))
         {
-            uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode");
-            nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy");
+            uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode",null,null);
+            nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy",null,null);
             depthUvnode = IOUtils.readNetcdfFloat1D(meshFilename,"depthUvnode");
             depthNodexy = IOUtils.readNetcdfFloat1D(meshFilename,"depthNodexy");
             trinodes = IOUtils.readNetcdfInteger2D(meshFilename,"trinodes");
@@ -93,13 +98,19 @@ public class Mesh {
             convexHull = ConvexHull.convexHull(uvnodeT);
             IOUtils.writeFloatArrayToFile(uvnodeT, "uvnode_FVCOM.dat", false);
             IOUtils.writeFloatArrayToFile(convexHull, "convexHull_FVCOM.dat", false);
+            // This isn't working at the moment
+            // At the very least, it's incredibly slow.
+//            ConcaveHull ch2 = new ConcaveHull();
+//            concaveHull = ch2.calculateConcaveHull(uvnodeT,3);
+//            IOUtils.writeFloatArrayToFile(convexHull, "concaveHull_FVCOM.dat", false);
+            
         } 
         else if (type.equalsIgnoreCase("ROMS"))
         {
-            lon_u = IOUtils.readNetcdfFloat2D(meshFilename,"lon_u");
-            lat_u = IOUtils.readNetcdfFloat2D(meshFilename,"lat_u");
-            lon_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lon_rho");
-            lat_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lat_rho");
+            lon_u = IOUtils.readNetcdfFloat2D(meshFilename,"lon_u",null,null);
+            lat_u = IOUtils.readNetcdfFloat2D(meshFilename,"lat_u",null,null);
+            lon_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lon_rho",null,null);
+            lat_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lat_rho",null,null);
             siglay = IOUtils.readNetcdfFloat1D(meshFilename,"s_rho");
             
             float[][] x1 = IOUtils.reshapeFloat(lon_u, lon_u.length*lon_u[0].length, 1);
@@ -111,10 +122,23 @@ public class Mesh {
             }
             convexHull = ConvexHull.convexHull(xy);
             IOUtils.writeFloatArrayToFile(convexHull, "convexHull_ROMS.dat", false);
+            
+            // List the corners to verify which way around the netCDF array is read in
+            System.out.println("ROMS grid size: "+lon_u.length+" "+lon_u[0].length);
+            System.out.println("Corner 1: "+lon_u[0][0]+" "+lat_u[0][0]);
+            System.out.println("Corner 2: "+lon_u[lon_u.length-1][0]+" "+lat_u[lon_u.length-1][0]);
+            System.out.println("Corner 3: "+lon_u[lon_u.length-1][lon_u[0].length-1]+" "+lat_u[lon_u.length-1][lon_u[0].length-1]);
+            System.out.println("Corner 4: "+lon_u[0][lon_u[0].length-1]+" "+lat_u[0][lon_u[0].length-1]);
+            // From this we can see that 
+            // increasing first index => increasing longitude
+            // increasing second index => decreasing latitude
+            
+            // The following isn't working at the moment.
+            // At the very least, it's incredibly slow.
+//            ConcaveHull ch2 = new ConcaveHull();
+//            concaveHull = ch2.calculateConcaveHull(xy,3);
+//            IOUtils.writeFloatArrayToFile(convexHull, "concaveHull_ROMS.dat", false);
         }
-        
-        
-       
     }
     
     /**
@@ -144,6 +168,14 @@ public class Mesh {
     {
         return neighbours;
     }
+    public float[][] getLonU()
+    {
+        return lon_u;
+    }
+    public float[][] getLatU()
+    {
+        return lat_u;
+    }
     public float[] getSiglay()
     {
         return siglay;
@@ -160,5 +192,49 @@ public class Mesh {
     {
         return convexHull;
     }
+    public String getType()
+    {
+        return meshType;
+    }
+    
+    /**
+     * Create a Path2D object from a list of x,y points
+     * @param points
+     * @return 
+     */
+    public static Path2D.Float pointsToPath(float[][] points)
+    {
+        if (points[0].length != 2)
+        {
+            System.err.print("Array provided to pointsToPath must have second dimension = 2");
+        }
+        Path2D.Float path = new Path2D.Float();
+        path.moveTo(points[0][0], points[0][1]);
+        for (int i = 1; i < points.length; i++)
+        {
+            path.lineTo(points[i][0], points[i][1]);
+        }
+        path.closePath();
         
+        return path;
+    }
+    
+    /**
+     * Is a specific location within the mesh convex hull?
+     * Note that this does not guarantee the point is within a mesh element, so we
+     * should normally find the nearest/containing node or element in addition to the
+     * mesh ID.
+     * 
+     * @param mesh
+     * @param xy
+     * @return 
+     */
+    public boolean isInMesh(double[] xy)
+    {
+        Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
+        boolean inMesh = cHull.contains(xy[0],xy[1]);
+        return inMesh;
+    }
+    
+    
 }

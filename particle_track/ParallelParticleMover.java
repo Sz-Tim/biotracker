@@ -27,27 +27,31 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final int st;
     private final double subStepDt;
     private final RunProperties rp;
-    private final float[][][] u; 
-    private final float[][][] v;
-    private final int[][] neighbours;
-    private final float[][] uvnode;
-    private final float[][] nodexy;
-    private final int[][] trinodes;
+    
+//    private final float[][][] u; 
+//    private final float[][][] v;
+//    private final int[][] neighbours;
+//    private final float[][] uvnode;
+//    private final float[][] nodexy;
+//    private final int[][] trinodes;
     private final int[] allelems;
-    private final float[] depthUvnode;
-    private final float[] sigvec2;
+//    private final float[] depthUvnode;
+//    private final float[] sigvec2;
+//    private final int[] open_BC_locs;
+    
+    private final List<Mesh> meshes;
+    private final List<HydroField> hydroFields;
+    
     private final List<HabitatSite> habitatEnd;
-    private final int[] open_BC_locs;
     private final int[] searchCounts;
     private final double[] minMaxDistTrav;
     
     public ParallelParticleMover(List<Particle> particles, double time, int tt, int st, double subStepDt,
-            RunProperties rp, 
-            float u[][][], float v[][][],
-            int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
-            int[][] trinodes, int[] allelems,
-            float[] depthUvnode, float[] sigvec2, 
-            List<HabitatSite> habitatEnd, int[] open_BC_locs,
+            RunProperties rp,
+            List<Mesh> meshes,
+            List<HydroField> hydroFields,
+            List<HabitatSite> habitatEnd, 
+            int[] allelems,
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
@@ -57,17 +61,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.st=st;
         this.subStepDt=subStepDt;
         this.rp=rp;
-        this.u=u; 
-        this.v=v;
-        this.neighbours=neighbours;
-        this.uvnode=uvnode;
-        this.nodexy=nodexy;
-        this.trinodes=trinodes;
+        this.meshes=meshes;
+        this.hydroFields=hydroFields;
         this.allelems=allelems;
-        this.depthUvnode=depthUvnode;
-        this.sigvec2=sigvec2;
         this.habitatEnd=habitatEnd;
-        this.open_BC_locs=open_BC_locs;
         this.searchCounts=searchCounts;
         this.minMaxDistTrav=minMaxDistTrav;
     }
@@ -76,10 +73,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             //System.out.println("Time "+time+" - Moving particle "+part.getID());
-            move(part, time, tt, st, subStepDt, rp, 
-                                    u, v, neighbours, uvnode, nodexy, trinodes, allelems, depthUvnode, sigvec2, 
-                                    habitatEnd, open_BC_locs,
-                                    searchCounts, 
+//            move(part, time, tt, st, subStepDt, rp, 
+//                                    u, v, neighbours, uvnode, nodexy, trinodes, allelems, depthUvnode, sigvec2, 
+//                                    habitatEnd, open_BC_locs,
+//                                    searchCounts, 
+//                                    minMaxDistTrav);
+            move(part, time, tt, st, subStepDt, rp, meshes, hydroFields, habitatEnd, allelems, searchCounts, 
                                     minMaxDistTrav);
         }
         return new ArrayList<Particle>();
@@ -112,16 +111,28 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param settle_density
      * @param minMaxDistTrav 
      */
+//    (Particle part, double time, int tt, int st, double subStepDt,
+//            RunProperties rp, 
+//            float u[][][], float v[][][],
+//            int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
+//            int[][] trinodes, int[] allelems,
+//            float[] depthUvnode, float[] siglay,
+//            List<HabitatSite> habitatEnd, int[] open_BC_locs,
+//            int[] searchCounts,
+//            double[] minMaxDistTrav)
     public static void move(Particle part, double time, int tt, int st, double subStepDt,
             RunProperties rp, 
-            float u[][][], float v[][][],
-            int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
-            int[][] trinodes, int[] allelems,
-            float[] depthUvnode, float[] siglay,
-            List<HabitatSite> habitatEnd, int[] open_BC_locs,
+            List<Mesh> meshes,
+            List<HydroField> hydroFields,
+            List<HabitatSite> habitatEnd,
+            int[] allelems,
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
+        Mesh m = meshes.get(part.getMesh());
+        HydroField hf = hydroFields.get(part.getMesh());
+        int elemPart = part.getElem();
+        
         //System.out.println("movepart");
         // Set particles free once they pass thier defined release time (hours)
         if (part.getFree()==false)
@@ -142,7 +153,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             //System.out.printf("PARTICLE %d \n",i);
             
             //System.out.println("particle able to move");
-            int elemPart = part.getElem();
+            
             //System.out.printf("%d\n",elemPart);
             // set and get the DEPTH layer for the particle based on tide state
 //            if (tt>0)
@@ -154,10 +165,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                    particles[i].setDepthLayer(behaviour,"ebb");
 //                }
 //            }
-            part.setDepth(rp.D_hVert,rp.sinkingRateMean,rp.sinkingRateStd,subStepDt,depthUvnode[elemPart]);
+            part.setDepth(rp.D_hVert,rp.sinkingRateMean,rp.sinkingRateStd,subStepDt,m.getDepthUvnode()[elemPart]);
 
             // set depth layer based on depth in metres
-            part.setLayerFromDepth(depthUvnode[elemPart],siglay);
+            part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
 
             // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
             // This is stored at NODES as opposed to ELEMENT CENTROIDS.
@@ -179,14 +190,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             if (rp.rk4==true)
             {
-                advectStep = part.rk4Step(u, v, 
-                    neighbours, uvnode,  nodexy, trinodes, allelems,
+                advectStep = part.rk4Step(hf.getU(), hf.getV(), 
+                    m.getNeighbours(), m.getUvnode(), m.getNodexy(), m.getTrinodes(), allelems,
                     tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);   
             }
             else
             {
-                advectStep = part.eulerStep(u, v, 
-                    neighbours, uvnode,  nodexy, trinodes, allelems,
+                advectStep = part.eulerStep(hf.getU(), hf.getV(), 
+                    m.getNeighbours(), m.getUvnode(), m.getNodexy(), m.getTrinodes(), allelems,
                     tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             }
 //            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
@@ -241,7 +252,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // find element containing particle and update seach counts for diagnosis
             int[] c = Particle.findContainingElement(new double[]{newlocx,newlocy}, elemPart, 
-                    nodexy, trinodes, neighbours, allelems);
+                    m.getNodexy(), m.getTrinodes(), m.getNeighbours(), allelems);
             int whereami = c[0];
             for (int j = 0; j < 4; j++)
             {
@@ -273,9 +284,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // if particle has skipped out of the model domain, place it at the nearest element centroid
             if (whereami == -1)
             {
-                int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],uvnode);
+                int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],m.getUvnode());
                 //fprintf('x%d',closest);
-                part.setLocation(uvnode[closest][0],uvnode[closest][1]);
+                part.setLocation(m.getUvnode()[0][closest],m.getUvnode()[1][closest]);
                 part.setElem(closest);
             }
 
@@ -298,12 +309,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // check whether the particle has gone within a certain range of one of the boundary nodes
             // (make it settle there, even if it is inviable)
-            for (int loc = 0; loc < open_BC_locs.length; loc++)
+            for (int loc = 0; loc < m.getOpenBoundaryNodes().length; loc++)
                 {
 //                    double dist = Math.sqrt((part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])*(part.getLocation()[0]-nodexy[0][open_BC_locs[loc]])+
 //                            (part.getLocation()[1]-nodexy[1][open_BC_locs[loc]])*(part.getLocation()[1]-nodexy[1][open_BC_locs[loc]]));
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
-                            nodexy[0][open_BC_locs[loc]], nodexy[1][open_BC_locs[loc]], rp.coordRef);
+                            m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
                     //System.out.println("dist to OBC loc = "+dist);
                     
                     double distThresh = 2000;

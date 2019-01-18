@@ -6,7 +6,14 @@
 package particle_track;
 
 /**
- *
+ * Code to compute the convex hull of a set of points.
+ * 
+ * Modified from:
+ * https://rosettacode.org/wiki/Convex_hull#Java
+ * Content is available under GNU Free Documentation License 1.2 
+ * 
+ * The convex hull encircles the set of points in an anticlockwise direction.
+ * 
  * @author SA01TA
  */
 import java.util.ArrayList;

@@ -90,7 +90,7 @@ public class IOUtils {
 //        return startlocs;
 //    }
     
-    public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy)
+    public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy, List<Mesh> meshes)
     {
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Habitat defined in file: "+filename);
@@ -119,7 +119,12 @@ public class IOUtils {
             {
                 //int numEntries = countWords(line);
                 String[] values = line.split("\t");
-                HabitatSite site = new HabitatSite(values[0],Double.parseDouble(values[1]),Double.parseDouble(values[2]),Double.parseDouble(values[3]),Double.parseDouble(values[scaleCol]));
+                HabitatSite site = new HabitatSite(values[0],
+                        (float)Double.parseDouble(values[1]),
+                        (float)Double.parseDouble(values[2]),
+                        (float)Double.parseDouble(values[3]),
+                        (float)Double.parseDouble(values[scaleCol]),
+                        meshes);
                 habitat.add(site);
                 count++;
             }
@@ -296,20 +301,44 @@ public class IOUtils {
      * 
      * @param filename
      * @param variable
+     * @param origin
+     * @param shape
      * @return
      * @throws IOException
      * @throws InvalidRangeException 
      */
-    public static float[][] readNetcdfFloat2D(String filename, String variable)
+    public static float[][] readNetcdfFloat2D(String filename, String variable, int[] origin, int[] shape)
     {
         System.out.println("Reading variable: "+variable);
         float[][] floatOut = new float[2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.out.println("Can't find Variable: "+variable);
-            }   int[] shape = dataVar.getShape();
-            int[] origin = new int[2];
+                System.err.println("Can't find Variable: "+variable);
+            }     
+//            int[] origin = new int[2];
+//            int[] shape = dataVar.getShape();
+            
+            // Check that origin is within the array
+            if (origin==null 
+                    || origin[0]>dataVar.getShape()[0] 
+                    || origin[1]>dataVar.getShape()[1])
+            {
+                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
+                origin = new int[3];
+            }
+            
+            //int[] shape = dataVar.getShape();
+            // Check that origin+shape is within the array
+            if (shape==null 
+                    || origin[0]+shape[0]>dataVar.getShape()[0] 
+                    || origin[1]+shape[1]>dataVar.getShape()[1])
+            {
+                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
+                shape = dataVar.getShape();
+            }
+            
+            System.out.println(variable+" ("+shape[0]+","+shape[1]+")");
             
             try
             {
@@ -408,20 +437,48 @@ public class IOUtils {
      * 
      * @param filename
      * @param variable
+     * @param origin
+     * @param shape
      * @return
      * @throws IOException
      * @throws InvalidRangeException 
      */
-    public static float[][][] readNetcdfFloat3D(String filename, String variable)
+    public static float[][][] readNetcdfFloat3D(String filename, String variable, int[] origin, int[] shape)
     {
         System.out.println("Reading variable: "+variable);
         float[][][] floatOut = new float[2][2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.out.println("Can't find Variable: "+variable);
-            }   int[] shape = dataVar.getShape();
-            int[] origin = new int[3];
+                System.err.println("Can't find Variable: "+variable);
+            }   
+            
+            // set origin externally, always?
+            // set shape externally. based on known size of mesh required. Handle case when it doesn't work here, rather than needing to set here?
+            
+            //int[] origin = new int[3];
+            // Check that origin is within the array
+            if (origin==null 
+                    || origin[0]>dataVar.getShape()[0] 
+                    || origin[1]>dataVar.getShape()[1] 
+                    || origin[2]>dataVar.getShape()[2])
+            {
+                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
+                origin = new int[3];
+            }
+            
+            //int[] shape = dataVar.getShape();
+            // Check that origin+shape is within the array
+            if (shape==null 
+                    || origin[0]+shape[0]>dataVar.getShape()[0] 
+                    || origin[1]+shape[1]>dataVar.getShape()[1] 
+                    || origin[2]+shape[2]>dataVar.getShape()[2])
+            {
+                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
+                shape = dataVar.getShape();
+            }
+            
+            System.out.println(variable+" ("+shape[0]+","+shape[1]+","+shape[2]+")");
             
             try
             {
@@ -879,4 +936,118 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
+    
+    
+    //    /**
+//     * Make additions to the element presence counts (PSTEPS)
+//     *
+//     * @param particles
+//     * @param rp
+//     * @param pstepsMature
+//     * @param pstepsImmature
+//     * @param subStepDt
+//     */
+//    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
+//            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
+//        for (Particle p : particles) {
+//            double d = 1;
+//            if (rp.pstepsIncMort == true) {
+//                d = p.getDensity();
+//            }
+//            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//            int elemPart = p.getElem();
+//            // psteps arrays are updated by lots of threads
+//            if (p.getViable() == true) {
+//                if (rp.splitPsteps == false) {
+//                    pstepsMature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                }
+//            } else if (p.getFree() == true) {
+//                //System.out.println("Printing to pstepsImmature");
+//                if (rp.splitPsteps == false) {
+//                    pstepsImmature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//    }
+    
+    /**
+     * Take a snapshot of the number of mature particles in each cell
+     * @param particles
+     * @param rp
+     * @param nSourceSites
+     * @return 
+     */
+//    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
+//            int nSourceSites) {   
+//        int pstepCols = 2; 
+//        // Alternatively, make a column for each source site
+//        if (rp.splitPsteps == true){
+//            pstepCols = nSourceSites + 1;            
+//        }
+//        double[][] pstepsInstMature = new double[rp.N][pstepCols];
+//        for (int i = 0; i < rp.N; i++) {
+//            pstepsInstMature[i][0] = i;
+//        }
+//        
+//        for (Particle p : particles) {
+//            if (p.getViable() == true) {
+//                double d = 1;
+//                if (rp.pstepsIncMort == true) {
+//                    d = p.getDensity();
+//                }
+//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//                int elemPart = p.getElem();
+//                if (rp.splitPsteps == false) {
+//                    pstepsInstMature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsInstMature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//        return pstepsInstMature;
+//    } 
+    
+//    /**
+//     * Take a snapshot of the number of immature particles in each cell
+//     * @param particles
+//     * @param rp
+//     * @param nSourceSites
+//     * @return 
+//     */
+//    public static double[][] pstepImmatureSnapshot(List<Particle> particles, RunProperties rp,
+//            int nSourceSites) {   
+//        int pstepCols = 2; 
+//        // Alternatively, make a column for each source site
+//        if (rp.splitPsteps == true){
+//            pstepCols = nSourceSites + 1;
+//        }
+//        double[][] pstepsInstImmature = new double[rp.N][pstepCols];
+//        for (int i = 0; i < rp.N; i++) {
+//            pstepsInstImmature[i][0] = i;
+//        }
+//        
+//        for (Particle p : particles) {
+//            if (p.getViable() == false && p.getFree() == true) {
+//                double d = 1;
+//                if (rp.pstepsIncMort == true) {
+//                    d = p.getDensity();
+//                }
+//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+//                int elemPart = p.getElem();
+//                //System.out.println("Printing to pstepsImmature");
+//                if (rp.splitPsteps == false) {
+//                    pstepsInstImmature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
+//                } else {
+//                    pstepsInstImmature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
+//                }
+//            }
+//        }
+//        return pstepsInstImmature;
+//    }
+    
+    
 }

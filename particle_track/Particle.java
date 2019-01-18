@@ -4,6 +4,7 @@
  */
 package particle_track;
 
+import java.awt.geom.Path2D;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -24,9 +25,13 @@ public class Particle {
     private ISO_datestr startDate;
     private double startTime = 0;
     
+    private int mesh;
     private int elem;
+    private int[] elemRoms;
+    
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
+    private int whichMesh; 
     // release time
     private double releaseTime = 0;
     // vertical position
@@ -180,6 +185,18 @@ public class Particle {
     public int getElem()
     {
         return this.elem;
+    }
+    public void setROMSElem(int[] elem)
+    {
+        this.elemRoms = elem;
+    }
+    public void setMesh(int meshID)
+    {
+        this.mesh = meshID;
+    }
+    public int getMesh()
+    {
+        return this.mesh;
     }
 //    public void setNrList(float[][] uvnode)
 //    {
@@ -478,7 +495,7 @@ public class Particle {
         int nearest = -1;
         double dist=10000000;
     
-        for (int i = 0; i < uvnode.length; i++)
+        for (int i = 0; i < uvnode[0].length; i++)
         {
             double distnew = Math.sqrt((x-uvnode[0][i])*(x-uvnode[0][i])+(y-uvnode[1][i])*(y-uvnode[1][i]));
             if (distnew<dist)
@@ -490,6 +507,7 @@ public class Particle {
         //System.out.printf("In Particle.nearestCentroid "+nearest+"\n");
         return nearest;
     }
+    
     /**
      * Make a list of nearest mesh element centroids
      * @param x
@@ -503,7 +521,7 @@ public class Particle {
         int nearest = -1;
         double dist=10000000;
     
-        for (int i = 0; i < uvnode.length; i++)
+        for (int i = 0; i < uvnode[0].length; i++)
         {
             double distnew = Math.sqrt((x-uvnode[0][i])*(x-uvnode[0][i])+(y-uvnode[1][i])*(y-uvnode[1][i]));
             if (distnew<dist)
@@ -527,7 +545,140 @@ public class Particle {
         return nearestList;
     }
     
-
+    /**
+     * Look for the nearest point in a grid of points. 
+     * This method is somewhat naive in that it searches the entire grid. This 
+     * means that it can handle grids which are not oriented on a strict N/S
+     * lattice, but is inefficient.
+     * 
+     * @param x
+     * @param y
+     * @param xGrid
+     * @param yGrid
+     * @return 
+     */
+    public static int[] nearestROMSGridPoint(float x, float y, float[][] xGrid, float[][] yGrid)
+    {
+        int[] nearest = new int[]{-1,-1};
+        float dist=10000000;
+    
+        if (xGrid.length != yGrid.length || xGrid[0].length != yGrid[0].length)
+        {
+            System.err.println("Particle.nearestROMSGridPoint: ROMS x and y grids are not the same size");
+        }
+                
+        for (int i = 0; i < xGrid.length; i++)
+        {
+            for (int j = 0; j < xGrid[0].length; j++)
+            {
+                
+                float distnew = (float)Math.sqrt((x-xGrid[i][j])*(x-xGrid[i][j])+(y-yGrid[i][j])*(y-yGrid[i][j]));
+                if (distnew<dist)
+                {
+                    dist=distnew;
+                    nearest=new int[]{i,j};
+                }
+            }
+        }
+        //System.out.printf("In Particle.nearestCentroid "+nearest+"\n");
+        return nearest;
+    }
+    
+    /**
+     * Identify the ROMS element (defined as four UV neighbouring points forming a 
+     * parallelogram) containing a particular coordinate.
+     * Given the nearest UV point, the coordinate is in one of four parellelograms,
+     * which share that point as a common corner.
+     * 
+     * The output index of which element is defined by the last xGrid,yGrid index
+     * occuring
+     * 
+     * @param x
+     * @param y
+     * @param lon_u
+     * @param lat_u
+     * @param nearP     the nearest ROMS grid point
+     * @return 
+     */
+    public static int[] whichROMSElement(float x, float y, float[][] lon_u, float[][] lat_u, int[] nearP)
+    {
+        int[] which = new int[]{-1,-1};
+        
+        // Look at each of the four possible boxes in turn.
+        // In the Marine Institute ROMS grids, U/V points are arranged in a matrix starting
+        // in the NW corner. 
+        
+        // In arrays read in by MATLAB from file:
+        // Increasing row (first) index means decreasing latitude.
+        // Increasing column (second) index means increasing longitude.
+        
+        // In arrays read in by JAVA from file, arrays are transposed:
+        // Increasing row (first) index means increasing longitude.
+        // Increasing column (second) index means decreasing latitude.
+        
+        // "Top left" (in context of lon_u/lat_u index)
+        if (nearP[0] != 0 && nearP[1] != 0)
+        {
+            float[][] box = new float[4][2];
+            // create corners of box from top left corner, going anticlockwise
+            box[0] = new float[]{lon_u[nearP[0]-1][nearP[1]-1],lat_u[nearP[0]-1][nearP[1]-1]};
+            box[1] = new float[]{lon_u[nearP[0]-1][nearP[1]],lat_u[nearP[0]-1][nearP[1]]};
+            box[2] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
+            box[3] = new float[]{lon_u[nearP[0]][nearP[1]-1],lat_u[nearP[0]][nearP[1]-1]};
+            Path2D.Float boxPath = Mesh.pointsToPath(box);
+            // Return the top left corner
+            if (boxPath.contains(x,y))
+            {
+                which = new int[]{nearP[0]-1,nearP[1]-1};
+            }
+        }
+        // "Top right"
+        if (nearP[1] != 0)
+        {
+            float[][] box = new float[4][2];
+            box[0] = new float[]{lon_u[nearP[0]][nearP[1]-1],lat_u[nearP[0]][nearP[1]-1]};
+            box[1] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
+            box[2] = new float[]{lon_u[nearP[0]+1][nearP[1]],lat_u[nearP[0]+1][nearP[1]]};
+            box[3] = new float[]{lon_u[nearP[0]+1][nearP[1]-1],lat_u[nearP[0]+1][nearP[1]-1]};
+            Path2D.Float boxPath = Mesh.pointsToPath(box);
+            if (boxPath.contains(x,y))
+            {
+                which = new int[]{nearP[0],nearP[1]-1};
+            }
+        }        
+        // "Bottom right"
+        if (nearP[0] != lon_u.length && nearP[1] != lon_u[0].length)
+        {
+            float[][] box = new float[4][2];
+            box[0] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
+            box[1] = new float[]{lon_u[nearP[0]][nearP[1]+1],lat_u[nearP[0]][nearP[1]+1]};
+            box[2] = new float[]{lon_u[nearP[0]+1][nearP[1]+1],lat_u[nearP[0]+1][nearP[1]+1]};
+            box[3] = new float[]{lon_u[nearP[0]+1][nearP[1]],lat_u[nearP[0]+1][nearP[1]]};
+            Path2D.Float boxPath = Mesh.pointsToPath(box);
+            if (boxPath.contains(x,y))
+            {
+                which = new int[]{nearP[0],nearP[1]};
+            }
+        }  
+        // "Bottom left"
+        if (nearP[0] != 0 && nearP[1] != 0)
+        {
+            float[][] box = new float[4][2];
+            box[0] = new float[]{lon_u[nearP[0]-1][nearP[1]],lat_u[nearP[0]-1][nearP[1]]};
+            box[1] = new float[]{lon_u[nearP[0]-1][nearP[1]+1],lat_u[nearP[0]-1][nearP[1]+1]};
+            box[2] = new float[]{lon_u[nearP[0]][nearP[1]+1],lat_u[nearP[0]][nearP[1]+1]};
+            box[3] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
+            Path2D.Float boxPath = Mesh.pointsToPath(box);
+            if (boxPath.contains(x,y))
+            {
+                which = new int[]{nearP[0]-1,nearP[1]};
+            }
+        }  
+        
+        
+        return which;
+    }
+    
     
     /**
      * 

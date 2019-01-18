@@ -14,33 +14,19 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.IntStream;
 
-//import java.util.Collection;
-//import java.util.List;
-//import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-//import java.util.concurrent.ThreadLocalRandom;
-//import java.lang.InterruptedException;
 
-//import edu.cornell.lassp.houle.RngPack.*;
-//import static particle_track.IOUtils.countLines;
-
- 
+import java.util.concurrent.ExecutionException;
 import java.io.IOException;
-//import java.nio.file.Files;
-//import java.nio.file.Path;
-//import java.nio.file.Paths;
-//import java.util.stream.Stream;
+
 import org.apache.commons.io.FileUtils;
-//import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
  
-
-
+import java.awt.geom.Path2D;
 
 /**
  *
@@ -148,7 +134,7 @@ public class Particle_track {
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
+        habitat = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true, meshes);
         for (HabitatSite site : habitat)
         {
             System.out.println(site.toString());
@@ -156,9 +142,8 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true, meshes);
         
-
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
         int nparts = rp.nparts * startlocs.length;
@@ -175,39 +160,50 @@ public class Particle_track {
         int numParticlesCreated = 0; // Counter to keep track of how many particles have been created
         boolean allowRelease = true; // boolean to be switched after a single release event
         
-
         // --------------------------------------------------------------------------------------
-        // Particle data arrays for model output
+        // Setup hydrodynamic fields and file lists.
+        // TODO: At present this holds only one file per mesh at this point; is there a way to get the whole list of files in the date range, and check presence before starting?
         // --------------------------------------------------------------------------------------
-        // an array to save the number of "particle-timesteps" in each cell
-        // default case (non-split): two columns
-        int pstepCols = 2; 
-        // Alternatively, make a column for each source site
-        if (rp.splitPsteps == true){
-            pstepCols = startlocs.length + 1;            
+        List<HydroField> hydroFields = new ArrayList<>();
+        String[] varNames = {"u","v","salinity","temp","zeta"};
+        List<List<File>> fileList = new ArrayList<>();
+        
+        for (int i = 0; i < meshes.size(); i++)
+        {
+            List<File> f = new LinkedList<>();
+            if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
+            {
+                f = (List<File>) FileUtils.listFiles(
+                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                    new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                    null);
+            }
+            else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
+            {
+                f = (List<File>) FileUtils.listFiles(
+                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                    new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                    null);
+            }
+            fileList.add(f);
+            
+            HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,null,null);
+            hydroFields.add(hf);
         }
         
-//        double[][] pstepsImmature = new double[rp.N][pstepCols];
-//        double[][] pstepsMature = new double[rp.N][pstepCols];
-//        for (int i = 0; i < rp.N; i++) {
-//            pstepsImmature[i][0] = i;
-//            pstepsMature[i][0] = i;
-//        }
 
         // --------------------------------------------------------------------------------------
         // Set up times at which to print particle locations to file 
         // --------------------------------------------------------------------------------------
         int simLengthHours = numberOfDays * 24;
         System.out.println("simLengthHours " + simLengthHours);
-        
-
+       
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
         System.out.println("Starting time loop");
 
         int[] searchCounts = new int[5];
-
         double minMaxDistTrav[] = new double[2];
         minMaxDistTrav[0] = 10000000;
         minMaxDistTrav[1] = 0;
@@ -215,7 +211,6 @@ public class Particle_track {
         int stepcount = 0;
         int calcCount = 0;
         double time = 0;
-
         int printCount = 0;
 
         int[] freeViableSettleExit = new int[4];
@@ -236,15 +231,6 @@ public class Particle_track {
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
         IOUtils.printFileHeader(arrivalHeader,"arrivals.out");
-        
-        HydroField hydroField1,hydroField2;
-        // Set an initial values for the field. Subsequent value setting will produce arrays that have one more element in the time dimension
-        List<File> files = (List<File>) FileUtils.listFiles(
-                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
-                new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                null);    
-        String[] varNames = {"u","v","salinity","temp","zeta"};
-        hydroField1 = new HydroField(files.get(0).getCanonicalPath(),varNames);
         
         try {
             // --------------------------------------------------------------------------------------
@@ -289,28 +275,35 @@ public class Particle_track {
                     
                     // Read the PRIMARY hydrodynamic output file - ASSUME THAT THIS IS ONE FILE PER DAY
                     if (tt%rp.recordsPerFile1 == 0){
+                        hydroFields.clear();
+                        
                         System.out.println("Reading file "+tt);
                         // Dima file naming format: minch2_20171229_0003.nc
                         List<File> files1 = (List<File>) FileUtils.listFiles(
                                 new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
                                 new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                                 null);    
-                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
-                        //hydroField1 = new HydroField(files1.get(0).getCanonicalPath(),varNames1);
                         
                         ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-                        
-                        // Check dates
-//                        System.out.println("Today: "+currentIsoDate.getDateStr());
-//                        System.out.println("Tomorrow: "+tomorrow.getDateStr());
 
                         List<File> files2 = (List<File>) FileUtils.listFiles(
                                 new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+System.getProperty("file.separator")),
                                 new WildcardFileFilter("minch2_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                                null);                           
+                                null);    
+                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
                         // Read both files and combine
-                        hydroField1 = new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1);
-                    }   
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null));
+                    }
+                    
+                    //if (tt%rp.recordsPerFile2 == 0)
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                     
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
@@ -319,7 +312,7 @@ public class Particle_track {
                         System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreated %d \n",
                             rp.releaseScenario,time,allowRelease,numParticlesCreated);
                         //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
-                        List<Particle> newParts = createNewParticles(habitat,meshes.get(0),
+                        List<Particle> newParts = createNewParticles(habitat,meshes,
                                 rp,currentIsoDate,currentHour,numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
@@ -359,9 +352,7 @@ public class Particle_track {
 //                                        searchCounts,
 //                                        minMaxDistTrav));
                                 callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
-                                        hydroField1.getU(), hydroField1.getV(), meshes.get(0).getNeighbours(), meshes.get(0).getUvnode(), meshes.get(0).getNodexy(), 
-                                        meshes.get(0).getTrinodes(), allelems, meshes.get(0).getDepthUvnode(), meshes.get(0).getSiglay(),
-                                        habitatEnd, meshes.get(0).getOpenBoundaryNodes(),
+                                        meshes, hydroFields, habitatEnd, allelems, 
                                         searchCounts,
                                         minMaxDistTrav));
 
@@ -384,9 +375,10 @@ public class Particle_track {
 //                                        searchCounts,
 //                                        minMaxDistTrav);
                                 ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
-                                        hydroField1.getU(), hydroField1.getV(), meshes.get(0).getNeighbours(), meshes.get(0).getUvnode(), meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), 
-                                        allelems, meshes.get(0).getDepthUvnode(), meshes.get(0).getSiglay(),
-                                        habitatEnd, meshes.get(0).getOpenBoundaryNodes(),
+                                        meshes, 
+                                        hydroFields, 
+                                        habitatEnd,
+                                        allelems,
                                         searchCounts,
                                         minMaxDistTrav);
 
@@ -453,14 +445,14 @@ public class Particle_track {
      * Method to create new particles. These must be appended to the existing list
      * 
      * @param habitat
-     * @param mesh
+     * @param meshes
      * @param rp
      * @param currentDate
      * @param currentTime
      * @param numParticlesCreated
      * @return List of the new particles to be appended to existing list
      */
-    public static List<Particle> createNewParticles(List<HabitatSite> habitat, Mesh mesh, 
+    public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, 
             RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated)
     {
         //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
@@ -470,32 +462,16 @@ public class Particle_track {
                 int startid = i % habitat.size();
                 double xstart = habitat.get(startid).getLocation()[0];
                 double ystart = habitat.get(startid).getLocation()[1];
-                
-                //System.out.println(xstart+" "+ystart);
-                
-                //double xstart = startlocs[startid][1];
-                //double ystart = startlocs[startid][2];
-                
-                // If start location is a boundary location it is not actually in the mesh/an element, so set
-                // new particle location to centre of nearest element.
-                int closest = Particle.nearestCentroid(xstart, ystart, mesh.getUvnode());
-                int startElem = Particle.whichElement(new double[]{xstart,ystart}, 
-                        IntStream.rangeClosed(0, mesh.getUvnode()[0].length-1).toArray(), 
-                        mesh.getNodexy(), mesh.getTrinodes());
-                if (startElem < 0) {
-                    xstart = mesh.getUvnode()[0][closest];
-                    ystart = mesh.getUvnode()[1][closest];
-                    startElem = closest;
-                }
-            
+                int meshStart = habitat.get(startid).getContainingMesh();
+                int elemFVCOMStart = habitat.get(startid).getContainingFVCOMElem();
+                int[] elemROMSStart = habitat.get(startid).getContainingROMSElem();
+                                                
                 Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
                         rp.mortalityRate, currentDate, currentTime, rp.coordRef);
-                p.setElem(startElem);
-                // No longer set releaseScenario for individual particles since they are created at the moment of release
-                //p.setReleaseScenario(rp.releaseScenario, startlocs);
-//                if (startlocs[startid].length > 4 && rp.setDepth == true) {
-//                    p.setZ(startlocs[startid][4]);
-//                }
+                p.setMesh(meshStart);
+                p.setElem(elemFVCOMStart);
+                p.setROMSElem(elemROMSStart);
+                
                 if (rp.setDepth == true) {
                     p.setZ(habitat.get(startid).getDepth());
                 }
@@ -541,118 +517,6 @@ public class Particle_track {
         }
         return connectMatrix;
     }
-
-//    /**
-//     * Make additions to the element presence counts (PSTEPS)
-//     *
-//     * @param particles
-//     * @param rp
-//     * @param pstepsMature
-//     * @param pstepsImmature
-//     * @param subStepDt
-//     */
-//    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
-//            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
-//        for (Particle p : particles) {
-//            double d = 1;
-//            if (rp.pstepsIncMort == true) {
-//                d = p.getDensity();
-//            }
-//            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-//            int elemPart = p.getElem();
-//            // psteps arrays are updated by lots of threads
-//            if (p.getViable() == true) {
-//                if (rp.splitPsteps == false) {
-//                    pstepsMature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                }
-//            } else if (p.getFree() == true) {
-//                //System.out.println("Printing to pstepsImmature");
-//                if (rp.splitPsteps == false) {
-//                    pstepsImmature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                }
-//            }
-//        }
-//    }
-    
-    /**
-     * Take a snapshot of the number of mature particles in each cell
-     * @param particles
-     * @param rp
-     * @param nSourceSites
-     * @return 
-     */
-//    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
-//            int nSourceSites) {   
-//        int pstepCols = 2; 
-//        // Alternatively, make a column for each source site
-//        if (rp.splitPsteps == true){
-//            pstepCols = nSourceSites + 1;            
-//        }
-//        double[][] pstepsInstMature = new double[rp.N][pstepCols];
-//        for (int i = 0; i < rp.N; i++) {
-//            pstepsInstMature[i][0] = i;
-//        }
-//        
-//        for (Particle p : particles) {
-//            if (p.getViable() == true) {
-//                double d = 1;
-//                if (rp.pstepsIncMort == true) {
-//                    d = p.getDensity();
-//                }
-//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-//                int elemPart = p.getElem();
-//                if (rp.splitPsteps == false) {
-//                    pstepsInstMature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsInstMature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
-//                }
-//            }
-//        }
-//        return pstepsInstMature;
-//    } 
-    
-//    /**
-//     * Take a snapshot of the number of immature particles in each cell
-//     * @param particles
-//     * @param rp
-//     * @param nSourceSites
-//     * @return 
-//     */
-//    public static double[][] pstepImmatureSnapshot(List<Particle> particles, RunProperties rp,
-//            int nSourceSites) {   
-//        int pstepCols = 2; 
-//        // Alternatively, make a column for each source site
-//        if (rp.splitPsteps == true){
-//            pstepCols = nSourceSites + 1;
-//        }
-//        double[][] pstepsInstImmature = new double[rp.N][pstepCols];
-//        for (int i = 0; i < rp.N; i++) {
-//            pstepsInstImmature[i][0] = i;
-//        }
-//        
-//        for (Particle p : particles) {
-//            if (p.getViable() == false && p.getFree() == true) {
-//                double d = 1;
-//                if (rp.pstepsIncMort == true) {
-//                    d = p.getDensity();
-//                }
-//                //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-//                int elemPart = p.getElem();
-//                //System.out.println("Printing to pstepsImmature");
-//                if (rp.splitPsteps == false) {
-//                    pstepsInstImmature[elemPart][1] += d;//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsInstImmature[elemPart][p.getStartID() + 1] += d;//*1.0/rp.stepsPerStep;
-//                }
-//            }
-//        }
-//        return pstepsInstImmature;
-//    }
-    
 
     /**
      * work out the date from an integer in format YYYYMMDD - Mike Bedington
