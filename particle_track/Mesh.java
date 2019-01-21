@@ -37,14 +37,20 @@ public class Mesh {
     // Variables used in the case of ROMS grid
     private float[][] lon_u;
     private float[][] lat_u;
+    private float[][] lon_v;
+    private float[][] lat_v;
     private float[][] lon_rho;
     private float[][] lat_rho;
     private float[][] depth_rho;
+    private float[][] mask_u;
+    private float[][] mask_v;
+    
+    private int[][] rangeUV = new int[2][2];
     
     // Variables used in all cases
     private float[] siglay;
     private float[][] convexHull;
-    private float[][] concaveHull;
+    //private float[][] concaveHull;
     
     /**
      * Create a Mesh from a NetCDF file, and supplementary text files detailing 
@@ -107,11 +113,29 @@ public class Mesh {
         } 
         else if (type.equalsIgnoreCase("ROMS"))
         {
-            lon_u = IOUtils.readNetcdfFloat2D(meshFilename,"lon_u",null,null);
-            lat_u = IOUtils.readNetcdfFloat2D(meshFilename,"lat_u",null,null);
-            lon_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lon_rho",null,null);
-            lat_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lat_rho",null,null);
+            rangeUV[0][0] = 300;
+            rangeUV[0][1] = 748;
+            rangeUV[1][0] = 250;
+            rangeUV[1][1] = 900;
+            
+            int[] origin = new int[]{rangeUV[0][0],rangeUV[1][0]};
+            int[] shape = new int[]{rangeUV[0][1]-rangeUV[0][0],rangeUV[1][1]-rangeUV[1][0]};
+            //int[] origin = null;
+            //int[] shape = null;
+            
+            lon_u = IOUtils.readNetcdfFloat2D(meshFilename,"lon_u",origin,shape);
+            lat_u = IOUtils.readNetcdfFloat2D(meshFilename,"lat_u",origin,shape);
+            lon_v = IOUtils.readNetcdfFloat2D(meshFilename,"lon_v",origin,shape);
+            lat_v = IOUtils.readNetcdfFloat2D(meshFilename,"lat_v",origin,shape);
+            lon_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lon_rho",origin,shape);
+            lat_rho = IOUtils.readNetcdfFloat2D(meshFilename,"lat_rho",origin,shape);
             siglay = IOUtils.readNetcdfFloat1D(meshFilename,"s_rho");
+            
+            mask_u = IOUtils.readNetcdfFloat2D(meshFilename, "mask_u",origin,shape);
+            mask_v = IOUtils.readNetcdfFloat2D(meshFilename, "mask_v",origin,shape);
+            
+            // Set the index limits. These are the ones to be used in the case of reading the full ROMS domain
+            
             
             float[][] x1 = IOUtils.reshapeFloat(lon_u, lon_u.length*lon_u[0].length, 1);
             float[][] y1 = IOUtils.reshapeFloat(lat_u, lat_u.length*lat_u[0].length, 1);
@@ -173,6 +197,18 @@ public class Mesh {
         return lon_u;
     }
     public float[][] getLatU()
+    {
+        return lat_u;
+    }
+    public float[][] getLonV()
+    {
+        return lon_u;
+    }
+    public int[][] getRange()
+    {
+        return rangeUV;
+    }
+    public float[][] getLatV()
     {
         return lat_u;
     }

@@ -55,7 +55,7 @@ public class Particle_track {
         System.out.println("Reading in data\n");
 
         System.out.println(System.getProperty("user.dir"));
-
+        
         //RunProperties rp = new RunProperties("model_setup.properties");
         RunProperties rp = new RunProperties(args[0]); // first (and only?) cmd line arg is properties filename e.g. model_setup.properties
         // Use this instead of previous to create runProps from CMD line args
@@ -165,8 +165,8 @@ public class Particle_track {
         // TODO: At present this holds only one file per mesh at this point; is there a way to get the whole list of files in the date range, and check presence before starting?
         // --------------------------------------------------------------------------------------
         List<HydroField> hydroFields = new ArrayList<>();
-        String[] varNames = {"u","v","salinity","temp","zeta"};
         List<List<File>> fileList = new ArrayList<>();
+        String[] varNames = new String[]{"","","","",""};
         
         for (int i = 0; i < meshes.size(); i++)
         {
@@ -174,21 +174,34 @@ public class Particle_track {
             if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
             {
                 f = (List<File>) FileUtils.listFiles(
-                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                     new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                     null);
+                varNames = new String[]{"u","v","salinity","temp","zeta"};
+                fileList.add(f); 
+                HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,null,null,null,"FVCOM");
+                hydroFields.add(hf);
             }
             else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
             {
+//                System.out.println(rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")+
+//                        "NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"01.nc");
                 f = (List<File>) FileUtils.listFiles(
-                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
-                    new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                    new File(rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")),
+                    new WildcardFileFilter("NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                     null);
+                varNames = new String[]{"ubar","vbar","","","zeta"};
+                fileList.add(f); 
+                
+                int[][] r = meshes.get(i).getRange();
+                int[] origin = new int[]{0,r[0][0],r[1][0]};
+                int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
+                HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,null,"ROMS");
+                hydroFields.add(hf);
             }
-            fileList.add(f);
             
-            HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,null,null);
-            hydroFields.add(hf);
+            
+            
         }
         
 
@@ -273,38 +286,81 @@ public class Particle_track {
                     int currentHour = tt;
                     //System.out.printf("%d \n", tt + 1);
                     
-                    // Read the PRIMARY hydrodynamic output file - ASSUME THAT THIS IS ONE FILE PER DAY
-                    if (tt%rp.recordsPerFile1 == 0){
-                        hydroFields.clear();
+                    // In the case where we read new files every hour, tIndex should be 0. 
+                    // Otherwise (as per the case of reading a file once a day FVCOM only mode),
+                    // set it equal to current value of tt
+                    int tIndex = 0; 
+                    
+                    // FVCOM only case
+                    if (tt%rp.recordsPerFile1 == 0 && meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
+                    {
+                        tIndex = tt;
                         
+                        hydroFields.clear();
+
                         System.out.println("Reading file "+tt);
                         // Dima file naming format: minch2_20171229_0003.nc
                         List<File> files1 = (List<File>) FileUtils.listFiles(
-                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+System.getProperty("file.separator")),
+                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                                 new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                                 null);    
                         
                         ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
 
                         List<File> files2 = (List<File>) FileUtils.listFiles(
-                                new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+System.getProperty("file.separator")),
+                                new File(rp.datadir2+rp.datadir2Prefix+tomorrow.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")),
                                 new WildcardFileFilter("minch2_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
                                 null);    
                         String[] varNames1 = {"u","v","salinity","temp","zeta"};
                         // Read both files and combine
-                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null));
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM"));
                     }
-                    
-                    //if (tt%rp.recordsPerFile2 == 0)
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+                    // Reading two hours at a time from all the different models
+                    else
+                    { 
+                        // i) The case where it is NOT the last hour of the day
+                        if ((tt-23)%24 != 0)
+                        {
+                            hydroFields.clear();
+                            for (int i = 0; i < meshes.size(); i++)
+                            {
+                                if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
+                                {
+                                    // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
+                                    List<File> f = (List<File>) FileUtils.listFiles(
+                                        new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                        new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                                        null); 
+                                    varNames = new String[]{"u","v","salinity","temp","zeta"};
+                                    int[] origin = new int[]{tt,0,0};
+                                    int[] shape = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length};
+                                    int[] shapeST = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length};
+                                    hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM"));
+                                }
+                                else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
+                                {
+                                    // ROMS files DO have a guaranteed name format, so just use a string for the name
+                                    String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+                                        +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt)+".nc";
+                                    String filename2 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+                                        +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt+1)+".nc";
+                                    
+                                    varNames = new String[]{"ubar","vbar","","","zeta"};
+                                    
+                                    int[][] r = meshes.get(i).getRange();
+                                    int[] origin = new int[]{0,r[0][0],r[1][0]};
+                                    int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
+                                    int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
+                                    hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS"));
+                                }
+                                
+                                
+                                    
+                                
+                            }
+                        }
+                    }
+                   
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
                     if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
@@ -351,7 +407,7 @@ public class Particle_track {
 //                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
 //                                        searchCounts,
 //                                        minMaxDistTrav));
-                                callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
+                                callables.add(new ParallelParticleMover(subList, time, tIndex, st, subStepDt, rp,
                                         meshes, hydroFields, habitatEnd, allelems, 
                                         searchCounts,
                                         minMaxDistTrav));
@@ -374,7 +430,7 @@ public class Particle_track {
 //                                        habitatEnd, mesh1.getOpenBoundaryNodes(),
 //                                        searchCounts,
 //                                        minMaxDistTrav);
-                                ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
+                                ParallelParticleMover.move(part, time, tIndex, st, subStepDt, rp,
                                         meshes, 
                                         hydroFields, 
                                         habitatEnd,

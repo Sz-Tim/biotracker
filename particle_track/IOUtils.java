@@ -515,6 +515,94 @@ public class IOUtils {
         return floatOut;
     }
     
+        /**
+     * 
+     * @param filename
+     * @param variable
+     * @param origin
+     * @param shape
+     * @return
+     * @throws IOException
+     * @throws InvalidRangeException 
+     */
+    public static float[][][][] readNetcdfFloat4D(String filename, String variable, int[] origin, int[] shape)
+    {
+        System.out.println("Reading variable: "+variable);
+        float[][][][] floatOut = new float[2][2][10][1];
+        try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
+            Variable dataVar = dataFile.findVariable(variable);
+            if (dataVar == null) {
+                System.err.println("Can't find Variable: "+variable);
+            }   
+            
+            // set origin externally, always?
+            // set shape externally. based on known size of mesh required. Handle case when it doesn't work here, rather than needing to set here?
+            
+            //int[] origin = new int[3];
+            // Check that origin is within the array
+            if (origin==null 
+                    || origin[0]>dataVar.getShape()[0] 
+                    || origin[1]>dataVar.getShape()[1] 
+                    || origin[2]>dataVar.getShape()[2]
+                    || origin[3]>dataVar.getShape()[3])
+            {
+                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
+                origin = new int[3];
+            }
+            
+            //int[] shape = dataVar.getShape();
+            // Check that origin+shape is within the array
+            if (shape==null 
+                    || origin[0]+shape[0]>dataVar.getShape()[0] 
+                    || origin[1]+shape[1]>dataVar.getShape()[1] 
+                    || origin[2]+shape[2]>dataVar.getShape()[2]
+                    || origin[3]+shape[3]>dataVar.getShape()[3])
+            {
+                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
+                shape = dataVar.getShape();
+            }
+            
+            System.out.println(variable+" ("+shape[0]+","+shape[1]+","+shape[2]+","+shape[3]+")");
+            
+            try
+            {
+                ArrayFloat.D4 dataArray = (ArrayFloat.D4) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]][shape[2]][shape[3]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        for (int d3 = 0; d3 < shape[2]; d3++) {
+                            for (int d4 = 0; d4 < shape[2]; d4++) {
+                                floatOut[d1][d2][d3][d4] = dataArray.get(d1, d2, d3, d4);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (ClassCastException e)
+            {
+                ArrayDouble.D4 dataArray = (ArrayDouble.D4) dataVar.read(origin, shape);
+                // Put the values into a native array
+                floatOut = new float[shape[0]][shape[1]][shape[2]][shape[3]];
+                for (int d1 = 0; d1 < shape[0]; d1++) {
+                    for (int d2 = 0; d2 < shape[1]; d2++) {
+                        for (int d3 = 0; d3 < shape[2]; d3++) {
+                            for (int d4 = 0; d4 < shape[2]; d4++) {
+                                floatOut[d1][d2][d3][d3] = (float)dataArray.get(d1, d2, d3, d3);
+                            }
+                        }
+                    }
+                }
+            }
+   
+        } catch (IOException ioe) {
+	    ioe.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } 
+        return floatOut;
+    }
+    
     
     public static double[][] readFileDoubleArray(String filename, int rows, int cols, String sep, boolean note)
     {
