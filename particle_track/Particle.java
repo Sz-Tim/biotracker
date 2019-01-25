@@ -720,7 +720,7 @@ public class Particle {
         vsum=vsum/sum;
         velocity[0]=usum;
         velocity[1]=vsum;
-        //System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
+//        System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
         return velocity;
     }
         

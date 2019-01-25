@@ -221,13 +221,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (rp.diffusion==true)
             {
                 // Use in-built RNG that is intented for multithread concurrent use. Also saves importing anything.
-                diff_X = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
-                diff_Y = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt/(double)rp.stepsPerStep);
+                diff_X = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt);///(double)rp.stepsPerStep);
+                diff_Y = ThreadLocalRandom.current().nextDouble(-1.0,1.0)*Math.sqrt(6*rp.D_h*subStepDt);///(double)rp.stepsPerStep);
             }
             double[] behave_uv = part.behaveVelocity(rp.behaviour);
 
             //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-            //System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" Y "+advectStep[1]+" "+diff_Y);
+//            System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" --- Y "+advectStep[1]+" "+diff_Y);
 
             double dx = advectStep[0]+subStepDt*behave_uv[0]+diff_X;
             double dy = advectStep[1]+subStepDt*behave_uv[1]+diff_Y;

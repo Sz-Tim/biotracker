@@ -124,6 +124,8 @@ public class HydroField {
             }
             
             // Create additional shape matrices for the 2D variables (elevation)
+            // Check whether the requested dimensions are non-null and remove the 
+            // middle dimension (depth) if so.
             int[] origin2 = null;
             if (origin != null)
             {
@@ -159,13 +161,18 @@ public class HydroField {
                 t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shapeST);
                 el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension (middle one) here
 
+                // When reading two files, we ALWAYS want to start from t=0 for the second one
+                if (origin != null)
+                {
+                    origin[0]=0;
+                    origin2[0]=0;
+                }
                 System.out.println("Reading hydro file: "+filename2);
                 u2 = IOUtils.readNetcdfFloat3D(filename2,varNames[0],origin,shape);
                 v2 = IOUtils.readNetcdfFloat3D(filename2,varNames[1],origin,shape);
-                s2 = IOUtils.readNetcdfFloat3D(filename1,varNames[2],origin,shape);
-                t2 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shape);
-
-                el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shape2);  // origin and shape need to lose a dimension here
+                s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2],origin,shapeST);
+                t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3],origin,shapeST);
+                el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension here (depth)
             }
             else if (type.equalsIgnoreCase("ROMS"))
             {
@@ -185,7 +192,7 @@ public class HydroField {
                 System.out.println("Reading hydro file: "+filename2);
                 u2 = IOUtils.readNetcdfFloat3D(filename2,varNames[0],origin,shape);
                 v2 = IOUtils.readNetcdfFloat3D(filename2,varNames[1],origin,shape);
-                float[][][] elTmp2 = IOUtils.readNetcdfFloat3D(filename1,varNames[4],origin,shape);
+                float[][][] elTmp2 = IOUtils.readNetcdfFloat3D(filename2,varNames[4],origin,shape);
                 el2 = new float[elTmp2[0].length][elTmp2[0][0].length];
                 for (int xInd = 0; xInd < elTmp2[0].length; xInd++)
                 {
@@ -214,7 +221,7 @@ public class HydroField {
             {
                 t = new float[t1.length+1][t1[0].length][t1[0][0].length];
             }
-            el = new float[shapeST2[0]+1][shapeST2[1]];
+            el = new float[el1.length+1][el1[0].length];
             
             double sumU = 0;
             for (int tt = 0; tt < u1.length; tt++) {

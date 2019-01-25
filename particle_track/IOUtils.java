@@ -309,7 +309,7 @@ public class IOUtils {
      */
     public static float[][] readNetcdfFloat2D(String filename, String variable, int[] origin, int[] shape)
     {
-        System.out.println("Reading variable: "+variable);
+//        System.out.println("Reading variable: "+variable);
         float[][] floatOut = new float[2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
@@ -324,7 +324,7 @@ public class IOUtils {
                     || origin[0]>dataVar.getShape()[0] 
                     || origin[1]>dataVar.getShape()[1])
             {
-                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
+//                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
                 origin = new int[3];
             }
             
@@ -334,7 +334,7 @@ public class IOUtils {
                     || origin[0]+shape[0]>dataVar.getShape()[0] 
                     || origin[1]+shape[1]>dataVar.getShape()[1])
             {
-                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
+//                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
                 shape = dataVar.getShape();
             }
             
@@ -445,7 +445,7 @@ public class IOUtils {
      */
     public static float[][][] readNetcdfFloat3D(String filename, String variable, int[] origin, int[] shape)
     {
-        System.out.println("Reading variable: "+variable);
+//        System.out.println("Reading variable: "+variable);
         float[][][] floatOut = new float[2][2][10];
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
@@ -463,7 +463,7 @@ public class IOUtils {
                     || origin[1]>dataVar.getShape()[1] 
                     || origin[2]>dataVar.getShape()[2])
             {
-                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
+//                System.out.println("Origin not supplied, or outside bounds of variable "+variable);
                 origin = new int[3];
             }
             
@@ -474,7 +474,7 @@ public class IOUtils {
                     || origin[1]+shape[1]>dataVar.getShape()[1] 
                     || origin[2]+shape[2]>dataVar.getShape()[2])
             {
-                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
+//                System.out.println("Shape not supplied, or outside bounds of variable "+variable);
                 shape = dataVar.getShape();
             }
             
@@ -942,7 +942,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %s %.4f %.4f %d %d %.2f\n",
+                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
