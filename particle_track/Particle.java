@@ -7,6 +7,7 @@ package particle_track;
 import java.awt.geom.Path2D;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -27,7 +28,12 @@ public class Particle {
     
     private int mesh;
     private int elem;
-    private int[] elemRoms;
+    private int[] elemRomsU;
+    private int[] elemRomsV;
+    private int[] nearestROMSGridPointU;
+    private int[] nearestROMSGridPointV;
+    private double[][] nrListROMSU;
+    private double[][] nrListROMSV;
     
     private double[][] nrList = new double[5][2];
     private double[][] cornerList = new double[3][2];
@@ -186,9 +192,37 @@ public class Particle {
     {
         return this.elem;
     }
-    public void setROMSElem(int[] elem)
+    public void setROMSElemU(int[] elem)
     {
-        this.elemRoms = elem;
+        this.elemRomsU = elem;
+    }
+    public void setROMSElemV(int[] elem)
+    {
+        this.elemRomsU = elem;
+    }
+    public int[] getROMSElemU()
+    {
+        return this.elemRomsU;
+    }
+    public int[] getROMSElemV()
+    {
+        return this.elemRomsV;
+    }
+    public void setROMSnearestPointU(int[] point)
+    {
+        this.nearestROMSGridPointU = point;
+    }
+    public void setROMSnearestPointV(int[] point)
+    {
+        this.nearestROMSGridPointV = point;
+    }
+    public int[] getROMSnearestPointU()
+    {
+        return this.nearestROMSGridPointU;
+    }
+    public int[] getROMSnearestPointV()
+    {
+        return this.nearestROMSGridPointV;
     }
     public void setMesh(int meshID)
     {
@@ -557,22 +591,39 @@ public class Particle {
      * @param yGrid
      * @return 
      */
-    public static int[] nearestROMSGridPoint(float x, float y, float[][] xGrid, float[][] yGrid)
+    public static int[] nearestROMSGridPoint(float x, float y, float[][] xGrid, float[][] yGrid, int[] searchCentre)
     {
         int[] nearest = new int[]{-1,-1};
         float dist=10000000;
-    
+
         if (xGrid.length != yGrid.length || xGrid[0].length != yGrid[0].length)
         {
             System.err.println("Particle.nearestROMSGridPoint: ROMS x and y grids are not the same size");
         }
-                
-        for (int i = 0; i < xGrid.length; i++)
+        
+        int minX = 0;
+        int maxX = xGrid.length;
+        int minY = 0;
+        int maxY = xGrid[0].length;
+        
+        if (searchCentre != null)
         {
-            for (int j = 0; j < xGrid[0].length; j++)
+//            System.out.println("Particle.nearestROMSGridPoint searchCentre: "+searchCentre[0]+","+searchCentre[1]);
+            minX = Math.max(0, searchCentre[0]-3);
+            maxX = Math.min(xGrid.length, searchCentre[0]+4);
+            minY = Math.max(0, searchCentre[1]-3);
+            maxY = Math.min(xGrid[0].length, searchCentre[1]+4);
+        }
+        
+//        System.out.println("Particle.nearestROMSGridPoint limits: X=["+minX+","+maxX+"] Y=["+minY+","+maxY+"]");
+   
+        for (int i = minX; i < maxX; i++)
+        {
+            for (int j = minY; j < maxY; j++)
             {
-                
-                float distnew = (float)Math.sqrt((x-xGrid[i][j])*(x-xGrid[i][j])+(y-yGrid[i][j])*(y-yGrid[i][j]));
+                float distnew = (float)distanceEuclid2(x, y, xGrid[i][j], yGrid[i][j], "WGS84");
+                //float distnew = (float)Math.sqrt((x-xGrid[i][j])*(x-xGrid[i][j])+(y-yGrid[i][j])*(y-yGrid[i][j]));
+//                System.out.printf("In --- Particle.nearestROMSGridPoint "+i+" "+j+" "+distnew+" ---\n");
                 if (distnew<dist)
                 {
                     dist=distnew;
@@ -580,27 +631,126 @@ public class Particle {
                 }
             }
         }
-        //System.out.printf("In Particle.nearestCentroid "+nearest+"\n");
+//        System.out.printf("In Particle.nearestROMSGridPoint; RESULT = "+nearest[0]+" "+nearest[1]+" "+dist+"\n");
         return nearest;
     }
     
     /**
-     * Identify the ROMS element (defined as four UV neighbouring points forming a 
+     * This makes a list of the nearest ROMS grid points - 4 of them.
+     * Note that this might no actually be what we want, due to the form of the grid.
+     * Instead, we probably want the 4 corners of the containing element - see nearestListROMS2.
+     * @param xy
+     * @param xGrid
+     * @param yGrid
+     * @param nearestPoint
+     * @return 
+     */
+    public static double[][] nearestListROMS(double[] xy, float[][] xGrid, float[][] yGrid, int[] nearestPoint)
+    {
+        double[][] allDists = new double[9][3];
+        double[][] nearList = new double[5][3];
+        
+        if (nearestPoint == null)
+        {
+            nearestPoint = nearestROMSGridPoint((float)xy[0], (float)xy[1], xGrid, yGrid, null);
+        }        
+        
+        // We should now be able to define the 9 grid points closest to the location
+        float dist=10000000;
+        int k = 0;
+        for (int i = nearestPoint[0]-1; i <= nearestPoint[0]+1; i++)
+        {
+//            System.out.println("i "+i);
+            for (int j = nearestPoint[1]-1; j <= nearestPoint[1]+1; j++)
+            {
+//                System.out.println("j "+j);
+                //float distnew = (float)Math.sqrt((xy[0]-xGrid[i][j])*(xy[0]-xGrid[i][j])+(xy[1]-yGrid[i][j])*(xy[1]-yGrid[i][j]));
+                float distnew = (float)distanceEuclid2(xy[0], xy[1], xGrid[i][j], yGrid[i][j], "WGS84");
+//                System.out.println("distnew "+distnew);
+                
+                allDists[k][0] = i;
+                allDists[k][1] = j;
+                allDists[k][2] = distnew;
+                
+                k++;
+                
+            }
+        }
+
+        Arrays.sort(allDists, new Comparator<double[]>() {
+            @Override
+            public int compare(double[] o1, double[] o2) {
+                return Double.compare(o1[2], o2[2]);
+            }
+        });
+
+//        for (double[] d : allDists)
+//            System.out.println(Arrays.toString(d));
+        
+        //int nPoints = nearList.length;
+        int nPoints = 4;
+        for (int i = 0; i < nPoints; i++)
+        {
+            nearList[i] = allDists[i];
+        }
+
+        //System.out.printf("In Particle.nearestCentroid "+nearest+"\n");
+        return nearList;
+    }
+    
+    /**
+     * 
+     * @param xy
+     * @param xGrid
+     * @param yGrid
+     * @param nearestPoint
+     * @return 
+     */
+    public static double[][] nearestListROMS2(double[] xy, float[][] xGrid, float[][] yGrid, int[] nearestPoint)
+    {
+        //double[][] allDists = new double[9][3];
+        double[][] nearList = new double[5][3];
+        
+        if (nearestPoint == null)
+        {
+            nearestPoint = nearestROMSGridPoint((float)xy[0], (float)xy[1], xGrid, yGrid, null);
+        } 
+        
+        // Get the index of the "top-left" corner of the containing element
+        int[] whichElem = whichROMSElement((float)xy[0], (float)xy[1], xGrid, yGrid, nearestPoint);
+        
+        // Get the distances to the corners of that element
+        nearList[0] = new double[]{whichElem[0],whichElem[1],
+            (float)distanceEuclid2(xy[0], xy[1], xGrid[whichElem[0]][whichElem[1]], yGrid[whichElem[0]][whichElem[1]], "WGS84")};
+        nearList[1] = new double[]{whichElem[0]+1,whichElem[1],
+            (float)distanceEuclid2(xy[0], xy[1], xGrid[whichElem[0]+1][whichElem[1]], yGrid[whichElem[0]+1][whichElem[1]], "WGS84")};
+        nearList[2] = new double[]{whichElem[0],whichElem[1]+1,
+            (float)distanceEuclid2(xy[0], xy[1], xGrid[whichElem[0]][whichElem[1]+1], yGrid[whichElem[0]][whichElem[1]+1], "WGS84")};
+        nearList[3] = new double[]{whichElem[0]+1,whichElem[1]+1,
+            (float)distanceEuclid2(xy[0], xy[1], xGrid[whichElem[0]+1][whichElem[1]+1], yGrid[whichElem[0]+1][whichElem[1]+1], "WGS84")};
+        nearList[4] = new double[]{0,0,10000000};
+        
+        return nearList;
+    }
+    
+    
+    /**
+     * Identify the ROMS element (defined as four neighbouring points forming a 
      * parallelogram) containing a particular coordinate.
-     * Given the nearest UV point, the coordinate is in one of four parellelograms,
+     * Given the nearest UV point, the coordinate is in one of four parallelograms,
      * which share that point as a common corner.
      * 
      * The output index of which element is defined by the last xGrid,yGrid index
-     * occuring
+     * occurring
      * 
      * @param x
      * @param y
-     * @param lon_u
-     * @param lat_u
+     * @param lon
+     * @param lat
      * @param nearP     the nearest ROMS grid point
      * @return 
      */
-    public static int[] whichROMSElement(float x, float y, float[][] lon_u, float[][] lat_u, int[] nearP)
+    public static int[] whichROMSElement(float x, float y, float[][] lon, float[][] lat, int[] nearP)
     {
         int[] which = new int[]{-1,-1};
         
@@ -621,10 +771,10 @@ public class Particle {
         {
             float[][] box = new float[4][2];
             // create corners of box from top left corner, going anticlockwise
-            box[0] = new float[]{lon_u[nearP[0]-1][nearP[1]-1],lat_u[nearP[0]-1][nearP[1]-1]};
-            box[1] = new float[]{lon_u[nearP[0]-1][nearP[1]],lat_u[nearP[0]-1][nearP[1]]};
-            box[2] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
-            box[3] = new float[]{lon_u[nearP[0]][nearP[1]-1],lat_u[nearP[0]][nearP[1]-1]};
+            box[0] = new float[]{lon[nearP[0]-1][nearP[1]-1],lat[nearP[0]-1][nearP[1]-1]};
+            box[1] = new float[]{lon[nearP[0]-1][nearP[1]],lat[nearP[0]-1][nearP[1]]};
+            box[2] = new float[]{lon[nearP[0]][nearP[1]],lat[nearP[0]][nearP[1]]};
+            box[3] = new float[]{lon[nearP[0]][nearP[1]-1],lat[nearP[0]][nearP[1]-1]};
             Path2D.Float boxPath = Mesh.pointsToPath(box);
             // Return the top left corner
             if (boxPath.contains(x,y))
@@ -636,10 +786,10 @@ public class Particle {
         if (nearP[1] != 0)
         {
             float[][] box = new float[4][2];
-            box[0] = new float[]{lon_u[nearP[0]][nearP[1]-1],lat_u[nearP[0]][nearP[1]-1]};
-            box[1] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
-            box[2] = new float[]{lon_u[nearP[0]+1][nearP[1]],lat_u[nearP[0]+1][nearP[1]]};
-            box[3] = new float[]{lon_u[nearP[0]+1][nearP[1]-1],lat_u[nearP[0]+1][nearP[1]-1]};
+            box[0] = new float[]{lon[nearP[0]][nearP[1]-1],lat[nearP[0]][nearP[1]-1]};
+            box[1] = new float[]{lon[nearP[0]][nearP[1]],lat[nearP[0]][nearP[1]]};
+            box[2] = new float[]{lon[nearP[0]+1][nearP[1]],lat[nearP[0]+1][nearP[1]]};
+            box[3] = new float[]{lon[nearP[0]+1][nearP[1]-1],lat[nearP[0]+1][nearP[1]-1]};
             Path2D.Float boxPath = Mesh.pointsToPath(box);
             if (boxPath.contains(x,y))
             {
@@ -647,13 +797,13 @@ public class Particle {
             }
         }        
         // "Bottom right"
-        if (nearP[0] != lon_u.length && nearP[1] != lon_u[0].length)
+        if (nearP[0] != lon.length && nearP[1] != lon[0].length)
         {
             float[][] box = new float[4][2];
-            box[0] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
-            box[1] = new float[]{lon_u[nearP[0]][nearP[1]+1],lat_u[nearP[0]][nearP[1]+1]};
-            box[2] = new float[]{lon_u[nearP[0]+1][nearP[1]+1],lat_u[nearP[0]+1][nearP[1]+1]};
-            box[3] = new float[]{lon_u[nearP[0]+1][nearP[1]],lat_u[nearP[0]+1][nearP[1]]};
+            box[0] = new float[]{lon[nearP[0]][nearP[1]],lat[nearP[0]][nearP[1]]};
+            box[1] = new float[]{lon[nearP[0]][nearP[1]+1],lat[nearP[0]][nearP[1]+1]};
+            box[2] = new float[]{lon[nearP[0]+1][nearP[1]+1],lat[nearP[0]+1][nearP[1]+1]};
+            box[3] = new float[]{lon[nearP[0]+1][nearP[1]],lat[nearP[0]+1][nearP[1]]};
             Path2D.Float boxPath = Mesh.pointsToPath(box);
             if (boxPath.contains(x,y))
             {
@@ -664,18 +814,21 @@ public class Particle {
         if (nearP[0] != 0 && nearP[1] != 0)
         {
             float[][] box = new float[4][2];
-            box[0] = new float[]{lon_u[nearP[0]-1][nearP[1]],lat_u[nearP[0]-1][nearP[1]]};
-            box[1] = new float[]{lon_u[nearP[0]-1][nearP[1]+1],lat_u[nearP[0]-1][nearP[1]+1]};
-            box[2] = new float[]{lon_u[nearP[0]][nearP[1]+1],lat_u[nearP[0]][nearP[1]+1]};
-            box[3] = new float[]{lon_u[nearP[0]][nearP[1]],lat_u[nearP[0]][nearP[1]]};
+            box[0] = new float[]{lon[nearP[0]-1][nearP[1]],lat[nearP[0]-1][nearP[1]]};
+            box[1] = new float[]{lon[nearP[0]-1][nearP[1]+1],lat[nearP[0]-1][nearP[1]+1]};
+            box[2] = new float[]{lon[nearP[0]][nearP[1]+1],lat[nearP[0]][nearP[1]+1]};
+            box[3] = new float[]{lon[nearP[0]][nearP[1]],lat[nearP[0]][nearP[1]]};
             Path2D.Float boxPath = Mesh.pointsToPath(box);
             if (boxPath.contains(x,y))
             {
                 which = new int[]{nearP[0]-1,nearP[1]};
             }
-        }  
-        
-        
+        }
+//        if (which[0]==-1)
+//        {
+//            System.err.println("Particle.whichROMSElement: Location not found in any of 4 elements surrounding nearest point");
+//        }
+  
         return which;
     }
     
@@ -723,6 +876,71 @@ public class Particle {
 //        System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
         return velocity;
     }
+    
+    /**
+     * A method to use the nearest grid point indexes and distances to interpolate a velocity.
+     * This is done between the four nearest values.
+     * In the ROMS output, U and V are stored on different grids (Arakawa-C). Therefore
+     * two nrLists are read in, one for each grid.
+     * 
+     * This method of calculating velocity DOES NOT match the methods used in e.g. TRACMASS, LTRANS.
+     * Those programs interpolate linearly between velocity values on opposing edges of model elements
+     * ("horizontally" for U, "vertically" for V), adjusted according to latitude.
+     * 
+     * @param nrListU
+     * @param nrListV
+     * @param tt
+     * @param u
+     * @param v
+     * @return 
+     */
+    public static double[] velocityFromNearestListROMS(double[][] nrListU, double[][] nrListV, int tt, float u[][][], float v[][][])
+    {
+        double[] velocity = new double[2];
+        double[] weightsU = new double[nrListU.length];
+        double[] weightsV = new double[nrListV.length];
+        double usum=0,vsum=0,sumWeightsU=0,sumWeightsV=0;
+        // Just use the first four entries
+        for (int i = 0; i < nrListU.length; i++)
+        {
+            if (nrListU[i][2]!=0)
+            {
+                weightsU[i]=1.0/(nrListU[i][2]*nrListU[i][2]);
+            }
+            else
+            {
+                weightsU[i]=1;
+            }
+            if (nrListV[i][2]!=0)
+            {
+                weightsV[i]=1.0/(nrListV[i][2]*nrListV[i][2]);
+            }
+            else
+            {
+                weightsV[i]=1;
+            }
+            
+            //System.out.printf("tt %d i %d",tt,i);
+//            System.out.printf(" --U-- elem %d %d dist %.4f weight %.4e --- vel = %.4f\n",
+//                (int)nrListU[i][0],(int)nrListU[i][1],nrListU[i][2],weightsU[i],u[tt][(int)nrListU[i][0]][(int)nrListU[i][1]]);
+//            System.out.printf(" --V-- elem %d %d dist %.4f weight %.4e --- vel = %.4f\n",
+//                (int)nrListV[i][0],(int)nrListV[i][1],nrListV[i][2],weightsV[i],v[tt][(int)nrListV[i][0]][(int)nrListV[i][1]]);
+            
+
+            usum=usum+weightsU[i]*u[tt][(int)nrListU[i][0]][(int)nrListU[i][1]];
+            vsum=vsum+weightsV[i]*v[tt][(int)nrListV[i][0]][(int)nrListV[i][1]];
+
+            sumWeightsU=sumWeightsU+weightsU[i];
+            sumWeightsV=sumWeightsV+weightsV[i];
+        }
+        usum=usum/sumWeightsU;
+        vsum=vsum/sumWeightsV;
+        velocity[0]=usum;
+        velocity[1]=vsum;
+//        System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
+        return velocity;
+    }
+    
         
     /**
      * Euclidean distance between two points
@@ -784,11 +1002,14 @@ public class Particle {
      * @return 
      */
     public static int[] findContainingElement(double[] xy, int elemPart,
-            float[][] nodexy, int[][] trinodes, int[][] neighbours, int[] allelems)
+            float[][] nodexy, int[][] trinodes, int[][] neighbours)
     {
         int[] c = new int[6];
         int[] elems = new int[1];
         elems[0] = elemPart;
+        
+        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length-1).toArray();
+        
         //System.out.println("findContainingElement: elems[0]="+elems[0]);
         int whereami=whichElement(xy,elems,nodexy,trinodes);
         //System.out.println("findContainingElement: whereami="+whereami);
@@ -901,14 +1122,21 @@ public class Particle {
      * @param coordRef
      * @return 
      */
-    public static double[][] neighbourCellsList(double[] xy, int elemPart0, 
-            int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems, String coordRef)
+    public static double[][] neighbourCellsList(double[] xy, int elemPart0, int meshPart,
+            List<Mesh> meshes, String coordRef)
     {      
         double[][] nrList = new double[5][2];
         // distance to elem
         //int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
+        
+        float[][] nodexy = meshes.get(meshPart).getNodexy();
+        float[][] uvnode = meshes.get(meshPart).getUvnode();
+        int[][] trinodes = meshes.get(meshPart).getTrinodes();
+        int[][] neighbours = meshes.get(meshPart).getNeighbours();
+        
+        
         int elem[] = findContainingElement(xy, elemPart0,
-            nodexy, trinodes, neighbours, allelems);
+            nodexy, trinodes, neighbours);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
         if (elem[0] == -1)
@@ -953,27 +1181,52 @@ public class Particle {
      * @param coordRef
      * @return 
      */
-    public double[] rk4Step(float u[][][], float v[][][], // velocities
-            int[][] neighbours, float[][] uvnode, float[][] nodexy, 
-            int[][] trinodes, int[] allelems,      // other mesh info
+    public double[] rk4Step(List<HydroField> hydroFields, // velocities
+            List<Mesh> meshes,      // other mesh info
             int tt, int st, double dt,                                  // locate particle in space and time
             int stepsPerStep, String coordRef)   // info on simulation length
     {
         int elemPart = this.getElem();
+        int meshPart = this.getMesh();
+        
         int dep = this.getDepthLayer();
         //System.out.printf("RK4Step: Location = [%.6e,%.6e], Element = %d\n",this.getLocation()[0],this.getLocation()[1],elemPart);
         double[] advectStep = new double[2];
-        this.nrList = neighbourCellsList(this.getLocation(), elemPart, 
-            neighbours, uvnode, nodexy, trinodes, allelems, coordRef);
-        //this.setNrListToNeighbourCells(neighbours,uvnode);
         
-        // 2. Compute k_1 (spatial interpolation at start of step)
-        //System.out.println("Start step");
-        // Velocity from start of timestep
-        double[] vel = velocityFromNearestList(this.getNrList(),tt,u,v,dep);
-        // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-        double[] velplus1 = velocityFromNearestList(this.getNrList(),tt+1,u,v,dep);
-        //double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,this.getNrList(),u,v,u1,v1,numLayers,dep);
+        
+        // Should call neighbourCellsList if in an FVCOM mesh.
+        // Otherwise should use another method to  set the list of nearest velocity points.
+        double[] vel = new double[2];
+        double[] velplus1 = new double[2];
+        
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        {     
+            this.nrList = neighbourCellsList(this.getLocation(), elemPart,  meshPart,
+                meshes, coordRef);
+            //this.setNrListToNeighbourCells(neighbours,uvnode);
+
+            // 2. Compute k_1 (spatial interpolation at start of step)
+            //System.out.println("Start step");
+            // Velocity from start of timestep
+            vel = velocityFromNearestList(this.getNrList(),tt,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
+            velplus1 = velocityFromNearestList(this.getNrList(),tt+1,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            //double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,this.getNrList(),u,v,u1,v1,numLayers,dep);
+
+        }
+        // Add methods here to find nearest nodes for interpolation
+        else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS"))
+        {
+            // nearestROMSGridPoint ---> whichROMSelement --->
+            this.nrListROMSU = nearestListROMS(this.getLocation(),meshes.get(meshPart).getLonU(),meshes.get(meshPart).getLatU(),null);
+            this.nrListROMSV = nearestListROMS(this.getLocation(),meshes.get(meshPart).getLonV(),meshes.get(meshPart).getLatV(),null);
+            vel = velocityFromNearestListROMS(this.nrListROMSU,this.nrListROMSV,tt,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());
+            velplus1 = velocityFromNearestListROMS(this.nrListROMSU,this.nrListROMSV,tt+1,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());         
+        }
+        
+        
         double[] k1 = new double[2];
         k1[0] = dt*(vel[0] + ((double)st/(double)stepsPerStep)*(velplus1[0]-vel[0]));
         k1[1] = dt*(vel[1] + ((double)st/(double)stepsPerStep)*(velplus1[1]-vel[1]));
@@ -992,7 +1245,7 @@ public class Particle {
         double[] k2 = stepAhead(
                 new double[]{this.getLocation()[0]+k1Deg[0]/2.0,this.getLocation()[1]+k1Deg[1]/2.0},
                 elemPart,dep,1.0/2.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
+                meshes,meshPart,hydroFields,
                 tt,st,dt,stepsPerStep,coordRef);
 
         // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
@@ -1005,7 +1258,7 @@ public class Particle {
         double[] k3 = stepAhead(
                 new double[]{this.getLocation()[0]+k2Deg[0]/2.0,this.getLocation()[1]+k2Deg[1]/2.0},
                 elemPart,dep,1.0/2.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
+                meshes,meshPart,hydroFields,
                 tt,st,dt,stepsPerStep,coordRef);              
         
         // 5. Compute k_4 (spatial interpolation at end step)
@@ -1018,7 +1271,7 @@ public class Particle {
         double[] k4 = stepAhead(
                 new double[]{this.getLocation()[0]+k3Deg[0],this.getLocation()[1]+k3Deg[1]},
                 elemPart,dep,1.0,
-                neighbours,uvnode,nodexy,trinodes,allelems,u,v,
+                meshes,meshPart,hydroFields,
                 tt,st,dt,stepsPerStep,coordRef);
         
         // 6. Add it all together
@@ -1063,24 +1316,57 @@ public class Particle {
      * @return 
      */
     public static double[] stepAhead(double[] xy, int elemPart, int dep, double timeStepAhead,
-            int[][] neighbours, float[][] uvnode, float[][] nodexy, int[][] trinodes, int[] allelems,
-            float u[][][], float v[][][], 
+            List<Mesh> meshes, int meshPart,
+            List<HydroField> hydroFields, 
             int tt, int st, double dt,
             int stepsPerStep, String coordRef)
     {   
         double[] xy_step = new double[2];
+        double[] vel = new double[2];
+        double[] velplus1 = new double[2];
         
         // Generate a "neighbour cells list" for this location
-        double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems,coordRef);
+        //double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems,coordRef);
         
-        // If predicted location of particle is outside mesh, return zero velocity
-        if (xNrList[0][0] == 0)
-        {
-            return xy_step;
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        {     
+            double[][] xNrList = neighbourCellsList(xy, elemPart,  meshPart,
+                meshes, coordRef);
+            //this.setNrListToNeighbourCells(neighbours,uvnode);
+
+            // 2. Compute k_1 (spatial interpolation at start of step)
+            //System.out.println("Start step");
+            // Velocity from start of timestep
+            vel = velocityFromNearestList(xNrList,tt,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
+            velplus1 = velocityFromNearestList(xNrList,tt+1,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            
+            // If predicted location of particle is outside mesh, return zero velocity
+            if (xNrList[0][0] == 0)
+            {
+                return xy_step;
+            }
+
         }
+        // Add methods here to find nearest nodes for interpolation
+        else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS"))
+        {
+            // nearestROMSGridPoint ---> whichROMSelement --->
+            double[][] nrListU = nearestListROMS(xy,meshes.get(meshPart).getLonU(),meshes.get(meshPart).getLatU(),null);
+            double[][] nrListV = nearestListROMS(xy,meshes.get(meshPart).getLonV(),meshes.get(meshPart).getLatV(),null);
+            vel = velocityFromNearestListROMS(nrListU,nrListV,tt,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());
+            velplus1 = velocityFromNearestListROMS(nrListU,nrListV,tt+1,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());         
+            if (nrListU[0][0] == 0)
+            {
+                return xy_step;
+            }
+        }
+
         // compute velocities at start and end of entire step, at the new location
-        double[] vel = velocityFromNearestList(xNrList,tt,u,v,dep);
-        double[] velplus1 = velocityFromNearestList(xNrList,tt+1,u,v,dep);
+//        double[] vel = velocityFromNearestList(xNrList,tt,u,v,dep);
+//        double[] velplus1 = velocityFromNearestList(xNrList,tt+1,u,v,dep);
         // Do the relevant temporal interpolation for this part of the step             
         xy_step[0] = dt*(vel[0] + ((double)(st+1.0/timeStepAhead)/(double)stepsPerStep)*(velplus1[0]-vel[0]));
         xy_step[1] = dt*(vel[1] + ((double)(st+1.0/timeStepAhead)/(double)stepsPerStep)*(velplus1[1]-vel[1]));
@@ -1091,13 +1377,8 @@ public class Particle {
     /**
      * Compute an Euler integration step for particle movement
      * 
-     * @param u
-     * @param v
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
+     * @param hydroFields
+     * @param meshes
      * @param tt
      * @param st
      * @param dt
@@ -1105,32 +1386,73 @@ public class Particle {
      * @param coordRef
      * @return 
      */
-    public double[] eulerStep(float u[][][], float v[][][], // velocities
-        int[][] neighbours, float[][] uvnode, float[][] nodexy, 
-        int[][] trinodes, int[] allelems,      // other mesh info
+    public double[] eulerStep(List<HydroField> hydroFields, // velocities
+        List<Mesh> meshes,     // other mesh info
         int tt, int st, double dt,                                  // locate particle in space and time
         int stepsPerStep, String coordRef)
     {
         int elemPart = this.getElem();
+        int meshPart = this.getMesh();
         int dep = this.getDepthLayer();
+        
+        double[] thisLoc = this.getLocation();
+        
         //System.out.printf("RK4Step: Location = [%.6e,%.6e], Element = %d\n",this.getLocation()[0],this.getLocation()[1],elemPart);
         double[] advectStep = new double[2];
-        this.nrList = neighbourCellsList(this.getLocation(), elemPart, 
-            neighbours, uvnode, nodexy, trinodes, allelems,coordRef);
-        //this.setNrListToNeighbourCells(neighbours,uvnode);
-        
-//        // Generate a "nearest list" for this location
-//        double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems);
-        
-        // If predicted location of particle is outside mesh, return zero velocity
-        if (this.getNrList()[0][0] == 0)
-        {
-            return advectStep;
-        }
-        
         // compute velocities at start and end of entire step, at the new location
-        double[] vel = velocityFromNearestList(this.getNrList(),tt,u,v,dep);
-        double[] velplus1 = velocityFromNearestList(this.getNrList(),tt+1,u,v,dep);
+        double[] vel =  new double[2];
+        double[] velplus1 = new double[2];
+        
+//        this.nrList = neighbourCellsList(this.getLocation(), elemPart, 
+//            meshPart, meshes, allelems,coordRef);
+        
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        {     
+            double[][] xNrList = neighbourCellsList(thisLoc, elemPart,  meshPart,
+                meshes, coordRef);
+            //this.setNrListToNeighbourCells(neighbours,uvnode);
+
+            // 2. Compute k_1 (spatial interpolation at start of step)
+            //System.out.println("Start step");
+            // Velocity from start of timestep
+            vel = velocityFromNearestList(xNrList,tt,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
+            velplus1 = velocityFromNearestList(xNrList,tt+1,
+                    hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV(),dep);
+            
+            // If predicted location of particle is outside mesh, return zero velocity
+            if (xNrList[0][0] == 0)
+            {
+                return advectStep;
+            }
+        }
+        // Find nearest nodes for interpolation
+        else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS"))
+        {
+//            System.out.println("in eulerStep, about to find nearest points");
+            // nearestROMSGridPoint ---> whichROMSelement --->
+            
+            // Search for nearest point based on the previous nearest point - assumes we haven't jumped across multiple elements
+            // No longer needed - update all particle location fields at the end of ParallelParticleMover.move
+//            System.out.println("Nearest point U = "+this.nearestROMSGridPointU[0]+" "+this.nearestROMSGridPointU[1]);
+//            this.nearestROMSGridPointU = nearestROMSGridPoint((float)thisLoc[0], (float)thisLoc[1], meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), this.nearestROMSGridPointU);
+//            this.nearestROMSGridPointV = nearestROMSGridPoint((float)thisLoc[0], (float)thisLoc[1], meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), this.nearestROMSGridPointV);
+            
+//            System.out.println("Nearest point U = "+this.nearestROMSGridPointU[0]+" "+this.nearestROMSGridPointU[1]);
+//            System.out.println("Nearest point V = "+this.nearestROMSGridPointV[0]+" "+this.nearestROMSGridPointV[1]);
+            
+            // Populate the list of points for interpolation
+            double[][] nrListU = nearestListROMS2(thisLoc,meshes.get(meshPart).getLonU(),meshes.get(meshPart).getLatU(),this.nearestROMSGridPointU);
+            double[][] nrListV = nearestListROMS2(thisLoc,meshes.get(meshPart).getLonV(),meshes.get(meshPart).getLatV(),this.nearestROMSGridPointV);
+            // Interpolate the velocity
+            vel = velocityFromNearestListROMS(nrListU,nrListV,tt,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());
+            velplus1 = velocityFromNearestListROMS(nrListU,nrListV,tt+1,hydroFields.get(meshPart).getU(),hydroFields.get(meshPart).getV());         
+            if (nrListU[0][0] == 0)
+            {
+                return advectStep;
+            }
+        }
         
         // Compute the advection step based on temporally interpolated velocities
         advectStep[0] = dt*(vel[0] + ((double)(st)/(double)stepsPerStep)*(velplus1[0]-vel[0]));

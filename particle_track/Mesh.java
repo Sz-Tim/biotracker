@@ -44,6 +44,8 @@ public class Mesh {
     private float[][] depth_rho;
     private float[][] mask_u;
     private float[][] mask_v;
+    private float[][] uXy;
+    private float[][] vXy;
     
     private int[][] rangeUV = new int[2][2];
     
@@ -137,19 +139,24 @@ public class Mesh {
             // Set the index limits. These are the ones to be used in the case of reading the full ROMS domain
             
             
-            float[][] x1 = IOUtils.reshapeFloat(lon_u, lon_u.length*lon_u[0].length, 1);
-            float[][] y1 = IOUtils.reshapeFloat(lat_u, lat_u.length*lat_u[0].length, 1);
-            float[][] xy = new float[lat_u.length*lat_u[0].length][2];
-            for (int i = 0; i < lat_u.length*lat_u[0].length; i++)
+            float[][] ux1 = IOUtils.reshapeFloat(lon_u, lon_u.length*lon_u[0].length, 1);
+            float[][] uy1 = IOUtils.reshapeFloat(lat_u, lat_u.length*lat_u[0].length, 1);
+            uXy = new float[lat_u.length*lat_u[0].length][2];
+            float[][] vx1 = IOUtils.reshapeFloat(lon_v, lon_v.length*lon_v[0].length, 1);
+            float[][] vy1 = IOUtils.reshapeFloat(lat_v, lat_v.length*lat_v[0].length, 1);
+            vXy = new float[lat_v.length*lat_v[0].length][2];
+            for (int i = 0; i < lat_v.length*lat_v[0].length; i++)
             {
-                xy[i] = new float[]{x1[i][0],y1[i][0]};
+                uXy[i] = new float[]{ux1[i][0],uy1[i][0]};
+                vXy[i] = new float[]{vx1[i][0],vy1[i][0]};
             }
-            convexHull = ConvexHull.convexHull(xy);
+            convexHull = ConvexHull.convexHull(uXy);
             IOUtils.writeFloatArrayToFile(convexHull, "convexHull_ROMS.dat", false);
             
             // List the corners to verify which way around the netCDF array is read in
             System.out.println("ROMS grid size: "+lon_u.length+" "+lon_u[0].length);
             System.out.println("Corner 1: "+lon_u[0][0]+" "+lat_u[0][0]);
+            //System.out.println("Corner 1: "+lon_v[0][0]+" "+lat_v[0][0]);
             System.out.println("Corner 2: "+lon_u[lon_u.length-1][0]+" "+lat_u[lon_u.length-1][0]);
             System.out.println("Corner 3: "+lon_u[lon_u.length-1][lon_u[0].length-1]+" "+lat_u[lon_u.length-1][lon_u[0].length-1]);
             System.out.println("Corner 4: "+lon_u[0][lon_u[0].length-1]+" "+lat_u[0][lon_u[0].length-1]);
@@ -202,16 +209,25 @@ public class Mesh {
     }
     public float[][] getLonV()
     {
-        return lon_u;
+        return lon_v;
+    }
+    public float[][] getLatV()
+    {
+        return lat_v;
+    }
+    public float[][] getLatRho()
+    {
+        return lat_rho;
+    }
+    public float[][] getLonRho()
+    {
+        return lon_rho;
     }
     public int[][] getRange()
     {
         return rangeUV;
     }
-    public float[][] getLatV()
-    {
-        return lat_u;
-    }
+    
     public float[] getSiglay()
     {
         return siglay;
@@ -265,12 +281,62 @@ public class Mesh {
      * @param xy
      * @return 
      */
-    public boolean isInMesh(double[] xy)
+    public boolean isInMesh(double[] xy)//, boolean checkElements, int elemLoc)
     {
         Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
         boolean inMesh = cHull.contains(xy[0],xy[1]);
+
         return inMesh;
     }
     
+    public boolean isInMesh(double[] xy, boolean checkElements, int[] elemLoc)
+    {
+        Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
+        boolean inMesh = cHull.contains(xy[0],xy[1]);
+        //System.out.println("Mesh.inMesh (preliminary result): inMesh("+this.getType()+")="+inMesh);       
+        
+        // Do the element check, if required. This will identify when a point is NOT in the mesh
+        // when it has fallen inside the convex hull but is outside of any element
+        if (checkElements == true && inMesh == true)
+        {
+            int[] c = new int[5];
+            if (this.getType().equalsIgnoreCase("FVCOM"))
+            {
+                int eL = 0;
+                if (elemLoc != null)
+                {
+                    eL = elemLoc[0];
+                }
+                c = Particle.findContainingElement(xy, eL, 
+                        this.getNodexy(), this.getTrinodes(), this.getNeighbours());
+            }
+            else if (this.getType().equalsIgnoreCase("ROMS"))
+            {
+                // Use the U grid to determine whether within the mesh or not.
+                // This leads to some particles that are outside the V grid being identified as in the mesh.
+                // The same would happen with rho
+                
+                
+                // If can make it fast, check U and V grids, and chuck out if not in one of them?
+                // Change isInMesh references in ParallelParticleMover, too
+                
+                int[] nearestPointU = Particle.nearestROMSGridPoint((float)xy[0], (float)xy[1], this.getLonU(), this.getLatU(), elemLoc);
+                //System.out.println("Mesh.isInMesh, L324: "+elemLoc[0]+" "+elemLoc[1]);
+                int[] cRomsU = Particle.whichROMSElement((float)xy[0], (float)xy[1], this.getLonU(), this.getLatU(), nearestPointU);
+                int[] nearestPointV = Particle.nearestROMSGridPoint((float)xy[0], (float)xy[1], this.getLonV(), this.getLatV(), elemLoc);
+                int[] cRomsV = Particle.whichROMSElement((float)xy[0], (float)xy[1], this.getLonV(), this.getLatV(), nearestPointV);
+                
+                c[0] = Math.min(cRomsU[0],cRomsV[0]);
+            }
+            if (c[0]==-1)
+            {
+               inMesh = false; 
+            }
+        }
+        
+//        System.out.println("Mesh.inMesh: "+xy[0]+" "+xy[1]+" inMesh("+this.getType()+")="+inMesh);
+        
+        return inMesh;
+    }
     
 }

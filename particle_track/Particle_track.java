@@ -304,13 +304,14 @@ public class Particle_track {
                     // exact hour
                     if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
                     {
-                        System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreated %d \n",
+                        System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreatedBeforeNow %d \n",
                             rp.releaseScenario,time,allowRelease,numParticlesCreated);
                         //System.out.printf("releaseScenario==1, releasing hourly (hour = %d)\n",currentHour);
                         List<Particle> newParts = createNewParticles(habitat,meshes,
                                 rp,currentIsoDate,currentHour,numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
+                        System.out.println("numberOfParticles: "+numParticlesCreated+" "+particles.size());
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario==0)
                         {
@@ -440,26 +441,32 @@ public class Particle_track {
         //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
         List<Particle> newParts = new ArrayList<>(rp.nparts*habitat.size());
         for (int i = 0; i < rp.nparts*habitat.size(); i++)
-            {
-                int startid = i % habitat.size();
-                double xstart = habitat.get(startid).getLocation()[0];
-                double ystart = habitat.get(startid).getLocation()[1];
-                int meshStart = habitat.get(startid).getContainingMesh();
-                int elemFVCOMStart = habitat.get(startid).getContainingFVCOMElem();
-                int[] elemROMSStart = habitat.get(startid).getContainingROMSElem();
-                                                
-                Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
-                        rp.mortalityRate, currentDate, currentTime, rp.coordRef);
-                p.setMesh(meshStart);
-                p.setElem(elemFVCOMStart);
-                p.setROMSElem(elemROMSStart);
-                
-                if (rp.setDepth == true) {
-                    p.setZ(habitat.get(startid).getDepth());
-                }
-                newParts.add(p);
-                //System.out.println(p.toString());
+        {
+            int startid = i % habitat.size();
+            double xstart = habitat.get(startid).getLocation()[0];
+            double ystart = habitat.get(startid).getLocation()[1];
+            int meshStart = habitat.get(startid).getContainingMesh();
+            int elemFVCOMStart = habitat.get(startid).getContainingFVCOMElem();
+            int[] elemROMSStartU = habitat.get(startid).getContainingROMSElemU();
+            int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
+            int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
+            int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
+
+            Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
+                    rp.mortalityRate, currentDate, currentTime, rp.coordRef);
+            p.setMesh(meshStart);
+            p.setElem(elemFVCOMStart);
+            p.setROMSElemU(elemROMSStartU);
+            p.setROMSElemV(elemROMSStartV);
+            p.setROMSnearestPointU(nearestROMSGridPointU);
+            p.setROMSnearestPointV(nearestROMSGridPointV);
+
+            if (rp.setDepth == true) {
+                p.setZ(habitat.get(startid).getDepth());
             }
+            newParts.add(p);
+            //System.out.println(p.toString());
+        }
         return newParts;
     }
     

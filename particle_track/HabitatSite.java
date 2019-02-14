@@ -20,8 +20,10 @@ public class HabitatSite {
     private String containingMeshType;
     private int nearestFVCOMCentroid; // the mesh u,v point that is closest to this location
     private int containingFVCOMElem; // the element containing the habitat (possibly multiple in case of polygon?)
-    private int[] nearestROMSGridPoint;
-    private int[] containingROMSElem;
+    private int[] nearestROMSGridPointU;
+    private int[] containingROMSElemU;
+    private int[] nearestROMSGridPointV;
+    private int[] containingROMSElemV;
         
     public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes)
     {
@@ -32,19 +34,24 @@ public class HabitatSite {
         
         double[] xy2 = new double[]{this.xy[0],this.xy[1]};
         
+        System.out.println("### HABITAT SITE: "+ID+" ("+this.xy[0]+","+this.xy[1]+") ###");
+        
         // Find out which mesh the particle is in, based on bounding box.
         // We make the assumption that meshes appear in the list in their
         // order of precedence, and allocate particles to the first mesh that
         // contains their location
         this.containingMesh = -1;
+        //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
         {
-            if (meshes.get(m).isInMesh(xy2))
+            //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
+            if (meshes.get(m).isInMesh(xy2,true,null))
             {
                 this.containingMesh = m;
                 break;
             }
         }
+        //System.out.println("Containing mesh = "+this.containingMesh);
         if (this.containingMesh == -1)
         {
             System.err.println("Habitat site "+ID+" not within any provided mesh, check coordinates: "+x+" "+y);
@@ -66,25 +73,29 @@ public class HabitatSite {
             this.containingMeshType = "ROMS";
             System.out.println("habitat site in ROMS mesh");
 
-            this.nearestROMSGridPoint = Particle.nearestROMSGridPoint(xy[0], xy[1], 
-                    meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU());
+            this.nearestROMSGridPointU = Particle.nearestROMSGridPoint(xy[0], xy[1], 
+                    meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), null);
+            this.nearestROMSGridPointV = Particle.nearestROMSGridPoint(xy[0], xy[1], 
+                    meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), null);
             
             System.out.println("found nearest point");
             // More to do here to turn the nearest grid point into the containing element
-            this.containingROMSElem = Particle.whichROMSElement(xy[0], xy[1], 
+            this.containingROMSElemU = Particle.whichROMSElement(xy[0], xy[1], 
                     meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), 
-                    this.nearestROMSGridPoint);
+                    this.nearestROMSGridPointU);
+            this.containingROMSElemV = Particle.whichROMSElement(xy[0], xy[1], 
+                    meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), 
+                    this.nearestROMSGridPointV);
             System.out.println("found which element");
-            
-            
-            
-            
-            
-            
-            System.out.println("Habitat site --- nearestROMSpoint=["+this.nearestROMSGridPoint[0]+","+this.nearestROMSGridPoint[1]+"]("
-                    +meshes.get(this.containingMesh).getLonU()[this.nearestROMSGridPoint[0]][this.nearestROMSGridPoint[1]]+","
-                    +meshes.get(this.containingMesh).getLatU()[this.nearestROMSGridPoint[0]][this.nearestROMSGridPoint[1]]+")"
-                    +" --- containingROMSElem=["+this.containingROMSElem[0]+","+this.containingROMSElem[1]+"]");
+ 
+            System.out.println("Habitat site --- nearestROMSpointU=["+this.nearestROMSGridPointU[0]+","+this.nearestROMSGridPointU[1]+"]("
+                    +meshes.get(this.containingMesh).getLonU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+","
+                    +meshes.get(this.containingMesh).getLatU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+")"
+                    +" --- containingROMSElemU=["+this.containingROMSElemU[0]+","+this.containingROMSElemU[1]+"]");
+            System.out.println("Habitat site --- nearestROMSpointV=["+this.nearestROMSGridPointV[0]+","+this.nearestROMSGridPointV[1]+"]("
+                    +meshes.get(this.containingMesh).getLonV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+","
+                    +meshes.get(this.containingMesh).getLatV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+")"
+                    +" --- containingROMSElemV=["+this.containingROMSElemV[0]+","+this.containingROMSElemV[1]+"]");
         }
         
     }
@@ -99,9 +110,9 @@ public class HabitatSite {
         }
         else if (this.containingMeshType.equalsIgnoreCase("ROMS"))
         {
-            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" ("
-                    +this.nearestROMSGridPoint[0]+","+this.nearestROMSGridPoint[1]+") ("
-                    +this.containingROMSElem[0]+","+this.nearestROMSGridPoint[1]+")";
+            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" U_grid: ("
+                    +this.nearestROMSGridPointU[0]+","+this.nearestROMSGridPointU[1]+") ("
+                    +this.containingROMSElemU[0]+","+this.nearestROMSGridPointU[1]+")";
         }
         return details;
     }
@@ -133,9 +144,21 @@ public class HabitatSite {
     {
         return this.containingFVCOMElem;
     }
-    public int[] getContainingROMSElem()
+    public int[] getContainingROMSElemU()
     {
-        return this.containingROMSElem;
+        return this.containingROMSElemU;
+    }
+    public int[] getContainingROMSElemV()
+    {
+        return this.containingROMSElemV;
+    }
+    public int[] getNearestROMSPointU()
+    {
+        return this.nearestROMSGridPointU;
+    }
+    public int[] getNearestROMSPointV()
+    {
+        return this.nearestROMSGridPointV;
     }
 
 }
