@@ -59,6 +59,7 @@ public class Mesh {
      * the open and closed boundary nodes.
      * 
      * @param meshFilename
+     * @param type
      */
     public Mesh(String meshFilename, String type)
     {

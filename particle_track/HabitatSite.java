@@ -6,6 +6,7 @@ package particle_track;
 //import java.util.Arrays;
 import java.util.*;
 import java.util.stream.IntStream;
+import static particle_track.Particle.distanceEuclid2;
 
 /**
  *
@@ -17,6 +18,7 @@ public class HabitatSite {
     private float depth;
     private float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
+    private boolean insideMesh;
     private String containingMeshType;
     private int nearestFVCOMCentroid; // the mesh u,v point that is closest to this location
     private int containingFVCOMElem; // the element containing the habitat (possibly multiple in case of polygon?)
@@ -40,7 +42,11 @@ public class HabitatSite {
         // We make the assumption that meshes appear in the list in their
         // order of precedence, and allocate particles to the first mesh that
         // contains their location
-        this.containingMesh = -1;
+        //this.containingMesh = -1;
+        // Assume as a default that the habitat site is in the first mesh, if not change it to something else
+        this.containingMesh = 0;
+        this.insideMesh = false;
+        
         //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
         {
@@ -48,13 +54,14 @@ public class HabitatSite {
             if (meshes.get(m).isInMesh(xy2,true,null))
             {
                 this.containingMesh = m;
+                this.insideMesh = true;
                 break;
             }
         }
         //System.out.println("Containing mesh = "+this.containingMesh);
-        if (this.containingMesh == -1)
+        if (this.insideMesh == false)
         {
-            System.err.println("Habitat site "+ID+" not within any provided mesh, check coordinates: "+x+" "+y);
+            System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
         }
         
         this.nearestFVCOMCentroid = -1;
@@ -64,6 +71,14 @@ public class HabitatSite {
             this.containingMeshType = "FVCOM";
             System.out.println("habitat site in FVCOM mesh");
             this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
+            if (this.insideMesh == false)
+            {
+                System.out.println("Moving habitat site ("+xy[0]+","+xy[1]+") to nearest centroid: "+this.nearestFVCOMCentroid
+                                    +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
+                                    +" distance = "+distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84"));
+                this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid],meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
+                xy2 = new double[]{this.xy[0],this.xy[1]};
+            }
             this.containingFVCOMElem = Particle.whichElement(xy2, 
                         IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray(), 
                         meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());

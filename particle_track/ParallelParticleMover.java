@@ -252,19 +252,17 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // 4. update particle location
             double newlocx=part.getLocation()[0] + dx; 
             double newlocy=part.getLocation()[1] + dy;
-            //System.out.println("Old = ("+particles[i].getLocation()[0]+", "+particles[i].getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
+            //System.out.println("Old = ("+part.getLocation()[0]+", "+part.getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
 
             // find element containing particle and update seach counts for diagnosis
  
             int[] c = null;
 
-            
-            
-            
-            
-            
-            // Find the containing mesh, afresh
-            // If the new location is not in the current mesh....
+            // ********************** Find the containing mesh, afresh ********************************
+            // i) is it in current mesh?
+            // ii) if not, is it in other mesh?
+            // iii) if not, has it crossed a water boundary?
+            // iv) if not, it has crossed a land boundary => don't move, or place at a nearest centroid
             int[] el = new int[2];
             if (m.getType().equalsIgnoreCase("ROMS"))
             {
@@ -275,15 +273,24 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 el[0] = part.getElem();
             }
             
-            
             //System.out.println("ParallelParticleMover.move L279: "+el[0]+" "+el[1]);
-            if (!m.isInMesh(new double[]{newlocx,newlocy},true,el))
+            // If particle is in the last recorded mesh.....
+            // should use only nearby cells, unless the particle is outside the mesh
+            // REMAIN in existing mesh: update location and nearest elements etc
+            if (m.isInMesh(new double[]{newlocx,newlocy},true,el))
+            {
+                part.setLocation(newlocx,newlocy);
+                part.placeInMesh(m,false);
+            }
+            // Or, NOT in the previous mesh
+            else
             {
                 // Check all other meshes....
                 int containingMesh = -1;
                 for (int i = 0; i < meshes.size(); i++)
                 {
                     //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
+                    // Search the ENTIRETY of the other mesh(es)
                     if (meshes.get(i).isInMesh(part.getLocation(),true,null))
                     {
                         part.setMesh(i);
@@ -291,95 +298,42 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     }
                 }
                 //System.out.println("Containing mesh = "+this.containingMesh);
-                
-                // This is the case of a boundary exit....
-                if (containingMesh == -1)
+                // If in other mesh, transfer to new mesh and set nearest elements etc
+                if (containingMesh != -1)
                 {
-                    System.err.println("Particle "+part.getID()+" not within any provided mesh");
-                }
-            }
-            // Change the value of m to match the new mesh particle is in
-            m = meshes.get(part.getMesh());
-            
-            
-            
-            
-            
-            
-            
-            
-            if (m.getType().equalsIgnoreCase("FVCOM"))
-            {
-                c = Particle.findContainingElement(new double[]{newlocx,newlocy}, elemPart, 
-                        m.getNodexy(), m.getTrinodes(), m.getNeighbours());
-//                int whereami = c[0];
-//                for (int j = 0; j < 4; j++)
-//                {
-//                    //moveStats[j+4] = c[j];
-//                    searchCounts[j] += c[j+1];
-//                }
-
-                // if particle is within the mesh, update location normally and save the distance travelled
-//                double distTrav = 0;
-                if (c[0] != -1)
-                {
-//                    distTrav = Math.sqrt((part.getLocation()[0]-newlocx)*(part.getLocation()[0]-newlocx)+
-//                            (part.getLocation()[1]-newlocy)*(part.getLocation()[1]-newlocy));
                     part.setLocation(newlocx,newlocy);
-                    part.setElem(c[0]);
-                    //System.out.printf("** MOVED **, new elem = %d (dist = %f)\n",particles[i].getElem(),Math.sqrt((newlocx-uvnode[particles[i].getElem()][0])*(newlocx-uvnode[particles[i].getElem()][0])+(newlocy-uvnode[particles[i].getElem()][1])*(newlocy-uvnode[particles[i].getElem()][1])));
+                    part.placeInMesh(meshes.get(containingMesh),true);
                 }
-                // if particle has skipped out of the model domain, place it at the nearest element centroid
+                // if NOT in other mesh, do open boundary exit check on existing mesh (<2000m from open boundary points)
                 else
                 {
-                    int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],m.getUvnode());
-                    //fprintf('x%d',closest);
-                    part.setLocation(m.getUvnode()[0][closest],m.getUvnode()[1][closest]);
-                    part.setElem(closest);
-                }
-                // What's done here is probably not thread-safe; but it's not critical to operation.
-                // Maybe save particle own min/max travel distances and calculate overall at end?
-//                if (distTrav>minMaxDistTrav[1])
-//                {
-//                    minMaxDistTrav[1]=distTrav;
-//                }
-//                if (distTrav<minMaxDistTrav[0])
-//                {
-//                    minMaxDistTrav[0]=distTrav;
-//                }
-                
-            }
-            else if (m.getType().equalsIgnoreCase("ROMS"))
-            {
-                part.setLocation(newlocx,newlocy);
-                int[] nearestROMSGridPointU = Particle.nearestROMSGridPoint((float)newlocx,(float)newlocy, 
-                    m.getLonU(), m.getLatU(), part.getROMSnearestPointU());
-                int[] nearestROMSGridPointV = Particle.nearestROMSGridPoint((float)newlocx,(float)newlocy, 
-                        m.getLonV(), m.getLatV(), part.getROMSnearestPointV());
-
-                //System.out.println("found nearest point");
-                // More to do here to turn the nearest grid point into the containing element
-                int[] containingROMSElemU = Particle.whichROMSElement((float)newlocx,(float)newlocy, 
-                        m.getLonU(), m.getLatU(), 
-                        nearestROMSGridPointU);
-                int[] containingROMSElemV = Particle.whichROMSElement((float)newlocx,(float)newlocy, 
-                        m.getLonV(), m.getLatV(), 
-                        nearestROMSGridPointV);
-                //System.out.println("found which element");
-                
-                
-                
-                // Presently not used anyway, as just search whole grid for nearest ponit each time.
-                // Need to save nearest point, in order to read into 
-                part.setROMSnearestPointU(nearestROMSGridPointU);
-                part.setROMSnearestPointV(nearestROMSGridPointV);
-                part.setROMSElemU(containingROMSElemU);
-                part.setROMSElemV(containingROMSElemV);
+                    //System.err.println("Particle "+part.getID()+" not within any provided mesh, checking for boundary exit");
+                    boolean openBoundaryExit = false;
+                    int openOut = openBoundaryCheck((float)newlocx,(float)newlocy,m,rp);
+                    // The case that particle has exited from the entire domain via an open boundary
+                    if (openOut != -1)
+                    {
+                        part.setBoundaryExit(true);
+                        part.setStatus(66);
+                    }
+                    // The case that the particle has crossed a land boundary 
+                    else
+                    {
+                        // - DO NOT CHANGE LOCATION ETC - leave the same - or move to nearest centroid to avoid sticking to boundary (as previously used)?
+//                        int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],m.getUvnode());
+//                        part.setLocation(m.getUvnode()[0][closest],m.getUvnode()[1][closest]);
+//                        part.setElem(closest);
+                    }   
+                }    
             }
             
 
             
-
+            
+            
+            
+            // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
+            
             // set particle to become able to settle after a predefined time
             if (part.getAge()>rp.viabletime && part.getViable()==false)
             {
@@ -397,64 +351,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setStatus(666);
             }
 
-            // check whether the particle has gone within a certain range of one of the boundary nodes
-            // (make it settle there, even if it is inviable)
-            int nBNode = 0;
-            if (m.getType().equalsIgnoreCase("FVCOM"))
-            {
-                nBNode = m.getOpenBoundaryNodes().length;
-            }
-            else if (m.getType().equalsIgnoreCase("ROMS"))
-            {
-                nBNode = m.getConvexHull().length;
-            }
             
-            for (int loc = 0; loc < nBNode; loc++)
-            {
-                double dist = 2001;
-                
-                if (m.getType().equalsIgnoreCase("FVCOM"))
-                {
-                    dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
-                        m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
-                }
-                else if (m.getType().equalsIgnoreCase("ROMS"))
-                {
-                    dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
-                        m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
-                
-                }
-                                
-                //System.out.println("dist to OBC loc = "+dist);
 
-                double distThresh = 2000;
-
-                if (dist < distThresh)
-                {
-                    // ADD check here that the particle isn't in the other mesh
-                    boolean inOtherMesh = false;
-                    for (int i = 0; i < meshes.size(); i++)
-                    {
-                        if (i!=part.getMesh())
-                        {
-                            inOtherMesh = meshes.get(i).isInMesh(part.getLocation(),true,null);
-                            part.setMesh(i);
-                        }
-                    }
-                    // If not in another mesh, the particle has exited the model terminally
-                    if (!inOtherMesh)
-                    {
-                        //System.out.printf("Boundary stop: %d at %d\n",i,loc);
-                        //part.setArrived(true);
-                        part.setBoundaryExit(true);
-                        part.setStatus(66);
-                    }
-                    break;
-                }
-            }
-
-            // if able to settle, is it close to a possible settlement
-            // location?
+            // **************** if able to settle, is it close to a possible settlement location? ******************************
             //System.out.println("Patricle age = "+particles.get(i).getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles.get(i).getViable());
             if (part.getViable()==true)
             {
@@ -585,4 +484,56 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         
         return distanceMetres;
     }
+    
+    /**
+     * 
+     * @param x
+     * @param y
+     * @param m
+     * @param rp
+     * @return 
+     */
+    public static int openBoundaryCheck(float x, float y, Mesh m, RunProperties rp)
+    {
+        // check whether the particle has gone within a certain range of one of the boundary nodes
+        // (make it settle there, even if it is inviable)
+        int nBNode = 0;
+        if (m.getType().equalsIgnoreCase("FVCOM"))
+        {
+            nBNode = m.getOpenBoundaryNodes().length;
+        }
+        else if (m.getType().equalsIgnoreCase("ROMS"))
+        {
+            nBNode = m.getConvexHull().length;
+        }
+
+        for (int loc = 0; loc < nBNode; loc++)
+        {
+            double dist = 2001;
+
+            if (m.getType().equalsIgnoreCase("FVCOM"))
+            {
+                dist = Particle.distanceEuclid2(x, y,
+                    m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
+            }
+            else if (m.getType().equalsIgnoreCase("ROMS"))
+            {
+                dist = Particle.distanceEuclid2(x, y,
+                    m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
+
+            }
+
+            //System.out.println("dist to OBC loc = "+dist);
+
+            double distThresh = 2000;
+
+            if (dist < distThresh)
+            {
+                return loc;
+            }
+        }
+        // If not close to any open boundary points, must be a land departure => return -1
+        return -1;
+    }
+
 }

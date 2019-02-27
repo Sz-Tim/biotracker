@@ -517,6 +517,61 @@ public class Particle {
     // --------------------------------------------------------------------------------------------------------------
     // Everything to do with velocity calculation below here
     // --------------------------------------------------------------------------------------------------------------
+    
+    /**
+     * This method updates the particle mesh neighbourhood information, dealing with a change in mesh ID if required
+     * 
+     * @param m     The mesh that has been shown to contain a particle
+     * @param switchedMesh   Logical, has the particle changed mesh?
+     */
+    public void placeInMesh(Mesh m, boolean switchedMesh)
+    {
+        if (m.getType().equalsIgnoreCase("FVCOM"))
+        {
+            int el = 0;
+            if (switchedMesh == false)
+            {
+                el = this.getElem();
+            }
+            int[] c = findContainingElement(this.getLocation(), el, 
+                    m.getNodexy(), m.getTrinodes(), m.getNeighbours());
+            // if particle is within the mesh, update location normally and save the distance travelled
+            this.setElem(c[0]);
+            
+        }
+        else if (m.getType().equalsIgnoreCase("ROMS"))
+        {
+            int[] searchCentreU = null, searchCentreV = null;
+            if (switchedMesh == false)
+            {
+                searchCentreU = this.getROMSnearestPointU();
+                searchCentreV = this.getROMSnearestPointV();
+            }
+            int[] nearU = nearestROMSGridPoint((float)this.getLocation()[0],(float)this.getLocation()[1], 
+                m.getLonU(), m.getLatU(), searchCentreU);
+            int[] nearV = nearestROMSGridPoint((float)this.getLocation()[0],(float)this.getLocation()[1], 
+                m.getLonV(), m.getLatV(), searchCentreV);
+
+            //System.out.println("found nearest point");
+            // More to do here to turn the nearest grid point into the containing element
+            int[] containingROMSElemU = whichROMSElement((float)this.getLocation()[0],(float)this.getLocation()[1], 
+                    m.getLonU(), m.getLatU(), 
+                    nearU);
+            int[] containingROMSElemV = whichROMSElement((float)this.getLocation()[0],(float)this.getLocation()[1], 
+                    m.getLonV(), m.getLatV(), 
+                    nearV);
+            //System.out.println("found which element");
+
+            // Need to save nearest point, in order to read into 
+            this.setROMSnearestPointU(nearU);
+            this.setROMSnearestPointV(nearV);
+            this.setROMSElemU(containingROMSElemU);
+            this.setROMSElemV(containingROMSElemV);
+        }
+    }
+    
+    
+    
     /**
      * Find the nearest mesh element centroid
      * @param x
@@ -992,13 +1047,11 @@ public class Particle {
      * 
      * Returned array contains the element in which the particle is determined to be located, 
      * plus the number of counts required at each scale (for diagnostics).
-     * @param newlocx
-     * @param newlocy
+     * @param xy
      * @param elemPart
      * @param nodexy
      * @param trinodes
      * @param neighbours
-     * @param allelems
      * @return 
      */
     public static int[] findContainingElement(double[] xy, int elemPart,
