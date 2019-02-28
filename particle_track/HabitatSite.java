@@ -73,11 +73,20 @@ public class HabitatSite {
             this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
             if (this.insideMesh == false)
             {
-                System.out.println("Moving habitat site ("+xy[0]+","+xy[1]+") to nearest centroid: "+this.nearestFVCOMCentroid
+                double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84");
+                System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Mearest centroid: "+this.nearestFVCOMCentroid
                                     +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
-                                    +" distance = "+distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84"));
-                this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid],meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
-                xy2 = new double[]{this.xy[0],this.xy[1]};
+                                    +" distance = "+d1);
+                if (d1 < 5000)
+                {
+                    System.out.println("Within 5000m from mesh edge; moving to nearest element centroid");
+                    this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid],meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
+                    xy2 = new double[]{this.xy[0],this.xy[1]};
+                }
+                else
+                {
+                    System.err.println("More than 5000m from mesh edge; cannot create habitat site");
+                }                
             }
             this.containingFVCOMElem = Particle.whichElement(xy2, 
                         IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray(), 

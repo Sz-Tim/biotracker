@@ -168,43 +168,6 @@ public class Particle_track {
 //        List<List<File>> fileList = new ArrayList<>();
         String[] varNames = new String[]{"","","","",""};
         
-//        for (int i = 0; i < meshes.size(); i++)
-//        {
-//            List<File> f = new LinkedList<>();
-//            if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-//            {
-//                f = (List<File>) FileUtils.listFiles(
-//                    new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-//                    new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-//                    null);
-//                varNames = new String[]{"u","v","salinity","temp","zeta"};
-//                fileList.add(f); 
-//                HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,null,null,null,"FVCOM");
-//                hydroFields.add(hf);
-//            }
-//            else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
-//            {
-////                System.out.println(rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")+
-////                        "NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"01.nc");
-//                f = (List<File>) FileUtils.listFiles(
-//                    new File(rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")),
-//                    new WildcardFileFilter("NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-//                    null);
-//                varNames = new String[]{"ubar","vbar","","","zeta"};
-//                fileList.add(f); 
-//                
-//                int[][] r = meshes.get(i).getRange();
-//                int[] origin = new int[]{0,r[0][0],r[1][0]};
-//                int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
-//                HydroField hf = new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,null,"ROMS");
-//                hydroFields.add(hf);
-//            }
-//            
-//            
-//            
-//        }
-        
-
         // --------------------------------------------------------------------------------------
         // Set up times at which to print particle locations to file 
         // --------------------------------------------------------------------------------------
@@ -243,7 +206,7 @@ public class Particle_track {
         String locationHeader = "hour ID startDate age startLocation x y elem status density";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
-        IOUtils.printFileHeader(arrivalHeader,"arrivals.out");
+        IOUtils.printFileHeader(arrivalHeader,"arrivals.dat");
         
         try {
             // --------------------------------------------------------------------------------------
@@ -255,8 +218,8 @@ public class Particle_track {
 
                 String today = currentIsoDate.getDateStr();
                 System.out.println(today);
-                IOUtils.printFileHeader(locationHeader,"locations_" + today + ".out");
-                IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".out");
+                IOUtils.printFileHeader(locationHeader,"locations_" + today + ".dat");
+                IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".dat");
                 
                 long splitTime = System.currentTimeMillis();
                 System.out.printf("\n------ Day %d (%s) - Stepcount %d (%f hrs) ------ \n",
@@ -385,15 +348,15 @@ public class Particle_track {
                     // New output: print ALL current particle location to a separate file, once each hour
 
                     //System.out.println("Print particle locations to file " + today + " " + currentHour);
-                    //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".out", true);
+                    //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".dat", true);
 
-                    IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".out",true);
+                    IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".dat",true);
                                         
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                     for (Particle part : particles) {
                         if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
                         {
-                            IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".out", true);
+                            IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
                             part.setSettledThisHour(false);
                         }
                     }

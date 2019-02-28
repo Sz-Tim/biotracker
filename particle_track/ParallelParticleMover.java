@@ -313,6 +313,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     // The case that particle has exited from the entire domain via an open boundary
                     if (openOut != -1)
                     {
+                        System.out.println("Boundary exit: bNode "+openOut);
                         part.setBoundaryExit(true);
                         part.setStatus(66);
                     }
