@@ -48,7 +48,7 @@ public class RunProperties {
             //N, // Number of mesh element centroids - IDEALLY DEPRECATE
             //M; // Number of mesh nodes - IDEALLY DEPRECATE
 
-    double releaseTime, viabletime, // Time of particle release (if releaseScenario == "0"), Time to attain settlement competency
+    double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Timestep (s) per record
             D_h, // Horizontal diffuision parameter
             D_hVert, // Vertical diffuision parameter
@@ -152,6 +152,7 @@ public class RunProperties {
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario","0"));
         nparts = Integer.parseInt(properties.getProperty("nparts","5"));
         releaseTime = Double.parseDouble(properties.getProperty("releaseTime","0"));
+        releaseTimeEnd = Double.parseDouble(properties.getProperty("releaseTimeEnd","24"));
 
         dt = Double.parseDouble(properties.getProperty("dt","3600"));
         

@@ -36,7 +36,7 @@ public class HabitatSite {
         
         double[] xy2 = new double[]{this.xy[0],this.xy[1]};
         
-        System.out.println("### HABITAT SITE: "+ID+" ("+this.xy[0]+","+this.xy[1]+") ###");
+        //System.out.println("### HABITAT SITE: "+ID+" ("+this.xy[0]+","+this.xy[1]+") ###");
         
         // Find out which mesh the particle is in, based on bounding box.
         // We make the assumption that meshes appear in the list in their
@@ -69,7 +69,7 @@ public class HabitatSite {
         if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM"))
         {
             this.containingMeshType = "FVCOM";
-            System.out.println("habitat site in FVCOM mesh");
+            //System.out.println("habitat site in FVCOM mesh");
             this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
             if (this.insideMesh == false)
             {

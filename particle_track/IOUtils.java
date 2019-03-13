@@ -94,7 +94,16 @@ public class IOUtils {
     {
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Habitat defined in file: "+filename);
-        File file = new File(sitedir+filename);
+        File file;
+        if (sitedir != null)
+        {
+            file = new File(sitedir+filename);
+        } 
+        else
+        {
+            file = new File(filename);
+        }
+        
         int nLines = 0;
         try
         {

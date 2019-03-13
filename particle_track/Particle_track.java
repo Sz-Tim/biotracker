@@ -134,7 +134,7 @@ public class Particle_track {
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true, meshes);
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 5, true, meshes);
         for (HabitatSite site : habitat)
         {
             System.out.println(site.toString());
@@ -142,7 +142,7 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, rp.sitedir, 5, true, meshes);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 5, true, meshes);
         
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -186,7 +186,7 @@ public class Particle_track {
 
         int stepcount = 0;
         int calcCount = 0;
-        double time = 0;
+        double time = 0; // time is updataed in HOURS as the simulation progresses
         int printCount = 0;
 
         int[] freeViableSettleExit = new int[4];
@@ -272,7 +272,8 @@ public class Particle_track {
                    
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
-                    if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true))
+                    if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true)
+                            || (rp.releaseScenario==2 && time>rp.releaseTime && time<=rp.releaseTimeEnd))
                     {
                         System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreatedBeforeNow %d \n",
                             rp.releaseScenario,time,allowRelease,numParticlesCreated);
