@@ -95,6 +95,7 @@ public class IOUtils {
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Habitat defined in file: "+filename);
         File file;
+        
         if (sitedir != null)
         {
             file = new File(sitedir+filename);
@@ -102,7 +103,7 @@ public class IOUtils {
         else
         {
             file = new File(filename);
-        }
+        }       
         
         int nLines = 0;
         try
@@ -127,6 +128,7 @@ public class IOUtils {
             while ((line = in.readLine()) != null)	//file reading
             {
                 //int numEntries = countWords(line);
+                System.out.println("Creating habitat site "+count);
                 String[] values = line.split("\t");
                 HabitatSite site = new HabitatSite(values[0],
                         (float)Double.parseDouble(values[1]),
@@ -134,7 +136,10 @@ public class IOUtils {
                         (float)Double.parseDouble(values[3]),
                         (float)Double.parseDouble(values[scaleCol]),
                         meshes);
-                habitat.add(site);
+                if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
+                {
+                    habitat.add(site);
+                }
                 count++;
             }
             in.close();
@@ -142,7 +147,7 @@ public class IOUtils {
         }
         catch (Exception e)
         {
-            System.err.println("Cannot create habitat sites from "+sitedir+filename);
+            System.err.println("Cannot create habitat sites from "+file);
         }
         
         // Make a copy if required
@@ -155,7 +160,7 @@ public class IOUtils {
             }
             catch (Exception e)
             {
-                System.err.println("Cannot copy "+sitedir+filename+" to "+outName);
+                System.err.println("Cannot copy "+file+" to "+outName);
             }
         }
         

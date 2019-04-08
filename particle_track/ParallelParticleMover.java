@@ -291,7 +291,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 {
                     //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
                     // Search the ENTIRETY of the other mesh(es)
-                    if (meshes.get(i).isInMesh(part.getLocation(),true,null))
+                    boolean checkElements = false;
+                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
+                    {
+                        checkElements = true;
+                    }
+                    if (meshes.get(i).isInMesh(part.getLocation(),checkElements,null))
                     {
                         part.setMesh(i);
                         break;

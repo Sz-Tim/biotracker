@@ -58,68 +58,73 @@ public class HabitatSite {
                 break;
             }
         }
+        
+        this.containingMeshType = "NONE";
+        this.nearestFVCOMCentroid = -1;
+        this.containingFVCOMElem = -1;
+        
         //System.out.println("Containing mesh = "+this.containingMesh);
         if (this.insideMesh == false)
         {
             System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
-        }
-        
-        this.nearestFVCOMCentroid = -1;
-        this.containingFVCOMElem = -1;
-        if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM"))
-        {
-            this.containingMeshType = "FVCOM";
-            //System.out.println("habitat site in FVCOM mesh");
-            this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
-            if (this.insideMesh == false)
-            {
-                double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84");
-                System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Mearest centroid: "+this.nearestFVCOMCentroid
-                                    +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
-                                    +" distance = "+d1);
-                if (d1 < 5000)
-                {
-                    System.out.println("Within 5000m from mesh edge; moving to nearest element centroid");
-                    this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid],meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
-                    xy2 = new double[]{this.xy[0],this.xy[1]};
-                }
-                else
-                {
-                    System.err.println("More than 5000m from mesh edge; cannot create habitat site");
-                }                
-            }
-            this.containingFVCOMElem = Particle.whichElement(xy2, 
-                        IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray(), 
-                        meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());
         } 
-        else if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS"))
+        else
         {
-            this.containingMeshType = "ROMS";
-            System.out.println("habitat site in ROMS mesh");
+            if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM"))
+            {
+                this.containingMeshType = "FVCOM";
+                //System.out.println("habitat site in FVCOM mesh");
+                this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
+                if (this.insideMesh == false)
+                {
+                    double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84");
+                    System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Mearest centroid: "+this.nearestFVCOMCentroid
+                                        +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
+                                        +" distance = "+d1);
+                    if (d1 < 5000)
+                    {
+                        System.out.println("Within 5000m from mesh edge; moving to nearest element centroid");
+                        this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid],meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
+                        xy2 = new double[]{this.xy[0],this.xy[1]};
+                    }
+                    else
+                    {
+                        System.err.println("More than 5000m from mesh edge; cannot create habitat site");
+                    }                
+                }
+                this.containingFVCOMElem = Particle.whichElement(xy2, 
+                            IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray(), 
+                            meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());
+            } 
+            else if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS"))
+            {
+                this.containingMeshType = "ROMS";
+                System.out.println("habitat site in ROMS mesh");
 
-            this.nearestROMSGridPointU = Particle.nearestROMSGridPoint(xy[0], xy[1], 
-                    meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), null);
-            this.nearestROMSGridPointV = Particle.nearestROMSGridPoint(xy[0], xy[1], 
-                    meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), null);
-            
-            System.out.println("found nearest point");
-            // More to do here to turn the nearest grid point into the containing element
-            this.containingROMSElemU = Particle.whichROMSElement(xy[0], xy[1], 
-                    meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), 
-                    this.nearestROMSGridPointU);
-            this.containingROMSElemV = Particle.whichROMSElement(xy[0], xy[1], 
-                    meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), 
-                    this.nearestROMSGridPointV);
-            System.out.println("found which element");
- 
-            System.out.println("Habitat site --- nearestROMSpointU=["+this.nearestROMSGridPointU[0]+","+this.nearestROMSGridPointU[1]+"]("
-                    +meshes.get(this.containingMesh).getLonU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+","
-                    +meshes.get(this.containingMesh).getLatU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+")"
-                    +" --- containingROMSElemU=["+this.containingROMSElemU[0]+","+this.containingROMSElemU[1]+"]");
-            System.out.println("Habitat site --- nearestROMSpointV=["+this.nearestROMSGridPointV[0]+","+this.nearestROMSGridPointV[1]+"]("
-                    +meshes.get(this.containingMesh).getLonV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+","
-                    +meshes.get(this.containingMesh).getLatV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+")"
-                    +" --- containingROMSElemV=["+this.containingROMSElemV[0]+","+this.containingROMSElemV[1]+"]");
+                this.nearestROMSGridPointU = Particle.nearestROMSGridPoint(xy[0], xy[1], 
+                        meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), null);
+                this.nearestROMSGridPointV = Particle.nearestROMSGridPoint(xy[0], xy[1], 
+                        meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), null);
+
+                System.out.println("found nearest point");
+                // More to do here to turn the nearest grid point into the containing element
+                this.containingROMSElemU = Particle.whichROMSElement(xy[0], xy[1], 
+                        meshes.get(this.containingMesh).getLonU(), meshes.get(this.containingMesh).getLatU(), 
+                        this.nearestROMSGridPointU);
+                this.containingROMSElemV = Particle.whichROMSElement(xy[0], xy[1], 
+                        meshes.get(this.containingMesh).getLonV(), meshes.get(this.containingMesh).getLatV(), 
+                        this.nearestROMSGridPointV);
+                System.out.println("found which element");
+
+                System.out.println("Habitat site --- nearestROMSpointU=["+this.nearestROMSGridPointU[0]+","+this.nearestROMSGridPointU[1]+"]("
+                        +meshes.get(this.containingMesh).getLonU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+","
+                        +meshes.get(this.containingMesh).getLatU()[this.nearestROMSGridPointU[0]][this.nearestROMSGridPointU[1]]+")"
+                        +" --- containingROMSElemU=["+this.containingROMSElemU[0]+","+this.containingROMSElemU[1]+"]");
+                System.out.println("Habitat site --- nearestROMSpointV=["+this.nearestROMSGridPointV[0]+","+this.nearestROMSGridPointV[1]+"]("
+                        +meshes.get(this.containingMesh).getLonV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+","
+                        +meshes.get(this.containingMesh).getLatV()[this.nearestROMSGridPointV[0]][this.nearestROMSGridPointV[1]]+")"
+                        +" --- containingROMSElemV=["+this.containingROMSElemV[0]+","+this.containingROMSElemV[1]+"]");
+            }
         }
         
     }
@@ -163,6 +168,10 @@ public class HabitatSite {
     public int getContainingMesh()
     {
         return this.containingMesh;
+    }
+    public String getContainingMeshType()
+    {
+        return this.containingMeshType;
     }
     public int getContainingFVCOMElem()
     {

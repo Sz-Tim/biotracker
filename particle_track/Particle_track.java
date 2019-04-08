@@ -134,7 +134,7 @@ public class Particle_track {
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 5, true, meshes);
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes);
         for (HabitatSite site : habitat)
         {
             System.out.println(site.toString());
@@ -142,7 +142,7 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 5, true, meshes);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes);
         
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -413,31 +413,41 @@ public class Particle_track {
         List<Particle> newParts = new ArrayList<>(rp.nparts*habitat.size());
         for (int i = 0; i < rp.nparts*habitat.size(); i++)
         {
-            int startid = i % habitat.size();
-            double xstart = habitat.get(startid).getLocation()[0];
-            double ystart = habitat.get(startid).getLocation()[1];
-            int meshStart = habitat.get(startid).getContainingMesh();
-            int elemFVCOMStart = habitat.get(startid).getContainingFVCOMElem();
-            int[] elemROMSStartU = habitat.get(startid).getContainingROMSElemU();
-            int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
-            int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
-            int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
+//            if (!habitat.get(i).getContainingMeshType().equalsIgnoreCase("NONE"))
+//            {
+                int startid = i % habitat.size();
+                double xstart = habitat.get(startid).getLocation()[0];
+                double ystart = habitat.get(startid).getLocation()[1];
+                int meshStart = habitat.get(startid).getContainingMesh();
+                int elemFVCOMStart = habitat.get(startid).getContainingFVCOMElem();
+                int[] elemROMSStartU = habitat.get(startid).getContainingROMSElemU();
+                int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
+                int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
+                int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
 
-            Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
-                    rp.mortalityRate, currentDate, currentTime, rp.coordRef);
-            p.setMesh(meshStart);
-            p.setElem(elemFVCOMStart);
-            p.setROMSElemU(elemROMSStartU);
-            p.setROMSElemV(elemROMSStartV);
-            p.setROMSnearestPointU(nearestROMSGridPointU);
-            p.setROMSnearestPointV(nearestROMSGridPointV);
+                Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
+                        rp.mortalityRate, currentDate, currentTime, rp.coordRef);
+                p.setMesh(meshStart);
+                p.setElem(elemFVCOMStart);
+                p.setROMSElemU(elemROMSStartU);
+                p.setROMSElemV(elemROMSStartV);
+                p.setROMSnearestPointU(nearestROMSGridPointU);
+                p.setROMSnearestPointV(nearestROMSGridPointV);
 
-            if (rp.setDepth == true) {
-                p.setZ(habitat.get(startid).getDepth());
-            }
-            newParts.add(p);
-            //System.out.println(p.toString());
+                if (rp.setDepth == true) {
+                    p.setZ(habitat.get(startid).getDepth());
+                }
+                newParts.add(p);
+                //System.out.println(p.toString());
+//            }
         }
+        
+        // Remove particles which were not created due to habitat site being miles from the model meshes.
+        // There would be a better way of doing this - not creating the habitat site in the first place being one way!
+        // OR just creating a list initially based on the number of habitat sites which didn't have "NONE" as their
+        // containing mesh.
+//        while(newParts.remove(null)){}
+        
         return newParts;
     }
     

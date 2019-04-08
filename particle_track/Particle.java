@@ -661,14 +661,20 @@ public class Particle {
         int minY = 0;
         int maxY = xGrid[0].length;
         
+        
         if (searchCentre != null)
         {
-//            System.out.println("Particle.nearestROMSGridPoint searchCentre: "+searchCentre[0]+","+searchCentre[1]);
+            //System.out.println("Particle.nearestROMSGridPoint searchCentre: "+searchCentre[0]+","+searchCentre[1]);
             minX = Math.max(0, searchCentre[0]-3);
             maxX = Math.min(xGrid.length, searchCentre[0]+4);
             minY = Math.max(0, searchCentre[1]-3);
             maxY = Math.min(xGrid[0].length, searchCentre[1]+4);
         }
+        else
+        {
+            //System.out.println("Particle.nearestROMSGridPoint searchCentre: NULL");
+        }
+        
         
 //        System.out.println("Particle.nearestROMSGridPoint limits: X=["+minX+","+maxX+"] Y=["+minY+","+maxY+"]");
    
