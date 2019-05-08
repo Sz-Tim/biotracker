@@ -129,6 +129,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
+        //System.out.println("--- Moving particle "+part.getID()+" ---");
+        //System.out.println("Particle location at start of ParallelParticleMover.move: "+part.printLocation());
         
         
         Mesh m = meshes.get(part.getMesh());
@@ -136,7 +138,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         int elemPart = part.getElem();
         
         //System.out.println("movepart");
-        // Set particles free once they pass thier defined release time (hours)
+        // Set particles free once they pass their defined release time (hours)
         if (part.getFree()==false)
         {
             if (time > part.getReleaseTime())
@@ -271,82 +273,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                        
             // Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
             part.meshSelectOrExit(new double[]{newlocx,newlocy},meshes,rp);
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            //System.out.println("ParallelParticleMover.move L279: "+el[0]+" "+el[1]);
-            // If particle is in the last recorded mesh.....
-            // should use only nearby cells, unless the particle is outside the mesh
-            // REMAIN in existing mesh: update location and nearest elements etc
-//            if (m.isInMesh(new double[]{newlocx,newlocy},true,el))
-//            {
-//                part.setLocation(newlocx,newlocy);
-//                part.placeInMesh(m,false);
-//            }
-//            // Or, NOT in the previous mesh
-//            else
-//            {
-//                // Check all other meshes....
-//                int containingMesh = -1;
-//                for (int i = 0; i < meshes.size(); i++)
-//                {
-//                    //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
-//                    // Search the ENTIRETY of the other mesh(es)
-//                    boolean checkElements = false;
-//                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-//                    {
-//                        checkElements = true;
-//                    }
-//                    if (meshes.get(i).isInMesh(part.getLocation(),checkElements,null))
-//                    {
-//                        part.setMesh(i);
-//                        break;
-//                    }
-//                }
-//                //System.out.println("Containing mesh = "+this.containingMesh);
-//                // If in other mesh, transfer to new mesh and set nearest elements etc
-//                if (containingMesh != -1)
-//                {
-//                    part.setLocation(newlocx,newlocy);
-//                    part.placeInMesh(meshes.get(containingMesh),true);
-//                }
-//                // if NOT in other mesh, do open boundary exit check on existing mesh (<2000m from open boundary points)
-//                else
-//                {
-//                    //System.err.println("Particle "+part.getID()+" not within any provided mesh, checking for boundary exit");
-//                    boolean openBoundaryExit = false;
-//                    int openOut = openBoundaryCheck((float)newlocx,(float)newlocy,m,rp);
-//                    // The case that particle has exited from the entire domain via an open boundary
-//                    if (openOut != -1)
-//                    {
-//                        System.out.println("Boundary exit: bNode "+openOut);
-//                        part.setBoundaryExit(true);
-//                        part.setStatus(66);
-//                    }
-//                    // The case that the particle has crossed a land boundary 
-//                    else
-//                    {
-//                        // - DO NOT CHANGE LOCATION ETC - leave the same - or move to nearest centroid to avoid sticking to boundary (as previously used)?
-////                        int closest=Particle.nearestCentroid(part.getLocation()[0],part.getLocation()[1],m.getUvnode());
-////                        part.setLocation(m.getUvnode()[0][closest],m.getUvnode()[1][closest]);
-////                        part.setElem(closest);
-//                    }   
-//                }    
-//            }
-            
-
-            
-            
+           
             
             
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************

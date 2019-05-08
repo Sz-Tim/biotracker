@@ -232,6 +232,15 @@ public class Particle {
     {
         return this.mesh;
     }
+    
+    public String printLocation()
+    {
+        if (this.mesh == 0)
+            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elem;
+        else
+            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elemRomsU[0]+" "+this.elemRomsU[1];
+    }
+    
 //    public void setNrList(float[][] uvnode)
 //    {
 //        this.nrList = nearestCentroidList(this.xy[0], this.xy[1], uvnode);
@@ -541,19 +550,19 @@ public class Particle {
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
         
         // Get current mesh and element
-        System.out.println("Particle.meshSelectOrExit");
+        //System.out.println("Particle.meshSelectOrExit");
         int meshID = this.getMesh();
         double[] oldLoc = this.getLocation();
         int[] el = new int[2];
         if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS"))
         {
             el = this.getROMSnearestPointU();
-            System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
+            //System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
         }
         else
         {
             el[0] = this.getElem();
-            System.out.println("  in FVCOM mesh, el = "+el[0]);
+            //System.out.println("  in FVCOM mesh, el = "+el[0]);
         }
         this.setLocation(newLoc[0],newLoc[1]);
         
@@ -561,63 +570,62 @@ public class Particle {
         Mesh m = meshes.get(meshID);
         if (m.isInMesh(newLoc,true,el))
         {
-            System.out.println("  in same mesh as before");
+            //System.out.println("  in same mesh as before");
             // i.i) in mesh > 0
             if (meshID > 0)
             {
-                System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
+                //System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
                 m = meshes.get(0);
                 if (m.isInMesh(newLoc,true,null))
                 {
-                    System.out.println("      in lower ID mesh");
+                    //System.out.println("      in lower ID mesh");
                     // switch to mesh 0
                     this.placeInMesh(m,true);
                 }
                 else
                 {
                     // stay in current mesh
-                    System.out.println("      not in lower ID mesh, stay in same mesh");
+                    //System.out.println("      not in lower ID mesh, stay in same mesh");
+                    //System.out.println("In mesh "+meshID+", which is of type "+meshes.get(meshID).getType());
                     this.placeInMesh(meshes.get(meshID),false);
                 }
             }
             // i.ii) in mesh 0
             else
             {
-                System.out.println("    this is the lowest ID mesh, checking boundaries");
+                //System.out.println("    this is the lowest ID mesh, checking boundaries");
                 // boundary check
                 int bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
                 if (bnode != -1)
                 {
-                    System.out.println("      close to a mesh boundary node");
+                    //System.out.println("      close to a mesh boundary node");
                     // Close to boundary
                     m = meshes.get(1);
                     if (m.isInMesh(newLoc,false,null))
                     {
-                        System.out.println("        in higher ID mesh, switch to that");
+                        //System.out.println("        in higher ID mesh, switch to that");
                         // switch to other mesh
                         this.placeInMesh(meshes.get(1),true);
                     }
                     else
                     {
-                        System.out.println("        not in higher ID mesh, boundary exit");
+                        //System.out.println("        not in higher ID mesh, boundary exit");
                         // boundary exit
-                        System.out.println("Boundary exit: bNode "+bnode);
+                        //System.out.println("Boundary exit: bNode "+bnode);
                         this.setBoundaryExit(true);
                         this.setStatus(66);
                     }
                 }
                 else
                 {
-                    System.out.println("      in same mesh as was before: keep going as was");
+                    //System.out.println("      in same mesh as was before: keep going as was");
                     // stay in same mesh and keep going! 
                 }   
-            }
-            
-            
+            }     
         }
         else
         {
-            System.out.println("  not in same mesh as before (first one in list), check other mesh");
+            //System.out.println("  not in same mesh as before (first one in list), check other mesh");
             // Not in original mesh, so check the other one
             int otherMesh = 1;
             if (meshID==1)
@@ -627,23 +635,21 @@ public class Particle {
             m = meshes.get(otherMesh);
             if (m.isInMesh(newLoc,false,null))
             {
-                System.out.println("    is in other mesh, switch to that");
+                //System.out.println("    is in other mesh, switch to that");
                 // switch to other mesh
                 this.placeInMesh(m,true);
             }
             else
             {
                 // boundary exit
-                System.out.println("    not in other mesh, boundary exit");
+                //System.out.println("    not in other mesh, boundary exit");
                 this.setBoundaryExit(true);
                 this.setStatus(66);
             }
-            
         }
         
-        
-        
-        this.placeInMesh(m,false);
+        //System.out.println("Particle location at end of meshSelectOrExit: "+this.printLocation());
+        //this.placeInMesh(m,false);
         
     }
     
@@ -657,8 +663,10 @@ public class Particle {
      */
     public void placeInMesh(Mesh m, boolean switchedMesh)
     {
+        //System.out.println("In placeInMesh "+m.getType());
         if (m.getType().equalsIgnoreCase("FVCOM"))
         {
+            //System.out.println("mesh verified as FVCOM");
             int el = 0;
             if (switchedMesh == false)
             {
@@ -672,6 +680,7 @@ public class Particle {
         }
         else if (m.getType().equalsIgnoreCase("ROMS"))
         {
+            //System.out.println("mesh verified as ROMS");
             int[] searchCentreU = null, searchCentreV = null;
             if (switchedMesh == false)
             {
@@ -905,12 +914,23 @@ public class Particle {
         
         if (nearestPoint == null)
         {
+            //System.out.println("nearestListROMS2: null nearestPoint supplied");
             nearestPoint = nearestROMSGridPoint((float)xy[0], (float)xy[1], xGrid, yGrid, null);
         } 
         
         // Get the index of the "top-left" corner of the containing element
         int[] whichElem = whichROMSElement((float)xy[0], (float)xy[1], xGrid, yGrid, nearestPoint);
-        
+        //System.out.println("nearestListROMS2: nearestPoint (supplied or calc'd) "+nearestPoint[0]+" "+nearestPoint[1]+" whichElem (calc'd) "+whichElem[0]+" "+whichElem[1]);
+        if (whichElem[0]==-1)
+        {
+            //System.out.println("Distance to nearestPoint: "+distanceEuclid2(xy[0], xy[1], xGrid[nearestPoint[0]][nearestPoint[1]], yGrid[nearestPoint[0]][nearestPoint[1]], "WGS84"));
+            nearestPoint = nearestROMSGridPoint((float)xy[0], (float)xy[1], xGrid, yGrid, null);
+            //System.out.println("Calc'd a new nearest point: "+nearestPoint[0]+" "+nearestPoint[1]);
+            whichElem = whichROMSElement((float)xy[0], (float)xy[1], xGrid, yGrid, nearestPoint);
+            //System.out.println("nearestListROMS2: whichElem (calc'd a second time) "+whichElem[0]+" "+whichElem[1]);
+            //System.exit(1);
+        }
+         
         // Get the distances to the corners of that element
         nearList[0] = new double[]{whichElem[0],whichElem[1],
             (float)distanceEuclid2(xy[0], xy[1], xGrid[whichElem[0]][whichElem[1]], yGrid[whichElem[0]][whichElem[1]], "WGS84")};
@@ -1020,7 +1040,7 @@ public class Particle {
 //        {
 //            System.err.println("Particle.whichROMSElement: Location not found in any of 4 elements surrounding nearest point");
 //        }
-  
+
         return which;
     }
     
