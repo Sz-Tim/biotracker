@@ -519,6 +519,137 @@ public class Particle {
     // --------------------------------------------------------------------------------------------------------------
     
     /**
+     * Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
+     * 
+     * @param newLoc
+     * @param meshes
+     * @param rp 
+     */
+    public void meshSelectOrExit(double[] newLoc, List<Mesh> meshes, RunProperties rp)
+    {
+        //  i) Is particle in present mesh?
+        //      i.i) If YES and presently in mesh n > 0, is it also within mesh < n?
+        //          If YES, place in that mesh
+        //          If NO, stay in same mesh
+        //      i.ii) If YES and in mesh 0, is it within certain range of boundary?
+        //          i.ii.i) If YES, is it in other mesh > 0?
+        //              If YES, switch to other mesh
+        //              If NO, BOUNDARY EXIT!! (nearest bnode)
+        //          If NO: CARRY ON!!!
+        //      i.iii) If NO, is particle within other mesh > n?
+        //          If YES, switch mesh
+        //          If NO, BOUNDARY EXIT!! (nearest bnode)
+        
+        // Get current mesh and element
+        System.out.println("Particle.meshSelectOrExit");
+        int meshID = this.getMesh();
+        double[] oldLoc = this.getLocation();
+        int[] el = new int[2];
+        if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS"))
+        {
+            el = this.getROMSnearestPointU();
+            System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
+        }
+        else
+        {
+            el[0] = this.getElem();
+            System.out.println("  in FVCOM mesh, el = "+el[0]);
+        }
+        this.setLocation(newLoc[0],newLoc[1]);
+        
+        // i)
+        Mesh m = meshes.get(meshID);
+        if (m.isInMesh(newLoc,true,el))
+        {
+            System.out.println("  in same mesh as before");
+            // i.i) in mesh > 0
+            if (meshID > 0)
+            {
+                System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
+                m = meshes.get(0);
+                if (m.isInMesh(newLoc,true,null))
+                {
+                    System.out.println("      in lower ID mesh");
+                    // switch to mesh 0
+                    this.placeInMesh(m,true);
+                }
+                else
+                {
+                    // stay in current mesh
+                    System.out.println("      not in lower ID mesh, stay in same mesh");
+                    this.placeInMesh(meshes.get(meshID),false);
+                }
+            }
+            // i.ii) in mesh 0
+            else
+            {
+                System.out.println("    this is the lowest ID mesh, checking boundaries");
+                // boundary check
+                int bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
+                if (bnode != -1)
+                {
+                    System.out.println("      close to a mesh boundary node");
+                    // Close to boundary
+                    m = meshes.get(1);
+                    if (m.isInMesh(newLoc,false,null))
+                    {
+                        System.out.println("        in higher ID mesh, switch to that");
+                        // switch to other mesh
+                        this.placeInMesh(meshes.get(1),true);
+                    }
+                    else
+                    {
+                        System.out.println("        not in higher ID mesh, boundary exit");
+                        // boundary exit
+                        System.out.println("Boundary exit: bNode "+bnode);
+                        this.setBoundaryExit(true);
+                        this.setStatus(66);
+                    }
+                }
+                else
+                {
+                    System.out.println("      in same mesh as was before: keep going as was");
+                    // stay in same mesh and keep going! 
+                }   
+            }
+            
+            
+        }
+        else
+        {
+            System.out.println("  not in same mesh as before (first one in list), check other mesh");
+            // Not in original mesh, so check the other one
+            int otherMesh = 1;
+            if (meshID==1)
+            {
+                otherMesh=0;
+            }
+            m = meshes.get(otherMesh);
+            if (m.isInMesh(newLoc,false,null))
+            {
+                System.out.println("    is in other mesh, switch to that");
+                // switch to other mesh
+                this.placeInMesh(m,true);
+            }
+            else
+            {
+                // boundary exit
+                System.out.println("    not in other mesh, boundary exit");
+                this.setBoundaryExit(true);
+                this.setStatus(66);
+            }
+            
+        }
+        
+        
+        
+        this.placeInMesh(m,false);
+        
+    }
+    
+    
+    
+    /**
      * This method updates the particle mesh neighbourhood information, dealing with a change in mesh ID if required
      * 
      * @param m     The mesh that has been shown to contain a particle
