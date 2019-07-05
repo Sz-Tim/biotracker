@@ -18,7 +18,8 @@ public class RunProperties {
             datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
             datadir2, datadir2Prefix, datadir2Suffix, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories 
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
-            mesh1Type, mesh2Type,
+            mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
+            restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, sitefile, habitat, suffix, // Descriptive strings
             coordRef; // Coordinate reference system
             
@@ -56,6 +57,7 @@ public class RunProperties {
             diffusionMultiplier, // Additional diffusion transport distance linear multiplier
             mortalityRate, // Hourly mortality rate of particles
             maxParticleAge, // Maximum age for particles. Set to <=0 and it will be ignored.
+            viableDegreeDays,maxDegreeDays, // Degree x days to use for settlement viability time and mortality 
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             startDepth; // Particle initiation depth
   
@@ -94,6 +96,8 @@ public class RunProperties {
         mesh2 = properties.getProperty("mesh2","");
         mesh1Type = properties.getProperty("mesh1Type","");
         mesh2Type = properties.getProperty("mesh2Type","");
+        
+        restartParticles = properties.getProperty("restartParticles",""); 
     
         sitefile = properties.getProperty("sitefile","startlocations.dat");
         location = properties.getProperty("location","minch_continuous");
@@ -180,6 +184,9 @@ public class RunProperties {
         diffusionMultiplier = Double.parseDouble(properties.getProperty("diffusionMultiplier","1"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate","0.01"));
         maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","-1"));
+        
+        viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays","-1"));
+        maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays","-1"));
         
         sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean","0"));
         sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd","0"));

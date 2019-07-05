@@ -45,6 +45,7 @@ public class Particle {
     private int depLayer = 0;
     // settlement details
     private double age = 0;
+    private double degreeDays = 0;
     private int status = 0;
     private double density = 1;
     private double mortRate = 0.01; // default hourly rate, based on results of Stein et al. 2005 (copepodid, nauplii rate marginally lower = 0.0078)
@@ -489,13 +490,23 @@ public class Particle {
         //System.out.println("salinity = "+salinity+" mortrate = "+this.mortRate);
     }
      
-    public void increaseAge(double increment)
+    public void incrementAge(double increment)
     {
         this.age+=increment;
     }
+    
+    public void incrementDegreeDays(double temp, RunProperties rp)
+    {
+        this.degreeDays += temp*(rp.dt/rp.stepsPerStep)/86400;
+    }
+    
     public double getAge()
     {
         return this.age;
+    }
+    public double getDegreeDays()
+    {
+        return this.degreeDays;
     }
     
     public void setDepth(double D_hVert, double sinkingRateMean, double sinkingRateStd, double dt, double localDepth)

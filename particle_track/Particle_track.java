@@ -159,6 +159,16 @@ public class Particle_track {
         List<Particle> particles = new ArrayList<>(nparts);
         int numParticlesCreated = 0; // Counter to keep track of how many particles have been created
         boolean allowRelease = true; // boolean to be switched after a single release event
+        // --------------------------------------------------------------------------------------
+        // Read in particles to be restarted, if there are any
+        // --------------------------------------------------------------------------------------
+        if (!rp.restartParticles.equalsIgnoreCase(""))
+        {
+            List<Particle> restartParts = IOUtils.readRestartParticles(rp);
+            particles.addAll(restartParts);
+            numParticlesCreated = numParticlesCreated+(restartParts.size());
+            System.out.println("numberOfParticles: "+numParticlesCreated+" "+particles.size());
+        }
         
         // --------------------------------------------------------------------------------------
         // Setup hydrodynamic fields and file lists.

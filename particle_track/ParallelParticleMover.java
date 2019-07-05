@@ -152,8 +152,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         }
         if (part.getFree()==true && part.getArrived()==false && part.getBoundaryExit()==false)
         {    
+            // Increment in particle age
+            part.incrementAge(subStepDt/3600.0); // particle age in hours
+            // Increment in particle degree days accumulated (can be used for maturation or mortality in larvae)
+            double temperature = hf.getT()[tt][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
+            part.incrementDegreeDays(temperature,rp);
             
-            part.increaseAge(subStepDt/3600.0); // particle age in hours
 //            System.out.printf("PARTICLE %d : %s\n",part.getID(),part.printLocation());
             
             //System.out.println("particle able to move");
@@ -276,10 +280,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
            
             
             
+            
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             
             // set particle to become able to settle after a predefined time
-            if (part.getAge()>rp.viabletime && part.getViable()==false)
+            if ((part.getAge()>rp.viabletime && part.getViable()==false) ||
+                    (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0))
             {
                 //System.out.println("Particle became viable");                                  
                 part.setViable(true);
@@ -289,7 +295,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Stop particles in their tracks if they exceed a maximum age
-            if (part.getAge()>rp.maxParticleAge && rp.maxParticleAge > 0)
+            if ((part.getAge()>rp.maxParticleAge && rp.maxParticleAge > 0) ||
+                    (part.getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0))
             {
                 part.setFree(false);
                 part.setStatus(666);
