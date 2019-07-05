@@ -154,7 +154,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         {    
             
             part.increaseAge(subStepDt/3600.0); // particle age in hours
-            //System.out.printf("PARTICLE %d \n",i);
+//            System.out.printf("PARTICLE %d : %s\n",part.getID(),part.printLocation());
             
             //System.out.println("particle able to move");
             

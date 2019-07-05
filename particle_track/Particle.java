@@ -550,105 +550,138 @@ public class Particle {
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
         
         // Get current mesh and element
-        //System.out.println("Particle.meshSelectOrExit");
+//        System.out.println("Particle.meshSelectOrExit");
+        int move = 0;
         int meshID = this.getMesh();
         double[] oldLoc = this.getLocation();
         int[] el = new int[2];
         if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS"))
         {
             el = this.getROMSnearestPointU();
-            //System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
+//            System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
         }
         else
         {
             el[0] = this.getElem();
-            //System.out.println("  in FVCOM mesh, el = "+el[0]);
+//            System.out.println("  in FVCOM mesh, el = "+el[0]);
         }
-        this.setLocation(newLoc[0],newLoc[1]);
+        
+        // Only move the particle at the end of this method, IFF it is allocated to move
+        //this.setLocation(newLoc[0],newLoc[1]);
         
         // i)
         Mesh m = meshes.get(meshID);
         if (m.isInMesh(newLoc,true,el))
         {
-            //System.out.println("  in same mesh as before");
+//            System.out.println("  in same mesh as before");
             // i.i) in mesh > 0
             if (meshID > 0)
             {
-                //System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
+//                System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
                 m = meshes.get(0);
                 if (m.isInMesh(newLoc,true,null))
                 {
-                    //System.out.println("      in lower ID mesh");
+//                    System.out.println("      in lower ID mesh");
                     // switch to mesh 0
+                    this.setLocation(newLoc[0],newLoc[1]);
                     this.placeInMesh(m,true);
+                    move = 1;
                 }
                 else
                 {
                     // stay in current mesh
-                    //System.out.println("      not in lower ID mesh, stay in same mesh");
+//                    System.out.println("      not in lower ID mesh, stay in same mesh");
                     //System.out.println("In mesh "+meshID+", which is of type "+meshes.get(meshID).getType());
+                    this.setLocation(newLoc[0],newLoc[1]);
                     this.placeInMesh(meshes.get(meshID),false);
+                    move = 1;
                 }
             }
             // i.ii) in mesh 0
             else
             {
-                //System.out.println("    this is the lowest ID mesh, checking boundaries");
+//                System.out.println("    this is the lowest ID mesh, checking boundaries");
                 // boundary check
                 int bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
                 if (bnode != -1)
                 {
-                    //System.out.println("      close to a mesh boundary node");
+//                    System.out.println("      close to a mesh boundary node");
                     // Close to boundary
-                    m = meshes.get(1);
-                    if (m.isInMesh(newLoc,false,null))
+                    if (meshes.size() == 2)
                     {
-                        //System.out.println("        in higher ID mesh, switch to that");
-                        // switch to other mesh
-                        this.placeInMesh(meshes.get(1),true);
+                        m = meshes.get(1);
+                        if (m.isInMesh(newLoc,false,null))
+                        {
+//                            System.out.println("        in higher ID mesh, switch to that");
+                            // switch to other mesh
+                            this.setLocation(newLoc[0],newLoc[1]);
+                            this.placeInMesh(meshes.get(1),true);
+                            move = 1;
+                        }    
                     }
                     else
                     {
-                        //System.out.println("        not in higher ID mesh, boundary exit");
+//                        System.out.println("        not in higher ID mesh, boundary exit");
                         // boundary exit
-                        //System.out.println("Boundary exit: bNode "+bnode);
+//                        System.out.println("Boundary exit: bNode "+bnode);
                         this.setBoundaryExit(true);
                         this.setStatus(66);
+                        move = 0;
                     }
                 }
                 else
                 {
-                    //System.out.println("      in same mesh as was before: keep going as was");
+//                    System.out.println("      in same mesh as was before: keep going as was");
+                    this.setLocation(newLoc[0],newLoc[1]);
+                    this.placeInMesh(meshes.get(0),false);
+                    move = 1;
                     // stay in same mesh and keep going! 
                 }   
             }     
         }
         else
-        {
-            //System.out.println("  not in same mesh as before (first one in list), check other mesh");
-            // Not in original mesh, so check the other one
-            int otherMesh = 1;
-            if (meshID==1)
+        {   
+            if (meshes.size() == 2)
             {
-                otherMesh=0;
-            }
-            m = meshes.get(otherMesh);
-            if (m.isInMesh(newLoc,false,null))
-            {
-                //System.out.println("    is in other mesh, switch to that");
-                // switch to other mesh
-                this.placeInMesh(m,true);
+//                System.out.println("  not in same mesh as before (first one in list), check other mesh");
+                // Not in original mesh, so check the other one
+                int otherMesh = 1;
+                if (meshID==1)
+                {
+                    otherMesh=0;
+                }
+
+                m = meshes.get(otherMesh);
+                if (m.isInMesh(newLoc,false,null))
+                {
+//                    System.out.println("    is in other mesh, switch to that");
+                    // switch to other mesh
+                    this.setLocation(newLoc[0],newLoc[1]);
+                    this.placeInMesh(m,true);
+                    move = 1;
+                }
+                else
+                {
+                    // boundary exit
+//                    System.out.println("    not in other mesh, boundary exit");
+                    this.setBoundaryExit(true);
+                    this.setStatus(66);
+                    move = 0;
+                }
             }
             else
             {
-                // boundary exit
-                //System.out.println("    not in other mesh, boundary exit");
-                this.setBoundaryExit(true);
-                this.setStatus(66);
+//                System.out.println("  not in single available mesh, stay at present location");
+                move = 0;
             }
         }
         
-        //System.out.println("Particle location at end of meshSelectOrExit: "+this.printLocation());
+//        if (move == 1)
+//        {
+//            this.setLocation(newLoc[0],newLoc[1]);
+//        }
+
+//        System.out.println("Particle location at end of meshSelectOrExit: "+this.printLocation());
         //this.placeInMesh(m,false);
         
     }
@@ -1233,21 +1266,25 @@ public class Particle {
             if (whereami==-1)
             {
                 c[3]=1;
-                int[] elems1 = new int[10];
-                for (int j = 0; j < 10; j++)
-                {
-                    elems1[j] = Math.min(Math.max(elemPart-5+j,0),allelems.length-1);
-                }
+                //int[] elems1 = new int[10];
+//                for (int j = 0; j < 10; j++)
+//                {
+//                    elems1[j] = Math.min(Math.max(elemPart-5+j,0),allelems.length-1);
+//                }
+                int elems1[] = IntStream.rangeClosed(Math.max(elemPart-5,0), Math.min(elemPart+5,trinodes[0].length-1)).toArray();
+                
                 whereami=whichElement(xy,elems1,nodexy,trinodes);
                 // if fails, look in nearest 500 (id numerical)
                 if (whereami==-1)
                 {
                     c[4]=1;
-                    int[] elems2 = new int[500];
-                    for (int j = 0; j < 500; j++)
-                    {
-                        elems2[j] = Math.min(Math.max(elemPart-250+j,0),allelems.length-1);
-                    }
+//                    int[] elems2 = new int[500];
+//                    for (int j = 0; j < 500; j++)
+//                    {
+//                        elems2[j] = Math.min(Math.max(elemPart-250+j,0),allelems.length-1);
+//                    }
+                    int elems2[] = IntStream.rangeClosed(Math.max(elemPart-500,0), Math.min(elemPart+500,trinodes[0].length-1)).toArray();
+                    
                     whereami=whichElement(xy,elems2,nodexy,trinodes);
                     // if this fails, look in all elements
                     if (whereami==-1)
@@ -1259,7 +1296,7 @@ public class Particle {
             }
         }
         c[0]=whereami;
-        //System.out.printf("%d %d %d %d %d %d\n",c[0],c[1],c[2],c[3],c[4],c[5]);
+//        System.out.printf("%d %d %d %d %d %d %d\n",elemPart,c[0],c[1],c[2],c[3],c[4],c[5]);
 //        if (c[0] == 0 || c[0] == -1)
 //        {
 //            System.out.println("Element out of bounds, fixing location");

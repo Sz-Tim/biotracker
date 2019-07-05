@@ -101,10 +101,10 @@ public class Particle_track {
 
         
         List<Mesh> meshes = new ArrayList<>();
-        meshes.add(new Mesh(rp.mesh1,rp.mesh1Type));
+        meshes.add(new Mesh(rp.mesh1,rp.mesh1Type,rp.coordRef));
         if (rp.mesh2.equals("") != true)
         {
-            meshes.add(new Mesh(rp.mesh2,rp.mesh2Type));
+            meshes.add(new Mesh(rp.mesh2,rp.mesh2Type,rp.coordRef));
         }
 
 
@@ -191,7 +191,8 @@ public class Particle_track {
 
         int[] freeViableSettleExit = new int[4];
 
-        int numberOfExecutorThreads = Runtime.getRuntime().availableProcessors();
+        //int numberOfExecutorThreads = Runtime.getRuntime().availableProcessors();
+        int numberOfExecutorThreads = rp.parallelThreads;
         if (rp.parallel == false) {
             numberOfExecutorThreads = 1;
         }

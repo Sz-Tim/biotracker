@@ -44,7 +44,8 @@ public class RunProperties {
             dumpInterval, // Interval in hours for printing particle locations and elements to file
             thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
-            endlimit; // Maximum ID of startlocs to use as a destination (0 = use all)
+            endlimit, // Maximum ID of startlocs to use as a destination (0 = use all)
+            parallelThreads; // Number of threads to use in parallel execution
             //N, // Number of mesh element centroids - IDEALLY DEPRECATE
             //M; // Number of mesh nodes - IDEALLY DEPRECATE
 
@@ -144,6 +145,7 @@ public class RunProperties {
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort","true"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel","true"));
+        parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads","4"));
         // DEPRECATED
         //oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
         
@@ -193,72 +195,6 @@ public class RunProperties {
         
     }
 
-//    // default constructor for lack of property file
-//    // NOT TESTED SINCE CODE REVISED.......
-//    public RunProperties(String[] args)
-//    {
-//        if (args.length == 6 || args.length == 7 || args.length == 8)
-//        {
-//            System.out.println("Standard minch chapter args (5)");
-//            // set values for many of the things that used to be read in
-//            
-//            habitat=args[0];
-//            //firstday=Integer.parseInt(args[1]);
-//            //lastday=Integer.parseInt(args[2]);
-//            diffusionMultiplier=Double.parseDouble(args[3]);
-//            D_h=0.1*diffusionMultiplier;
-//            behaviour=Integer.parseInt(args[4]);
-//            nparts=Integer.parseInt(args[5]);
-//            if (args.length == 7)
-//            {
-//                stepsPerStep=Integer.parseInt(args[6]);
-//            }
-//            if (args.length == 8)
-//            {
-//                viabletime=Double.parseDouble(args[7]);
-//            }
-//        }
-//        
-//        if (args.length >= 12)
-//        {
-//            nparts=Integer.parseInt(args[0]);
-//            //firstday=Integer.parseInt(args[1]);
-//            //lastday=Integer.parseInt(args[2]);
-//            recordsPerFile=Integer.parseInt(args[3]);
-//            dt=Integer.parseInt(args[4]);
-//            stepsPerStep=Integer.parseInt(args[5]);
-//            thresh=Integer.parseInt(args[6]);
-//            viabletime=Integer.parseInt(args[7]);
-//            behaviour=Integer.parseInt(args[8]);
-//            if (args[9].equalsIgnoreCase("true"))
-//            {
-//                timeInterpolate = true;
-//            }
-//            if (args[10].equalsIgnoreCase("true"))
-//            {
-//                spatialInterpolate = true;
-//            }
-//            D_h = Double.parseDouble(args[11]);
-//        }
-//        
-//        if (args.length == 14)
-//        {
-//            suffix = args[12];
-//            location = args[13];
-//        }
-//        
-//        if (D_h==0)
-//            {
-//                diffusion = false;
-//            }
-//        // the case of using spatially variable diffusion as output by FVCOM
-//        if (D_h<0)
-//            {
-//                variableDiff = true;
-//            }
-//    }
-    
-    
 }
 
 

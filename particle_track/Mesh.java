@@ -61,15 +61,23 @@ public class Mesh {
      * @param meshFilename
      * @param type
      */
-    public Mesh(String meshFilename, String type)
+    public Mesh(String meshFilename, String type, String coordRef)
     {
         System.out.println("Reading mesh file: "+meshFilename);
         
         meshType = type;
         if (type.equalsIgnoreCase("triangular") || type.equalsIgnoreCase("FVCOM"))
         {
-            uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode",null,null);
-            nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy",null,null);
+            if (coordRef.equalsIgnoreCase("WGS84"))
+            {
+                uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode",null,null);
+                nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy",null,null);
+            }
+            else
+            {
+                uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode_os",null,null);
+                nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy_os",null,null);
+            }
             depthUvnode = IOUtils.readNetcdfFloat1D(meshFilename,"depthUvnode");
             depthNodexy = IOUtils.readNetcdfFloat1D(meshFilename,"depthNodexy");
             trinodes = IOUtils.readNetcdfInteger2D(meshFilename,"trinodes");
@@ -304,7 +312,7 @@ public class Mesh {
             
             
         }
-                
+              
         if (checkElements == true && inMesh == true)
         {
             int[] c = new int[5];
@@ -314,6 +322,10 @@ public class Mesh {
                 if (elemLoc != null)
                 {
                     eL = elemLoc[0];
+                }
+                else
+                {
+                    System.out.println("***** elemLoc = null *****");
                 }
                 c = Particle.findContainingElement(xy, eL, 
                         this.getNodexy(), this.getTrinodes(), this.getNeighbours());
