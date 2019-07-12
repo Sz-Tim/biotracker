@@ -278,16 +278,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
             part.meshSelectOrExit(new double[]{newlocx,newlocy},meshes,rp);
            
-            
-            
-            
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             
             // set particle to become able to settle after a predefined time
-            if ((part.getAge()>rp.viabletime && part.getViable()==false) ||
-                    (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0))
+            if (((part.getAge()>rp.viabletime) ||
+                    (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0)) && part.getViable()==false)
             {
-                //System.out.println("Particle became viable");                                  
+                System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
                 part.setViable(true);
                 part.setStatus(2);
                 // This is updated by many threads - calculation now done outside of move

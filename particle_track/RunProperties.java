@@ -33,8 +33,7 @@ public class RunProperties {
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setDepth, // set particle depth at initiation?
             splitPsteps, // separate pSteps by source site? No longer produced (done in Matlab post processing) - POSSIBLY DEPRECATE
-            pstepsIncMort, // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true) - POSSIBLY DEPRECATE
-            all_locs_out;
+            pstepsIncMort; // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true) - POSSIBLY DEPRECATE
     
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
@@ -47,8 +46,6 @@ public class RunProperties {
             behaviour, // Particle behaviour - see Particle.java
             endlimit, // Maximum ID of startlocs to use as a destination (0 = use all)
             parallelThreads; // Number of threads to use in parallel execution
-            //N, // Number of mesh element centroids - IDEALLY DEPRECATE
-            //M; // Number of mesh nodes - IDEALLY DEPRECATE
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Timestep (s) per record
@@ -152,8 +149,6 @@ public class RunProperties {
         parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads","4"));
         // DEPRECATED
         //oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
-        
-        all_locs_out = Boolean.parseBoolean(properties.getProperty("all_locs_out","true"));
     
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario","0"));
         nparts = Integer.parseInt(properties.getProperty("nparts","5"));

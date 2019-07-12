@@ -90,7 +90,7 @@ public class IOUtils {
 //        return startlocs;
 //    }
     
-    public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy, List<Mesh> meshes)
+    public static List<HabitatSite> createHabitatSites(String filename, String sitedir, int scaleCol, boolean makeLocalCopy, List<Mesh> meshes, RunProperties rp)
     {
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Habitat defined in file: "+filename);
@@ -135,7 +135,7 @@ public class IOUtils {
                         (float)Double.parseDouble(values[2]),
                         (float)Double.parseDouble(values[3]),
                         (float)Double.parseDouble(values[scaleCol]),
-                        meshes);
+                        meshes,rp);
                 if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
                 {
                     habitat.add(site);
@@ -229,6 +229,53 @@ public class IOUtils {
 //        }
 //        return open_BC_locs;
 //    }
+    
+    public static List<Particle> readRestartParticles(RunProperties rp)
+    {
+        List<Particle> parts = new ArrayList<Particle>();
+        System.out.println("Particles to restart defined in file: "+rp.restartParticles);
+        File file = new File(rp.restartParticles);
+        int nLines = 0;
+        try
+        {
+            nLines = countLines(file);
+            System.out.println("FILE "+file+" NLINES "+nLines);
+        }
+        catch (Exception e)
+        {
+            System.err.println("Cannot open "+rp.restartParticles);
+        } 
+        
+        try
+        {
+            BufferedReader in = new BufferedReader(new FileReader(file));	//reading files in specified directory
+ 
+            String line;
+            //boolean printWarning=true;
+            int count = 0;
+            
+            while ((line = in.readLine()) != null)	//file reading
+            { 
+                // Ignore the header line
+                if (count > 0)
+                {
+                    //int numEntries = countWords(line);
+                    System.out.println("Creating restart particle "+count);
+                    Particle p = new Particle(line);
+                    parts.add(p);
+                }
+                count++;
+            }
+            in.close();
+            System.out.println("Created "+count+" particles");
+        }
+        catch (Exception e)
+        {
+            System.err.println("Cannot create particles from "+file);
+        }
+        
+        return parts;
+    }
     
     public static int[] readFileInt1D(String fullFileName) throws Exception
     {

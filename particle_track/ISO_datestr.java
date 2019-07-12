@@ -33,6 +33,21 @@ public class ISO_datestr {
             }
         }
      }
+    
+    public ISO_datestr(String dateString)
+    {
+        this.year = Integer.parseInt(dateString.substring(0, 4));
+        this.month= Integer.parseInt(dateString.substring(4, 6));
+        this.day = Integer.parseInt(dateString.substring(6, 8));
+        
+        for (int i = 0; i < this.leapYears.length; i++) 
+        {
+            if(this.leapYears[i]==this.year)
+            {
+                monthDays[1][1]=29;
+            }
+        }
+    }
 
     public String getDateStr()
     {

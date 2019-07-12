@@ -27,7 +27,7 @@ public class HabitatSite {
     private int[] nearestROMSGridPointV;
     private int[] containingROMSElemV;
         
-    public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes)
+    public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes, RunProperties rp)
     {
         this.ID = ID;
         this.xy = new float[]{x,y};
@@ -46,6 +46,8 @@ public class HabitatSite {
         // Assume as a default that the habitat site is in the first mesh, if not change it to something else
         this.containingMesh = 0;
         this.insideMesh = false;
+        // Use this to force checking of FVCOM mesh (single mesh scenario)
+        boolean exitIfNotInMesh = false;
         
         //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
@@ -58,13 +60,15 @@ public class HabitatSite {
                 break;
             }
         }
+
         
-        this.containingMeshType = "NONE";
+//        this.containingMeshType = "NONE";        
+        this.containingMeshType = "FVCOM";
         this.nearestFVCOMCentroid = -1;
         this.containingFVCOMElem = -1;
         
         //System.out.println("Containing mesh = "+this.containingMesh);
-        if (this.insideMesh == false)
+        if (this.insideMesh == false && exitIfNotInMesh == true)
         {
             System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
         } 
@@ -77,7 +81,7 @@ public class HabitatSite {
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
                 if (this.insideMesh == false)
                 {
-                    double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], "WGS84");
+                    double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
                     System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Mearest centroid: "+this.nearestFVCOMCentroid
                                         +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
                                         +" distance = "+d1);

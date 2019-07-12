@@ -95,6 +95,38 @@ public class Particle {
         
         //this.arrivals = new ArrayList<Arrival>();
     }
+    
+    /**
+     * Create a new particle from the line of a location ASCII file.
+     * 
+     * @param locationFileLine 
+     */
+    public Particle(String locationFileLine)
+    {
+        String[] values = locationFileLine.split(" ");
+        // Don't use the 0 th  entry on the line (current time in locations) 
+        this.id = Integer.parseInt(values[1]);
+        this.startDate = new ISO_datestr(values[2]);
+        this.age = Double.parseDouble(values[3]);
+        this.startSiteID = values[4];
+        this.xy[0] = Double.parseDouble(values[5]);
+        this.xy[1] = Double.parseDouble(values[6]);
+        this.elem = Integer.parseInt(values[7]);
+        this.status = Integer.parseInt(values[8]);
+        this.density = Double.parseDouble(values[9]);
+        // Check the details of the particle created
+//        System.out.printf("%d %s %.1f %s %.5f %.5f %d %d %.4f\n",
+//                this.getID(),
+//                this.getStartDate().getDateStr(),
+//                this.getAge(),
+//                this.getStartID(),
+//                this.getLocation()[0],
+//                this.getLocation()[1],
+//                this.getElem(),
+//                this.getStatus(),
+//                this.getDensity()
+//        );
+    }
 
 //    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
 //    {
@@ -497,7 +529,9 @@ public class Particle {
     
     public void incrementDegreeDays(double temp, RunProperties rp)
     {
-        this.degreeDays += temp*(rp.dt/rp.stepsPerStep)/86400;
+        double inc = temp*(rp.dt/rp.stepsPerStep)/86400;
+        //System.out.println("DD increment: T="+temp+" dt="+rp.dt+" stepsPerStep="+rp.stepsPerStep+" dt/st="+(rp.dt/rp.stepsPerStep)+" inc="+inc);
+        this.degreeDays += inc;
     }
     
     public double getAge()

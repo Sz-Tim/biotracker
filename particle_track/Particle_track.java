@@ -134,7 +134,7 @@ public class Particle_track {
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes);
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes, rp);
         for (HabitatSite site : habitat)
         {
             System.out.println(site.toString());
@@ -142,7 +142,7 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes, rp);
         
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -379,12 +379,12 @@ public class Particle_track {
                     {
                         if (part.getStatus()==666 || part.getStatus()==66)
                         {
-                            //System.out.printf("Removing particle %d, status %d\n",part.getID(),part.getStatus());
+                            System.out.printf("Removing particle %d, age %f degreeDays %f status %d\n",part.getID(),part.getAge(),part.getDegreeDays(),part.getStatus());
                             particlesToRemove.add(part);
                         }
                     }
                     particles.removeAll(particlesToRemove);
-                    
+                                      
                     System.out.println("Number of particles = "+particles.size());
 
                     printCount++;                    
@@ -393,7 +393,22 @@ public class Particle_track {
                 System.out.printf("\n");
                 
                 currentIsoDate.addDay();
+                
+                // Check some particle info
+//                for (Particle part : particles)
+//                {
+//                    System.out.println(part.getID()+" --- Age = "+part.getAge()+" DegreeDays = "+part.getDegreeDays()+" status = "+part.getStatus());
+//                }
             }
+            
+            // Write out the final locations of the particles.
+            // Note that the last hour of the last day has by now been iteracted over, and the day has been advanced
+            // to the day after the simulation finished.
+            // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
+            // start a new run on the next day.
+            IOUtils.printFileHeader(locationHeader,"locationsEnd_"+currentIsoDate.getDateStr()+".dat");
+            IOUtils.particleLocsToFile_full(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true);
+            
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
            
