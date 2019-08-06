@@ -20,7 +20,7 @@ public class RunProperties {
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            location, sitefile, habitat, suffix, // Descriptive strings
+            location, sitefile, sitefileEnd, habitat, suffix, // Descriptive strings
             coordRef; // Coordinate reference system
             
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
@@ -45,7 +45,8 @@ public class RunProperties {
             thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
             endlimit, // Maximum ID of startlocs to use as a destination (0 = use all)
-            parallelThreads; // Number of threads to use in parallel execution
+            parallelThreads,
+            minchVersion; // Number of threads to use in parallel execution
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Timestep (s) per record
@@ -89,6 +90,8 @@ public class RunProperties {
         datadir2Prefix = properties.getProperty("datadirPrefix","");
         datadir2Suffix = properties.getProperty("datadirSuffix","_OLD");
         
+        minchVersion = Integer.parseInt(properties.getProperty("minchVersion","2"));
+        
         mesh1 = properties.getProperty("mesh1","/home/sa01ta/particle_track/WestCOMS_mesh.nc");
         mesh2 = properties.getProperty("mesh2","");
         mesh1Type = properties.getProperty("mesh1Type","");
@@ -97,7 +100,9 @@ public class RunProperties {
         restartParticles = properties.getProperty("restartParticles",""); 
     
         sitefile = properties.getProperty("sitefile","startlocations.dat");
-        location = properties.getProperty("location","minch_continuous");
+        sitefileEnd = properties.getProperty("sitefileEnd",sitefile);
+        
+        location = properties.getProperty("location","minch");
         habitat = properties.getProperty("habitat","");
         suffix = properties.getProperty("suffix",""); 
         

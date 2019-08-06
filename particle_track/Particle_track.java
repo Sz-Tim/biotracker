@@ -142,7 +142,7 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes, rp);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, true, meshes, rp);
         
         int nparts_per_site = rp.nparts;
         int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -216,8 +216,6 @@ public class Particle_track {
 
         String locationHeader = "hour ID startDate age startLocation x y elem status density";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
-        
-        IOUtils.printFileHeader(arrivalHeader,"arrivals.dat");
         
         try {
             // --------------------------------------------------------------------------------------
@@ -510,14 +508,14 @@ public class Particle_track {
                 // Dima file naming format: minch2_20171229_0003.nc
                 List<File> files1 = (List<File>) FileUtils.listFiles(
                         new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                        new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                        new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                         null);    
 
                 ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
 
                 List<File> files2 = (List<File>) FileUtils.listFiles(
                         new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                        new WildcardFileFilter("minch2_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                        new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
                         null);    
                 String[] varNames1 = {"u","v","salinity","temp","zeta"};
                 // Read both files and combine
@@ -538,7 +536,7 @@ public class Particle_track {
                         // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
                         List<File> f = (List<File>) FileUtils.listFiles(
                             new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                             null); 
                         String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
                         int[] origin = new int[]{tt,0,0};
@@ -576,14 +574,14 @@ public class Particle_track {
                         // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
                         List<File> f1 = (List<File>) FileUtils.listFiles(
                             new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter("minch2_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
                             null);
 
                         ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
 
                         List<File> f2 = (List<File>) FileUtils.listFiles(
                             new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter("minch2_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
                             null);
 
                         String[] varNames = new String[]{"u","v","salinity","temp","zeta"};

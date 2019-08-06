@@ -113,8 +113,8 @@ public class Mesh {
                 uvnodeT[i][1] = uvnode[1][i];
             }
             convexHull = ConvexHull.convexHull(uvnodeT);
-            IOUtils.writeFloatArrayToFile(uvnodeT, "uvnode_FVCOM.dat", false);
-            IOUtils.writeFloatArrayToFile(convexHull, "convexHull_FVCOM.dat", false);
+            //IOUtils.writeFloatArrayToFile(uvnodeT, "uvnode_FVCOM.dat", false);
+            //IOUtils.writeFloatArrayToFile(convexHull, "convexHull_FVCOM.dat", false);
             // This isn't working at the moment
             // At the very least, it's incredibly slow.
 //            ConcaveHull ch2 = new ConcaveHull();

@@ -130,12 +130,20 @@ public class IOUtils {
                 //int numEntries = countWords(line);
                 System.out.println("Creating habitat site "+count);
                 String[] values = line.split("\t");
-                HabitatSite site = new HabitatSite(values[0],
-                        (float)Double.parseDouble(values[1]),
-                        (float)Double.parseDouble(values[2]),
-                        (float)Double.parseDouble(values[3]),
-                        (float)Double.parseDouble(values[scaleCol]),
-                        meshes,rp);
+                String ID = values[0];
+                float x = (float)Double.parseDouble(values[1]);
+                float y = (float)Double.parseDouble(values[2]);
+                float depth = 0;
+                if (values.length > 3)
+                {
+                    depth = (float)Double.parseDouble(values[3]);
+                }
+                float scale = 0;
+                if (values.length > 4 && scaleCol < values.length)
+                {
+                    scale = (float)Double.parseDouble(values[scaleCol]);
+                }
+                HabitatSite site = new HabitatSite(ID,x,y,depth,scale,meshes,rp);
                 if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
                 {
                     habitat.add(site);

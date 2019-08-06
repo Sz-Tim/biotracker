@@ -281,14 +281,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             
             // set particle to become able to settle after a predefined time
-            if (((part.getAge()>rp.viabletime) ||
-                    (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0)) && part.getViable()==false)
+            if (part.getViable()==false)
             {
-                System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
-                part.setViable(true);
-                part.setStatus(2);
-                // This is updated by many threads - calculation now done outside of move
-                //freeViableSettleExit[1]++;
+                if ((part.getAge()>rp.viabletime) ||
+                    (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0)) 
+                
+                {
+                    //System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
+                    part.setViable(true);
+                    part.setStatus(2);
+                    // This is updated by many threads - calculation now done outside of move
+                    //freeViableSettleExit[1]++;
+                }
             }
 
             // Stop particles in their tracks if they exceed a maximum age

@@ -222,49 +222,90 @@ public class HydroField {
                 t = new float[t1.length+1][t1[0].length][t1[0][0].length];
             }
             el = new float[el1.length+1][el1[0].length];
-            
+
+
             double sumU = 0;
-            for (int tt = 0; tt < u1.length; tt++) {
-                for (int dep = 0; dep < u1[0].length; dep++) {
-                    for (int elem = 0; elem < u1[0][0].length; elem++) {
-                        u[tt][dep][elem] = u1[tt][dep][elem];
-                        v[tt][dep][elem] = v1[tt][dep][elem];
-                        sumU += u[tt][dep][elem];
-                    }
-                    for (int node = 0; node < el1[0].length; node++) {
-                        if (s1 != null)
-                        {
-                            s[tt][dep][node] = s1[tt][dep][node];
+            
+            // Use this to test zero velocity/diffusion cases
+            boolean createTest = false;
+            float testU = 0;
+            float testV = (float)0.1;
+            if (createTest == true)
+            {
+                for (int tt = 0; tt < u.length; tt++) {
+                    for (int dep = 0; dep < u[0].length; dep++) {
+                        for (int elem = 0; elem < u[0][0].length; elem++) {
+                            u[tt][dep][elem] = testU;
+                            v[tt][dep][elem] = testV;
+                            sumU+=u[tt][dep][elem];
                         }
-                        if (t1 != null)
-                        {
-                            t[tt][dep][node] = t1[tt][dep][node];
-                        }
-                        if (dep == 0)
-                        {
-                            el[tt][node] = el1[tt][node];
+                        for (int node = 0; node < el1[0].length; node++) {
+                            if (s2 != null)
+                            {
+                                s[u.length-1][dep][node] = 0;
+                            }
+                            if (t2 != null)
+                            {
+                                t[u.length-1][dep][node] = 0;
+                            }
+                            if (dep == 0)
+                            {
+                                el[u.length-1][node] = 0;
+                            }
                         }
                     }
                 }
             }
-            for (int dep = 0; dep < u1[0].length; dep++) {
-                for (int elem = 0; elem < u1[0][0].length; elem++) {
-                    u[u.length-1][dep][elem] = u2[0][dep][elem];
-                    v[u.length-1][dep][elem] = v2[0][dep][elem];
-                    sumU+=u[u.length-1][dep][elem];
+            else
+            {
+                
+                float sumUDep[] = new float[u1[0].length];
+                for (int tt = 0; tt < u1.length; tt++) {
+                    for (int dep = 0; dep < u1[0].length; dep++) {
+                        for (int elem = 0; elem < u1[0][0].length; elem++) {
+                            u[tt][dep][elem] = u1[tt][dep][elem];
+                            v[tt][dep][elem] = v1[tt][dep][elem];
+                            sumU += u[tt][dep][elem];
+                            sumUDep[dep]+=u[tt][dep][elem];
+                        }
+                        for (int node = 0; node < el1[0].length; node++) {
+                            if (s1 != null)
+                            {
+                                s[tt][dep][node] = s1[tt][dep][node];
+                            }
+                            if (t1 != null)
+                            {
+                                t[tt][dep][node] = t1[tt][dep][node];
+                            }
+                            if (dep == 0)
+                            {
+                                el[tt][node] = el1[tt][node];
+                            }
+                        }
+                    }
                 }
-                for (int node = 0; node < el1[0].length; node++) {
-                    if (s2 != null)
-                    {
-                        s[u.length-1][dep][node] = s2[0][dep][node];
+//                for (int dep = 0; dep < u1[0].length; dep++) {
+//                    System.out.println("sumUDep["+dep+"] = "+sumUDep[dep]);
+//                }
+                for (int dep = 0; dep < u1[0].length; dep++) {
+                    for (int elem = 0; elem < u1[0][0].length; elem++) {
+                        u[u.length-1][dep][elem] = u2[0][dep][elem];
+                        v[u.length-1][dep][elem] = v2[0][dep][elem];
+                        sumU+=u[u.length-1][dep][elem];
                     }
-                    if (t2 != null)
-                    {
-                        t[u.length-1][dep][node] = t2[0][dep][node];
-                    }
-                    if (dep == 0)
-                    {
-                        el[u.length-1][node] = el2[0][node];
+                    for (int node = 0; node < el1[0].length; node++) {
+                        if (s2 != null)
+                        {
+                            s[u.length-1][dep][node] = s2[0][dep][node];
+                        }
+                        if (t2 != null)
+                        {
+                            t[u.length-1][dep][node] = t2[0][dep][node];
+                        }
+                        if (dep == 0)
+                        {
+                            el[u.length-1][node] = el2[0][node];
+                        }
                     }
                 }
             }
