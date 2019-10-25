@@ -87,6 +87,7 @@ public class Particle_track {
         System.out.printf("Viable time (d)    = %f\n", rp.viabletime / 24.0);
         System.out.printf("Threshold distance = %d\n", rp.thresh);
         System.out.printf("Diffusion D_h      = %f (diffusion: %s)\n", rp.D_h, rp.diffusion);
+        System.out.printf("Coord ref          = %s\n", rp.coordRef);
         System.out.printf("-----------------------------------------------------------\n");
 
         // --------------------------------------------------------------------------------------
@@ -277,8 +278,8 @@ public class Particle_track {
                         // Get new hydro fields
                         hydroFields.clear();
                         hydroFields = readHydroFields(meshes,currentIsoDate,tt,rp);
-                    }                
-                   
+                    }
+                                       
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
                     if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true)
@@ -519,7 +520,7 @@ public class Particle_track {
                         null);    
                 String[] varNames1 = {"u","v","salinity","temp","zeta"};
                 // Read both files and combine
-                hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM"));
+                hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
             }
         }
         // Reading two hours at a time from all the different models
@@ -542,7 +543,7 @@ public class Particle_track {
                         int[] origin = new int[]{tt,0,0};
                         int[] shape = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length}; // U/V are stored on element centroids in FVCOM
                         int[] shapeST = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length}; // S/T are stored on element corners in FVCOM
-                        hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM"));
+                        hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
                     }
                     else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
                     {
@@ -558,9 +559,8 @@ public class Particle_track {
                         int[] origin = new int[]{0,r[0][0],r[1][0]};
                         int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
                         int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid (lon_psi, lat_psi)
-                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS"));
+                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
                     }
-
                 }
             } 
             // The case that it IS the last hour of the day
@@ -588,7 +588,7 @@ public class Particle_track {
                         int[] origin = new int[]{tt,0,0};
                         int[] shape = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length};
                         int[] shapeST = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length};
-                        hydroFields.add(new HydroField(f1.get(0).getCanonicalPath(),f2.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM"));
+                        hydroFields.add(new HydroField(f1.get(0).getCanonicalPath(),f2.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
                     }
                     else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
                     {
@@ -607,7 +607,7 @@ public class Particle_track {
                         int[] origin = new int[]{0,r[0][0],r[1][0]};
                         int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
                         int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid
-                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS"));
+                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
                     }
 
                 }

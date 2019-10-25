@@ -33,7 +33,8 @@ public class RunProperties {
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setDepth, // set particle depth at initiation?
             splitPsteps, // separate pSteps by source site? No longer produced (done in Matlab post processing) - POSSIBLY DEPRECATE
-            pstepsIncMort; // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true) - POSSIBLY DEPRECATE
+            pstepsIncMort, // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true) - POSSIBLY DEPRECATE
+            readHydroVelocityOnly;
     
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
@@ -45,8 +46,8 @@ public class RunProperties {
             thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
             endlimit, // Maximum ID of startlocs to use as a destination (0 = use all)
-            parallelThreads,
-            minchVersion; // Number of threads to use in parallel execution
+            parallelThreads, // Number of threads to use in parallel execution
+            minchVersion; 
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Timestep (s) per record
@@ -149,6 +150,7 @@ public class RunProperties {
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps","false"));
         
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort","true"));
+        readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly","false"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel","true"));
         parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads","4"));
@@ -176,17 +178,30 @@ public class RunProperties {
         dumpInterval = Integer.parseInt(properties.getProperty("dumpInterval","24"));
 
         thresh = Integer.parseInt(properties.getProperty("thresh","500"));
-        viabletime = Double.parseDouble(properties.getProperty("viabletime","86"));
         behaviour = Integer.parseInt(properties.getProperty("behaviour","1"));
         
         D_h = Double.parseDouble(properties.getProperty("D_h","0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert","0.005"));
         diffusionMultiplier = Double.parseDouble(properties.getProperty("diffusionMultiplier","1"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate","0.01"));
+        
+        
+        viabletime = Double.parseDouble(properties.getProperty("viabletime","86"));
         maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","-1"));
         
         viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays","-1"));
         maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays","-1"));
+        if (viableDegreeDays != -1)
+        {
+            viabletime = viableDegreeDays*20;
+            System.out.println("viableDegreeDays entered; set viabletime="+viabletime+" so won't be used at 56N!");
+        }
+        if (maxDegreeDays != -1)
+        {
+            maxParticleAge = maxDegreeDays*20;
+            System.out.println("maxDegreeDays entered; set maxParticleAge="+maxParticleAge+" so won't be used at 56N!");
+        }
+        
         
         sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean","0"));
         sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd","0"));

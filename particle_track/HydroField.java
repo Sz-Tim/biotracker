@@ -37,7 +37,7 @@ public class HydroField {
      * @param shapeST   an additional array shape vector for T/S arrays
      * @param type      type of hydro field (FVCOM/ROMS)
      */
-    public HydroField(String filename, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type)
+    public HydroField(String filename, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, boolean readHydroVelocityOnly)
     {
         System.out.println("Reading hydro file: "+filename);
 
@@ -70,22 +70,28 @@ public class HydroField {
         {
             u = IOUtils.readNetcdfFloat3D(filename,varNames[0],origin,shape);
             v = IOUtils.readNetcdfFloat3D(filename,varNames[1],origin,shape);
-            s = IOUtils.readNetcdfFloat3D(filename,varNames[2],origin,shapeST);
-            t = IOUtils.readNetcdfFloat3D(filename,varNames[3],origin,shapeST);
-            el = IOUtils.readNetcdfFloat2D(filename,varNames[4],origin2,shapeST2);
+            if (readHydroVelocityOnly == false)
+            {
+                s = IOUtils.readNetcdfFloat3D(filename,varNames[2],origin,shapeST);
+                t = IOUtils.readNetcdfFloat3D(filename,varNames[3],origin,shapeST);
+                el = IOUtils.readNetcdfFloat2D(filename,varNames[4],origin2,shapeST2);
+            }
         }
         else if (type.equalsIgnoreCase("ROMS"))
         {
             u = IOUtils.readNetcdfFloat3D(filename,varNames[0],origin,shape);
             v = IOUtils.readNetcdfFloat3D(filename,varNames[1],origin,shape);
-            float[][][] elTmp = IOUtils.readNetcdfFloat3D(filename,varNames[4],origin,shape);
-            System.out.println("elTmp ("+elTmp.length+","+elTmp[0].length+","+elTmp[0][0].length+")");
-            el = new float[elTmp[0].length][elTmp[0][0].length];
-            for (int xInd = 0; xInd < elTmp[0].length; xInd++)
+            if (readHydroVelocityOnly == false)
             {
-                for (int yInd = 0; yInd < elTmp[0][0].length; yInd++)
+                float[][][] elTmp = IOUtils.readNetcdfFloat3D(filename,varNames[4],origin,shape);
+                System.out.println("elTmp ("+elTmp.length+","+elTmp[0].length+","+elTmp[0][0].length+")");
+                el = new float[elTmp[0].length][elTmp[0][0].length];
+                for (int xInd = 0; xInd < elTmp[0].length; xInd++)
                 {
-                    el[xInd][yInd] = elTmp[0][xInd][yInd];
+                    for (int yInd = 0; yInd < elTmp[0][0].length; yInd++)
+                    {
+                        el[xInd][yInd] = elTmp[0][xInd][yInd];
+                    }
                 }
             }
             
@@ -116,7 +122,7 @@ public class HydroField {
      * @param origin
      * @param shape
      */
-    public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape, int shapeST[], String type)
+    public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape, int shapeST[], String type, boolean readHydroVelocityOnly)
     {
             if (varNames.length != 5)
             {
@@ -157,10 +163,13 @@ public class HydroField {
                 System.out.println("Reading hydro file: "+filename1);
                 u1 = IOUtils.readNetcdfFloat3D(filename1,varNames[0],origin,shape);
                 v1 = IOUtils.readNetcdfFloat3D(filename1,varNames[1],origin,shape);
-                s1 = IOUtils.readNetcdfFloat3D(filename1,varNames[2],origin,shapeST);
-                t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shapeST);
-                el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension (middle one) here
-
+                if (readHydroVelocityOnly == false)
+                {
+                    s1 = IOUtils.readNetcdfFloat3D(filename1,varNames[2],origin,shapeST);
+                    t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shapeST);
+                    el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension (middle one) here
+                }
+                
                 // When reading two files, we ALWAYS want to start from t=0 for the second one
                 if (origin != null)
                 {
@@ -170,9 +179,12 @@ public class HydroField {
                 System.out.println("Reading hydro file: "+filename2);
                 u2 = IOUtils.readNetcdfFloat3D(filename2,varNames[0],origin,shape);
                 v2 = IOUtils.readNetcdfFloat3D(filename2,varNames[1],origin,shape);
-                s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2],origin,shapeST);
-                t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3],origin,shapeST);
-                el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension here (depth)
+                if (readHydroVelocityOnly == false)
+                {
+                    s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2],origin,shapeST);
+                    t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3],origin,shapeST);
+                    el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension here (depth)
+                }
             }
             else if (type.equalsIgnoreCase("ROMS"))
             {
@@ -213,16 +225,18 @@ public class HydroField {
             u = new float[u1.length+1][u1[0].length][u1[0][0].length];
             v = new float[u1.length+1][u1[0].length][u1[0][0].length];
             // Next three quantities are recorded at nodes in FVCOM
-            if (s1 != null)
+            if (readHydroVelocityOnly == false)
             {
-                s = new float[s1.length+1][s1[0].length][s1[0][1].length];
+                if (s1 != null)
+                {
+                    s = new float[s1.length+1][s1[0].length][s1[0][1].length];
+                }
+                if (t1 != null)
+                {
+                    t = new float[t1.length+1][t1[0].length][t1[0][0].length];
+                }
+                el = new float[el1.length+1][el1[0].length];
             }
-            if (t1 != null)
-            {
-                t = new float[t1.length+1][t1[0].length][t1[0][0].length];
-            }
-            el = new float[el1.length+1][el1[0].length];
-
 
             double sumU = 0;
             
@@ -239,18 +253,22 @@ public class HydroField {
                             v[tt][dep][elem] = testV;
                             sumU+=u[tt][dep][elem];
                         }
-                        for (int node = 0; node < el1[0].length; node++) {
-                            if (s2 != null)
-                            {
-                                s[u.length-1][dep][node] = 0;
-                            }
-                            if (t2 != null)
-                            {
-                                t[u.length-1][dep][node] = 0;
-                            }
-                            if (dep == 0)
-                            {
-                                el[u.length-1][node] = 0;
+                        if (readHydroVelocityOnly == false)
+                        {
+                            for (int node = 0; node < el1[0].length; node++) {
+                            
+                                if (s2 != null)
+                                {
+                                    s[u.length-1][dep][node] = 0;
+                                }
+                                if (t2 != null)
+                                {
+                                    t[u.length-1][dep][node] = 0;
+                                }
+                                if (dep == 0)
+                                {
+                                    el[u.length-1][node] = 0;
+                                }
                             }
                         }
                     }
@@ -268,18 +286,21 @@ public class HydroField {
                             sumU += u[tt][dep][elem];
                             sumUDep[dep]+=u[tt][dep][elem];
                         }
-                        for (int node = 0; node < el1[0].length; node++) {
-                            if (s1 != null)
-                            {
-                                s[tt][dep][node] = s1[tt][dep][node];
-                            }
-                            if (t1 != null)
-                            {
-                                t[tt][dep][node] = t1[tt][dep][node];
-                            }
-                            if (dep == 0)
-                            {
-                                el[tt][node] = el1[tt][node];
+                        if (readHydroVelocityOnly == false)
+                        {
+                            for (int node = 0; node < el1[0].length; node++) {
+                                if (s1 != null)
+                                {
+                                    s[tt][dep][node] = s1[tt][dep][node];
+                                }
+                                if (t1 != null)
+                                {
+                                    t[tt][dep][node] = t1[tt][dep][node];
+                                }
+                                if (dep == 0)
+                                {
+                                    el[tt][node] = el1[tt][node];
+                                }
                             }
                         }
                     }
@@ -293,18 +314,21 @@ public class HydroField {
                         v[u.length-1][dep][elem] = v2[0][dep][elem];
                         sumU+=u[u.length-1][dep][elem];
                     }
-                    for (int node = 0; node < el1[0].length; node++) {
-                        if (s2 != null)
-                        {
-                            s[u.length-1][dep][node] = s2[0][dep][node];
-                        }
-                        if (t2 != null)
-                        {
-                            t[u.length-1][dep][node] = t2[0][dep][node];
-                        }
-                        if (dep == 0)
-                        {
-                            el[u.length-1][node] = el2[0][node];
+                    if (readHydroVelocityOnly == false)
+                    {
+                        for (int node = 0; node < el1[0].length; node++) {
+                            if (s2 != null)
+                            {
+                                s[u.length-1][dep][node] = s2[0][dep][node];
+                            }
+                            if (t2 != null)
+                            {
+                                t[u.length-1][dep][node] = t2[0][dep][node];
+                            }
+                            if (dep == 0)
+                            {
+                                el[u.length-1][node] = el2[0][node];
+                            }
                         }
                     }
                 }

@@ -70,14 +70,17 @@ public class Mesh {
         {
             if (coordRef.equalsIgnoreCase("WGS84"))
             {
+                //System.out.println("WGS84 in mesh "+meshFilename);
                 uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode",null,null);
                 nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy",null,null);
             }
             else
             {
+                //System.out.println("OSGB1936 in mesh "+meshFilename);
                 uvnode = IOUtils.readNetcdfFloat2D(meshFilename,"uvnode_os",null,null);
                 nodexy = IOUtils.readNetcdfFloat2D(meshFilename,"nodexy_os",null,null);
             }
+            
             depthUvnode = IOUtils.readNetcdfFloat1D(meshFilename,"depthUvnode");
             depthNodexy = IOUtils.readNetcdfFloat1D(meshFilename,"depthNodexy");
             trinodes = IOUtils.readNetcdfInteger2D(meshFilename,"trinodes");

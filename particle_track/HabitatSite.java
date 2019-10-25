@@ -82,7 +82,7 @@ public class HabitatSite {
                 if (this.insideMesh == false)
                 {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
-                    System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Mearest centroid: "+this.nearestFVCOMCentroid
+                    System.out.println("Habitat site ("+xy[0]+","+xy[1]+") outside mesh. Nearest centroid: "+this.nearestFVCOMCentroid
                                         +" ("+meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid]+","+meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]+")"
                                         +" distance = "+d1);
                     if (d1 < 5000)
