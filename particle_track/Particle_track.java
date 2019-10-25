@@ -264,14 +264,14 @@ public class Particle_track {
                     // set it equal to current value of tt
                     int tIndex = 0;
                     boolean readNewFields = true;
-                    if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
-                    {
-                        tIndex = tt;
+//                    if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
+//                    {
+//                        tIndex = tt;
                         if (tt != 0)
                         {
                             readNewFields = false;
                         }
-                    }
+//                    }
                     
                     if (readNewFields == true)
                     {
@@ -496,123 +496,137 @@ public class Particle_track {
     {
         List<HydroField> hydroFields = new ArrayList<>();
         
-        // FVCOM only case - read once a day
-        if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
+        // 24 hr files only case - read once a day
+        for (int i = 0; i < meshes.size(); i++)
         {
-            //tIndex = tt;
-
-            if (tt%rp.recordsPerFile1 == 0)
+            if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
             {
-                hydroFields.clear();
+                //tIndex = tt;
 
-                System.out.println("Reading file "+tt);
-                // Dima file naming format: minch2_20171229_0003.nc
-                List<File> files1 = (List<File>) FileUtils.listFiles(
-                        new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                        new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                        null);    
-
-                ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-
-                List<File> files2 = (List<File>) FileUtils.listFiles(
-                        new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                        new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                        null);    
-                String[] varNames1 = {"u","v","salinity","temp","zeta"};
-                // Read both files and combine
-                hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
-            }
-        }
-        // Reading two hours at a time from all the different models
-        else
-        { 
-            // i) The case where it is NOT the last hour of the day
-            if ((tt-23)%24 != 0)
-            {
-                hydroFields.clear();
-                for (int i = 0; i < meshes.size(); i++)
+                if (tt%rp.recordsPerFile1 == 0)
                 {
-                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-                    {
-                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
-                        List<File> f = (List<File>) FileUtils.listFiles(
+                    hydroFields.clear();
+
+                    System.out.println("Reading file "+tt);
+                    // Dima file naming format: minch2_20171229_0003.nc
+                    List<File> files1 = (List<File>) FileUtils.listFiles(
                             new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                             new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                            null); 
-                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
-                        int[] origin = new int[]{tt,0,0};
-                        int[] shape = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length}; // U/V are stored on element centroids in FVCOM
-                        int[] shapeST = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length}; // S/T are stored on element corners in FVCOM
-                        hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
-                    }
-                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
-                    {
-                        // ROMS files DO have a guaranteed name format, so just use a string for the name
-                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt)+".nc";
-                        String filename2 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt+1)+".nc";
+                            null);    
 
-                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
+                    ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
 
-                        int[][] r = meshes.get(i).getRange();
-                        int[] origin = new int[]{0,r[0][0],r[1][0]};
-                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
-                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid (lon_psi, lat_psi)
-                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
-                    }
-                }
-            } 
-            // The case that it IS the last hour of the day
-            else
-            {
-                hydroFields.clear();
-                for (int i = 0; i < meshes.size(); i++)
-                {
-                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-                    {
-                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
-                        List<File> f1 = (List<File>) FileUtils.listFiles(
-                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                            null);
-
-                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-
-                        List<File> f2 = (List<File>) FileUtils.listFiles(
+                    List<File> files2 = (List<File>) FileUtils.listFiles(
                             new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                             new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                            null);
-
-                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
-                        int[] origin = new int[]{tt,0,0};
-                        int[] shape = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length};
-                        int[] shapeST = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length};
-                        hydroFields.add(new HydroField(f1.get(0).getCanonicalPath(),f2.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
-                    }
-                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
-                    {
-                        // ROMS files DO have a guaranteed name format, so just use a string for the name
-                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"23.nc";
-
-                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-
-                        String filename2 = rp.datadir2+rp.datadir2Prefix+tomorrow.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-                            +"NEATL_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"00.nc";
-
-                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
-
-                        int[][] r = meshes.get(i).getRange();
-                        int[] origin = new int[]{0,r[0][0],r[1][0]};
-                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
-                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid
-                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
-                    }
-
+                            null);    
+                    String[] varNames1 = {"u","v","salinity","temp","zeta"};
+                    // Read both files and combine
+                    hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
                 }
             }
+            else if (meshes.get(i).getType().equalsIgnoreCase("ROMS_TRI"))
+            {
+                String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+                +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+".nc";
+                String filename2 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+                +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+".nc";
+                String[] varNames1 = {"u","v","","",""};
+                // Read both files and combine
+                hydroFields.add(new HydroField(filename1,filename2,varNames1,null,null,null,"ROMS_TRI",rp.readHydroVelocityOnly));   
+            }
+            
         }
+//        // Reading two hours at a time from all the different models
+//        else
+//        { 
+//            // i) The case where it is NOT the last hour of the day
+//            if ((tt-23)%24 != 0)
+//            {
+//                hydroFields.clear();
+//                for (int i = 0; i < meshes.size(); i++)
+//                {
+//                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
+//                    {
+//                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
+//                        List<File> f = (List<File>) FileUtils.listFiles(
+//                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+//                            null); 
+//                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
+//                        int[] origin = new int[]{tt,0,0};
+//                        int[] shape = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length}; // U/V are stored on element centroids in FVCOM
+//                        int[] shapeST = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length}; // S/T are stored on element corners in FVCOM
+//                        hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
+//                    }
+//                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
+//                    {
+//                        // ROMS files DO have a guaranteed name format, so just use a string for the name
+//                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt)+".nc";
+//                        String filename2 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",tt+1)+".nc";
+//
+//                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
+//
+//                        int[][] r = meshes.get(i).getRange();
+//                        int[] origin = new int[]{0,r[0][0],r[1][0]};
+//                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
+//                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid (lon_psi, lat_psi)
+//                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
+//                    }
+//                }
+//            } 
+//            // The case that it IS the last hour of the day
+//            else
+//            {
+//                hydroFields.clear();
+//                for (int i = 0; i < meshes.size(); i++)
+//                {
+//                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
+//                    {
+//                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
+//                        List<File> f1 = (List<File>) FileUtils.listFiles(
+//                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+//                            null);
+//
+//                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+//
+//                        List<File> f2 = (List<File>) FileUtils.listFiles(
+//                            new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+//                            null);
+//
+//                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
+//                        int[] origin = new int[]{tt,0,0};
+//                        int[] shape = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length};
+//                        int[] shapeST = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length};
+//                        hydroFields.add(new HydroField(f1.get(0).getCanonicalPath(),f2.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
+//                    }
+//                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
+//                    {
+//                        // ROMS files DO have a guaranteed name format, so just use a string for the name
+//                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"23.nc";
+//
+//                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+//
+//                        String filename2 = rp.datadir2+rp.datadir2Prefix+tomorrow.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
+//                            +"NEATL_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"00.nc";
+//
+//                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
+//
+//                        int[][] r = meshes.get(i).getRange();
+//                        int[] origin = new int[]{0,r[0][0],r[1][0]};
+//                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
+//                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid
+//                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
+//                    }
+//
+//                }
+//            }
+//        }
 
         return hydroFields;
     }

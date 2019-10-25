@@ -1491,7 +1491,7 @@ public class Particle {
         double[] vel = new double[2];
         double[] velplus1 = new double[2];
         
-        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI"))
         {     
             this.nrList = neighbourCellsList(this.getLocation(), elemPart,  meshPart,
                 meshes, coordRef);
@@ -1620,7 +1620,7 @@ public class Particle {
         // Generate a "neighbour cells list" for this location
         //double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems,coordRef);
         
-        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI"))
         {     
             double[][] xNrList = neighbourCellsList(xy, elemPart,  meshPart,
                 meshes, coordRef);
@@ -1698,7 +1698,7 @@ public class Particle {
 //        this.nrList = neighbourCellsList(this.getLocation(), elemPart, 
 //            meshPart, meshes, allelems,coordRef);
         
-        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM"))
+        if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI"))
         {     
             double[][] xNrList = neighbourCellsList(thisLoc, elemPart,  meshPart,
                 meshes, coordRef);
@@ -1751,8 +1751,8 @@ public class Particle {
         advectStep[1] = dt*(vel[1] + ((double)(st)/(double)stepsPerStep)*(velplus1[1]-vel[1]));
         
         // Sense check calculated velocity and advection step (should be better when st close to 0)
-        System.out.printf("Euler calc (%d): advectStep=[%.3e,%.3e] vel0=[%.3e,%.3e] dt=%.3e vel0*dt=[%.3e,%.3e]\n",
-            st,advectStep[0],advectStep[1],vel[0],vel[1],dt,vel[0]*dt,vel[1]*dt);
+//        System.out.printf("Euler calc (%d): advectStep=[%.3e,%.3e] vel0=[%.3e,%.3e] dt=%.3e vel0*dt=[%.3e,%.3e]\n",
+//            st,advectStep[0],advectStep[1],vel[0],vel[1],dt,vel[0]*dt,vel[1]*dt);
         
         return advectStep;
     }   

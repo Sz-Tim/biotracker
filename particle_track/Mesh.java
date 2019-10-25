@@ -66,7 +66,7 @@ public class Mesh {
         System.out.println("Reading mesh file: "+meshFilename);
         
         meshType = type;
-        if (type.equalsIgnoreCase("triangular") || type.equalsIgnoreCase("FVCOM"))
+        if (type.equalsIgnoreCase("ROMS_TRI") || type.equalsIgnoreCase("FVCOM"))
         {
             if (coordRef.equalsIgnoreCase("WGS84"))
             {

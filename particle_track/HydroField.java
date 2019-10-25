@@ -158,7 +158,7 @@ public class HydroField {
             float[][][] u1 = null,v1 = null,s1 = null,t1 = null,u2 = null,v2 = null,s2 = null,t2 = null;
             float[][] el1 = null, el2 = null;
             
-            if (type.equalsIgnoreCase("FVCOM"))
+            if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI"))
             {
                 System.out.println("Reading hydro file: "+filename1);
                 u1 = IOUtils.readNetcdfFloat3D(filename1,varNames[0],origin,shape);

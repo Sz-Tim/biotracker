@@ -74,9 +74,9 @@ public class HabitatSite {
         } 
         else
         {
-            if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM"))
+            if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM") || meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS_TRI"))
             {
-                this.containingMeshType = "FVCOM";
+                this.containingMeshType = meshes.get(this.containingMesh).getType();
                 //System.out.println("habitat site in FVCOM mesh");
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
                 if (this.insideMesh == false)
@@ -97,7 +97,7 @@ public class HabitatSite {
                     }                
                 }
                 this.containingFVCOMElem = Particle.whichElement(xy2, 
-                            IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length-1).toArray(), 
+                            IntStream.rangeClosed(0, meshes.get(this.containingMesh).getUvnode()[0].length-1).toArray(), 
                             meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());
             } 
             else if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS"))
@@ -137,9 +137,10 @@ public class HabitatSite {
     public String toString()
     {
         String details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh;
-        if (this.containingMeshType.equalsIgnoreCase("FVCOM"))
+        if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI"))
         {
-            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" "+this.nearestFVCOMCentroid+" "+this.containingFVCOMElem;
+            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" "+this.nearestFVCOMCentroid+" "+this.containingFVCOMElem
+                    +" "+this.containingMesh+" "+this.containingMeshType;
         }
         else if (this.containingMeshType.equalsIgnoreCase("ROMS"))
         {
