@@ -90,6 +90,7 @@ public class Particle {
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
+        this.z = startDepth;
         
         this.coordRef = coordRef;
         
@@ -268,10 +269,11 @@ public class Particle {
     
     public String printLocation()
     {
-        if (this.mesh == 0)
-            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elem;
-        else
-            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elemRomsU[0]+" "+this.elemRomsU[1];
+//        if (this.mesh == 0)
+//            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elem;
+//        else
+//            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elemRomsU[0]+" "+this.elemRomsU[1];
+        return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elem;
     }
     
 //    public void setNrList(float[][] uvnode)
@@ -415,9 +417,10 @@ public class Particle {
             if (Math.abs(this.z - localDepth*layers[i]) < dZmin)
             {
                 depNearest = i;
+                dZmin = Math.abs(this.z - localDepth*layers[i]);
             }
         }
-        //System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
+//        System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
         this.setDepthLayer(depNearest);
     }
     
@@ -558,7 +561,7 @@ public class Particle {
         {
             depthNew = 0;
         }
-        if (depthNew < localDepth)
+        if (depthNew > localDepth)
         {
             depthNew = localDepth;
         }
@@ -595,7 +598,8 @@ public class Particle {
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
         
         // Get current mesh and element
-//        System.out.println("Particle.meshSelectOrExit");
+        boolean report = false;
+        if (report) {System.out.println("Particle.meshSelectOrExit");}
         int move = 0;
         int meshID = this.getMesh();
         double[] oldLoc = this.getLocation();
@@ -603,12 +607,12 @@ public class Particle {
         if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS"))
         {
             el = this.getROMSnearestPointU();
-//            System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);
+            if (report) {System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);}
         }
         else
         {
             el[0] = this.getElem();
-//            System.out.println("  in FVCOM mesh, el = "+el[0]);
+            if (report) {System.out.println("  in FVCOM mesh, el = "+el[0]);}
         }
         
         // Only move the particle at the end of this method, IFF it is allocated to move
@@ -618,57 +622,57 @@ public class Particle {
         Mesh m = meshes.get(meshID);
         if (m.isInMesh(newLoc,true,el))
         {
-//            System.out.println("  in same mesh as before");
+            if (report) {System.out.println("  in same mesh as before");}
             // i.i) in mesh > 0
             if (meshID > 0)
             {
-//                System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
+                if (report) {System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");}
                 m = meshes.get(0);
                 if (m.isInMesh(newLoc,true,null))
                 {
-//                    System.out.println("      in lower ID mesh");
+                    if (report) {System.out.println("      in lower ID mesh");}
                     // switch to mesh 0
                     this.setLocation(newLoc[0],newLoc[1]);
-                    this.placeInMesh(m,true);
+                    this.placeInMesh(meshes,0,true);
                     move = 1;
                 }
                 else
                 {
                     // stay in current mesh
-//                    System.out.println("      not in lower ID mesh, stay in same mesh");
+                    if (report) {System.out.println("      not in lower ID mesh, stay in same mesh");}
                     //System.out.println("In mesh "+meshID+", which is of type "+meshes.get(meshID).getType());
                     this.setLocation(newLoc[0],newLoc[1]);
-                    this.placeInMesh(meshes.get(meshID),false);
+                    this.placeInMesh(meshes,1,false);
                     move = 1;
                 }
             }
             // i.ii) in mesh 0
             else
             {
-//                System.out.println("    this is the lowest ID mesh, checking boundaries");
+                if (report) {System.out.println("    this is the lowest ID mesh, checking boundaries");}
                 // boundary check
                 int bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
                 if (bnode != -1)
                 {
-//                    System.out.println("      close to a mesh boundary node");
+                    if (report) {System.out.println("      close to a mesh boundary node");}
                     // Close to boundary
                     if (meshes.size() == 2)
                     {
                         m = meshes.get(1);
                         if (m.isInMesh(newLoc,false,null))
                         {
-//                            System.out.println("        in higher ID mesh, switch to that");
+                            if (report) {System.out.println("        in higher ID mesh, switch to that");}
                             // switch to other mesh
                             this.setLocation(newLoc[0],newLoc[1]);
-                            this.placeInMesh(meshes.get(1),true);
+                            this.placeInMesh(meshes,1,true);
                             move = 1;
                         }    
                     }
                     else
                     {
-//                        System.out.println("        not in higher ID mesh, boundary exit");
+                        if (report) {System.out.println("        not in higher ID mesh, boundary exit");}
                         // boundary exit
-//                        System.out.println("Boundary exit: bNode "+bnode);
+                        if (report) {System.out.println("Boundary exit: bNode "+bnode);}
                         this.setBoundaryExit(true);
                         this.setStatus(66);
                         move = 0;
@@ -676,9 +680,9 @@ public class Particle {
                 }
                 else
                 {
-//                    System.out.println("      in same mesh as was before: keep going as was");
+                    if (report) {System.out.println("      in same mesh as was before: keep going as was");}
                     this.setLocation(newLoc[0],newLoc[1]);
-                    this.placeInMesh(meshes.get(0),false);
+                    this.placeInMesh(meshes,0,false);
                     move = 1;
                     // stay in same mesh and keep going! 
                 }   
@@ -688,7 +692,7 @@ public class Particle {
         {   
             if (meshes.size() == 2)
             {
-//                System.out.println("  not in same mesh as before (first one in list), check other mesh");
+                if (report) {System.out.println("  not in same mesh as before (first one in list), check other mesh");}
                 // Not in original mesh, so check the other one
                 int otherMesh = 1;
                 if (meshID==1)
@@ -699,16 +703,16 @@ public class Particle {
                 m = meshes.get(otherMesh);
                 if (m.isInMesh(newLoc,false,null))
                 {
-//                    System.out.println("    is in other mesh, switch to that");
+                    if (report) {System.out.println("    is in other mesh, switch to that");}
                     // switch to other mesh
                     this.setLocation(newLoc[0],newLoc[1]);
-                    this.placeInMesh(m,true);
+                    this.placeInMesh(meshes,otherMesh,true);
                     move = 1;
                 }
                 else
                 {
                     // boundary exit
-//                    System.out.println("    not in other mesh, boundary exit");
+                    if (report) {System.out.println("    not in other mesh, boundary exit");}
                     this.setBoundaryExit(true);
                     this.setStatus(66);
                     move = 0;
@@ -716,7 +720,7 @@ public class Particle {
             }
             else
             {
-//                System.out.println("  not in single available mesh, stay at present location");
+                if (report) {System.out.println("  not in single available mesh, stay at present location");}
                 move = 0;
             }
         }
@@ -726,9 +730,12 @@ public class Particle {
 //            this.setLocation(newLoc[0],newLoc[1]);
 //        }
 
-//        System.out.println("Particle location at end of meshSelectOrExit: "+this.printLocation());
+        if (report) {System.out.println("Particle location at end of meshSelectOrExit: "+this.printLocation());}
         //this.placeInMesh(m,false);
-        
+//        if (this.getMesh() != meshID)
+//        {
+            if (report) {System.out.println("Particle "+this.getID()+" original mesh: "+meshID+", new mesh: "+this.getMesh());}
+//        }
     }
     
     
@@ -739,9 +746,12 @@ public class Particle {
      * @param m     The mesh that has been shown to contain a particle
      * @param switchedMesh   Logical, has the particle changed mesh?
      */
-    public void placeInMesh(Mesh m, boolean switchedMesh)
+    public void placeInMesh(List<Mesh> meshes, int id, boolean switchedMesh)
     {
         //System.out.println("In placeInMesh "+m.getType());
+        Mesh m = meshes.get(id);
+        this.setMesh(id);
+        
         if (m.getType().equalsIgnoreCase("FVCOM"))
         {
             //System.out.println("mesh verified as FVCOM");
@@ -1152,7 +1162,7 @@ public class Particle {
             //System.out.printf("tt %d i %d",tt,i);
 //            System.out.printf(" --- elem %d dist %.4f weight %.4e --- vel = %.4f %.4f\n",
 //                (int)nrList[i][0],nrList[i][1],weights[i],u[tt][depLayer][(int)nrList[i][0]],v[tt][depLayer][(int)nrList[i][0]]);
-            
+//            System.out.println("velocityFromNearestList: "+i+" "+tt+" "+depLayer+" "+(int)nrList[i][0]);
             usum=usum+weights[i]*u[tt][depLayer][(int)nrList[i][0]];
             vsum=vsum+weights[i]*v[tt][depLayer][(int)nrList[i][0]];
 //            usum=usum+weights[i]*u[tt][(int)nrList[i][0]*numLayers+depLayer];

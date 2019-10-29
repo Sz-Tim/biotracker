@@ -128,7 +128,7 @@ public class IOUtils {
             while ((line = in.readLine()) != null)	//file reading
             {
                 //int numEntries = countWords(line);
-                System.out.println("Creating habitat site "+count);
+                //System.out.println("Creating habitat site "+count);
                 String[] values = line.split("\t");
                 String ID = values[0];
                 float x = (float)Double.parseDouble(values[1]);
@@ -1011,7 +1011,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f\n",
+                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f %d\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -1021,7 +1021,8 @@ public class IOUtils {
                         p.getLocation()[1],
                         p.getElem(),
                         p.getStatus(),
-                        p.getDensity()
+                        p.getDensity(),
+                        p.getMesh()
                 );
             }
             

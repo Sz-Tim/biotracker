@@ -129,7 +129,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
-        //System.out.println("--- Moving particle "+part.getID()+" ---");
+        //System.out.println("--- Moving particle "+part.getID()+" --- "+part.printLocation());
         //System.out.println("Particle location at start of ParallelParticleMover.move: "+part.printLocation());
         
         
@@ -181,8 +181,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                }
 //            }
 
-            if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM"))
+            if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
             {
+               
                 part.setDepth(rp.D_hVert,rp.sinkingRateMean,rp.sinkingRateStd,subStepDt,m.getDepthUvnode()[elemPart]);
 
                 // set depth layer based on depth in metres

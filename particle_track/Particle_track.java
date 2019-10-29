@@ -215,7 +215,7 @@ public class Particle_track {
         //final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
-        String locationHeader = "hour ID startDate age startLocation x y elem status density";
+        String locationHeader = "hour ID startDate age startLocation x y elem status density mesh";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
         try {

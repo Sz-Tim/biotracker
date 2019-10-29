@@ -47,7 +47,7 @@ public class HabitatSite {
         this.containingMesh = 0;
         this.insideMesh = false;
         // Use this to force checking of FVCOM mesh (single mesh scenario)
-        boolean exitIfNotInMesh = false;
+        boolean exitIfNotInMesh = true;
         
         //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
@@ -70,7 +70,9 @@ public class HabitatSite {
         //System.out.println("Containing mesh = "+this.containingMesh);
         if (this.insideMesh == false && exitIfNotInMesh == true)
         {
-            System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
+            //System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
+            System.err.println("Habitat site "+ID+" not within any provided mesh --- "+x+" "+y+": Not creating site");
+            this.containingMeshType = "NONE";
         } 
         else
         {
