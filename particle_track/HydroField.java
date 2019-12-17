@@ -26,6 +26,7 @@ public class HydroField {
     private float[][][] s;
     private float[][][] t;
     private float[][] el;
+    private float[][][] diffVert;
     
     /**
      * Default constructor for a single day's data
@@ -66,7 +67,7 @@ public class HydroField {
         
         
         
-        if (type.equalsIgnoreCase("FVCOM"))
+        if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI"))
         {
             u = IOUtils.readNetcdfFloat3D(filename,varNames[0],origin,shape);
             v = IOUtils.readNetcdfFloat3D(filename,varNames[1],origin,shape);
@@ -75,6 +76,7 @@ public class HydroField {
                 s = IOUtils.readNetcdfFloat3D(filename,varNames[2],origin,shapeST);
                 t = IOUtils.readNetcdfFloat3D(filename,varNames[3],origin,shapeST);
                 el = IOUtils.readNetcdfFloat2D(filename,varNames[4],origin2,shapeST2);
+                //diffVert = IOUtils.readNetcdfFloat3D(filename,varNames[5],origin2,shapeST2);
             }
         }
         else if (type.equalsIgnoreCase("ROMS"))
@@ -155,7 +157,7 @@ public class HydroField {
             }
             
             System.out.println("Reading two hydro files and combining");
-            float[][][] u1 = null,v1 = null,s1 = null,t1 = null,u2 = null,v2 = null,s2 = null,t2 = null;
+            float[][][] u1 = null,v1 = null,s1 = null,t1 = null,u2 = null,v2 = null,s2 = null,t2 = null,diffVert1 = null,diffVert2 = null;
             float[][] el1 = null, el2 = null;
             
             if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI"))
@@ -168,6 +170,7 @@ public class HydroField {
                     s1 = IOUtils.readNetcdfFloat3D(filename1,varNames[2],origin,shapeST);
                     t1 = IOUtils.readNetcdfFloat3D(filename1,varNames[3],origin,shapeST);
                     el1 = IOUtils.readNetcdfFloat2D(filename1,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension (middle one) here
+                    //diffVert1 = IOUtils.readNetcdfFloat3D(filename1,varNames[5],origin2,shapeST2); 
                 }
                 
                 // When reading two files, we ALWAYS want to start from t=0 for the second one
@@ -184,6 +187,7 @@ public class HydroField {
                     s2 = IOUtils.readNetcdfFloat3D(filename2,varNames[2],origin,shapeST);
                     t2 = IOUtils.readNetcdfFloat3D(filename2,varNames[3],origin,shapeST);
                     el2 = IOUtils.readNetcdfFloat2D(filename2,varNames[4],origin2,shapeST2);  // origin and shape need to lose a dimension here (depth)
+                    //diffVert2 = IOUtils.readNetcdfFloat3D(filename2,varNames[5],origin2,shapeST2);
                 }
             }
             else if (type.equalsIgnoreCase("ROMS"))
@@ -235,6 +239,10 @@ public class HydroField {
                 {
                     t = new float[t1.length+1][t1[0].length][t1[0][0].length];
                 }
+                if (diffVert1 != null)
+                {
+                    diffVert = new float[diffVert1.length+1][diffVert1[0].length][diffVert1[0][0].length];
+                }
                 el = new float[el1.length+1][el1[0].length];
             }
 
@@ -264,6 +272,10 @@ public class HydroField {
                                 if (t2 != null)
                                 {
                                     t[u.length-1][dep][node] = 0;
+                                }
+                                if (diffVert2 != null)
+                                {
+                                    diffVert[u.length-1][dep][node] = 0;
                                 }
                                 if (dep == 0)
                                 {
@@ -297,6 +309,10 @@ public class HydroField {
                                 {
                                     t[tt][dep][node] = t1[tt][dep][node];
                                 }
+                                if (diffVert1 != null)
+                                {
+                                    diffVert[tt][dep][node] = t1[tt][dep][node];
+                                }
                                 if (dep == 0)
                                 {
                                     el[tt][node] = el1[tt][node];
@@ -324,6 +340,10 @@ public class HydroField {
                             if (t2 != null)
                             {
                                 t[u.length-1][dep][node] = t2[0][dep][node];
+                            }
+                            if (diffVert2 != null)
+                            {
+                                diffVert[u.length-1][dep][node] = t2[0][dep][node];
                             }
                             if (dep == 0)
                             {
@@ -369,6 +389,10 @@ public class HydroField {
     public float[][] getEl()
     {
         return el;
+    }
+    public float[][][] getDiffVert()
+    {
+        return diffVert;
     }
     
     /**

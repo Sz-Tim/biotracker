@@ -282,8 +282,8 @@ public class Particle_track {
                                        
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
-                    if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>rp.releaseTime && allowRelease==true)
-                            || (rp.releaseScenario==2 && time>rp.releaseTime && time<=rp.releaseTimeEnd))
+                    if (rp.releaseScenario==1 || (rp.releaseScenario==0 && time>=rp.releaseTime && allowRelease==true)
+                            || (rp.releaseScenario==2 && time>=rp.releaseTime && time<=rp.releaseTimeEnd))
                     {
                         System.out.printf("Release attempt: releaseScenario %d, releaseTime %f, allowRelease %s newParticlesCreatedBeforeNow %d \n",
                             rp.releaseScenario,time,allowRelease,numParticlesCreated);
@@ -451,7 +451,7 @@ public class Particle_track {
                 int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
 
                 Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
-                        rp.mortalityRate, currentDate, currentTime, rp.coordRef);
+                        rp.mortalityRate, currentDate, currentTime, rp.coordRef, rp.species);
                 p.setMesh(meshStart);
                 p.setElem(elemFVCOMStart);
                 p.setROMSElemU(elemROMSStartU);
@@ -459,9 +459,9 @@ public class Particle_track {
                 p.setROMSnearestPointU(nearestROMSGridPointU);
                 p.setROMSnearestPointV(nearestROMSGridPointV);
 
-                if (rp.setDepth == true) {
-                    p.setZ(habitat.get(startid).getDepth());
-                }
+//                if (rp.setStartDepth == true) {
+//                    p.setZ(rp.startDepth);
+//                }
                 newParts.add(p);
                 //System.out.println(p.toString());
 //            }

@@ -129,7 +129,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int[] searchCounts,
             double[] minMaxDistTrav)
     {
-        //System.out.println("--- Moving particle "+part.getID()+" --- "+part.printLocation());
+        //System.out.println("--- "+tt+" "+st+" "+" --- Moving particle "+part.getID()+" --- "+part.printLocation());
         //System.out.println("Particle location at start of ParallelParticleMover.move: "+part.printLocation());
         
         
@@ -180,14 +180,43 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                    particles[i].setDepthLayer(behaviour,"ebb");
 //                }
 //            }
-
-            if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
+    
+            if (rp.fixDepth == true)
             {
-               
-                part.setDepth(rp.D_hVert,rp.sinkingRateMean,rp.sinkingRateStd,subStepDt,m.getDepthUvnode()[elemPart]);
-
+                
+                //System.out.println("Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+m.getDepthUvnode()[elemPart]);
+                part.setZ(rp.startDepth,m.getDepthUvnode()[elemPart]);
+                part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
+                //System.out.println("Fixed depth run: Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
+            }
+            else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
+            {
+                double D_hVertDz = 0;
+                // Calculate the gradient in vertical diffusion, if required
+                if (rp.variableDiff==true)
+                {
+                    // Get the vertical diffusivity profile for the particle location
+                    double dep = part.getZ();
+                    double[] diffusionProfile = new double[3];
+                    int l1 = part.getDepthLayer();
+                    int l0 = Math.max(0, l1-1);
+                    int l2 = Math.min(hf.getDiffVert()[1].length, l1+1);
+                    diffusionProfile[0] = hf.getDiffVert()[tt][l0][m.getTrinodes()[0][part.getElem()]];
+                    diffusionProfile[1] = hf.getDiffVert()[tt][l1][m.getTrinodes()[0][part.getElem()]];
+                    diffusionProfile[2] = hf.getDiffVert()[tt][l2][m.getTrinodes()[0][part.getElem()]];
+                    
+                    /****
+                     * TODO: Need to add things to allow calculation of gradients here: the distance between the layers of the model output
+                     */
+                    
+                }
+                
+                //System.out.println("Depth pre-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
+                part.verticalMovement(rp.D_hVert,D_hVertDz,rp.sinkingRateMean,rp.sinkingRateStd,tt,subStepDt,m.getDepthUvnode()[elemPart]);
+                //System.out.println("Depth post-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
                 // set depth layer based on depth in metres
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
+                //System.out.println("Normal run: Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             }
             
             // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).

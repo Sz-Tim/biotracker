@@ -20,8 +20,9 @@ public class RunProperties {
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            location, sitefile, sitefileEnd, habitat, suffix, // Descriptive strings
+            location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef; // Coordinate reference system
+            
             
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             timeInterpolate, spatialInterpolate, // interpolate between hydro file data values?
@@ -31,7 +32,7 @@ public class RunProperties {
             diffusion, variableDiff, // include random walk, use diffusion parameter from hydro output?
             salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
-            setDepth, // set particle depth at initiation?
+            setStartDepth, fixDepth, // set particle depth at initiation?
             splitPsteps, // separate pSteps by source site? No longer produced (done in Matlab post processing) - POSSIBLY DEPRECATE
             pstepsIncMort, // Include mortality in pstep calculation (negative exponential, unless "calcMort" is true) - POSSIBLY DEPRECATE
             readHydroVelocityOnly;
@@ -146,7 +147,10 @@ public class RunProperties {
         endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival","false"));
         // DEPRECATED
         //tidalRelease = Boolean.parseBoolean(properties.getProperty("tidalRelease","false"));
-        setDepth = Boolean.parseBoolean(properties.getProperty("setDepth","false"));
+        setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth","false"));
+        fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth","false"));
+        startDepth = Integer.parseInt(properties.getProperty("startDepth","0"));
+        
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps","false"));
         
         pstepsIncMort = Boolean.parseBoolean(properties.getProperty("pstepsIncMort","true"));
@@ -185,7 +189,7 @@ public class RunProperties {
         diffusionMultiplier = Double.parseDouble(properties.getProperty("diffusionMultiplier","1"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate","0.01"));
         
-        
+        species = properties.getProperty("species","none"); 
         viabletime = Double.parseDouble(properties.getProperty("viabletime","86"));
         maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","-1"));
         

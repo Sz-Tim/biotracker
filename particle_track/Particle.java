@@ -55,6 +55,8 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
     
+    private String species = "none";
+    
     private String lastArrival = "0";
     
     // A list to store data on the arrivals made by each particle.
@@ -63,7 +65,7 @@ public class Particle {
     private List<Arrival> arrivals;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, String coordRef)
+    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, String coordRef, String species)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -77,9 +79,10 @@ public class Particle {
         this.arrivals = new ArrayList<>();
         
         this.coordRef = coordRef;
+        this.species = species;
     }
     public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, 
-            ISO_datestr startDate, double startTime, String coordRef)
+            ISO_datestr startDate, double startTime, String coordRef, String species)
     {
         this.id = id;
         this.xy[0] = xstart;
@@ -93,6 +96,7 @@ public class Particle {
         this.z = startDepth;
         
         this.coordRef = coordRef;
+        this.species = species;
         
         //this.arrivals = new ArrayList<Arrival>();
     }
@@ -102,7 +106,7 @@ public class Particle {
      * 
      * @param locationFileLine 
      */
-    public Particle(String locationFileLine)
+    public Particle(String locationFileLine, String species)
     {
         String[] values = locationFileLine.split(" ");
         // Don't use the 0 th  entry on the line (current time in locations) 
@@ -127,6 +131,7 @@ public class Particle {
 //                this.getStatus(),
 //                this.getDensity()
 //        );
+        this.species = species;
     }
 
 //    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
@@ -302,8 +307,26 @@ public class Particle {
     {
         return this.z;
     }
+    /**
+     * Set depth of particle
+     * 
+     * @param z 
+     */
     public void setZ(double z)
     {
+        this.z = z;
+    }
+    /**
+     * Set depth of particle with check against local depth
+     * @param z  (this is a negative value)
+     * @param localDepth  (this is a positive value)
+     */
+    public void setZ(double z, double localDepth)
+    {
+        if (z < -localDepth)
+        {
+            z = localDepth;
+        }
         this.z = z;
     }
     public int getDepthLayer()
@@ -412,15 +435,19 @@ public class Particle {
     {
         int depNearest = 0;
         double dZmin = 1000;
+        //System.out.println("in setLayerFromDepth");
         for (int i = 0; i < layers.length; i++)
         {
+            // Switch so that layers are positive proportions of 1.
+            // (z and localDepth are both positive values)
+            layers[i] =  - layers[i];
             if (Math.abs(this.z - localDepth*layers[i]) < dZmin)
             {
                 depNearest = i;
                 dZmin = Math.abs(this.z - localDepth*layers[i]);
             }
         }
-//        System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
+        //System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
         this.setDepthLayer(depNearest);
     }
     
@@ -546,18 +573,48 @@ public class Particle {
         return this.degreeDays;
     }
     
-    public void setDepth(double D_hVert, double sinkingRateMean, double sinkingRateStd, double dt, double localDepth)
+    public void verticalMovement(double D_hVert, double D_hVertDz, double sinkingRateMean, double sinkingRateStd, double tt, double dt, double localDepth)
     {
         double depthNew = this.z;
+        double dielSwimmingSpeed = 0;
+        
+        if (this.species.equalsIgnoreCase("modiolus"))
+        {
+            if (this.status==1)
+            {
+                sinkingRateMean=0;
+            }
+            else
+            {
+                // Use the supplied
+                //sinkingRateMean=
+            }
+            
+        }
         
         // Do some stuff with the sinking and diffusion parameters here
         // Simple example here PRESENTLY UNTESTED, and enforces a uniform distribution
-        depthNew += dt * (sinkingRateMean + sinkingRateStd*ThreadLocalRandom.current().nextDouble(-1.0,1.0));
-        depthNew += dt * D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+        
+        depthNew += dt * (sinkingRateMean + dielSwimmingSpeed + sinkingRateStd*ThreadLocalRandom.current().nextDouble(-1.0,1.0));
+        // Naive vertical diffusion; use this for fixed diffusion parameter
+        //depthNew += dt * D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+        // Variable vertical diffusion, following Visser (1997) and Ross & Sharples (2004)
+        double r = 1.0/3.0;
+        double mult= (2*dt/r)*D_hVert*(this.z + (dt/2)*D_hVertDz);
+        double rand= ThreadLocalRandom.current().nextGaussian();
+        if (rand < 0)
+        {
+            depthNew -= dt*D_hVertDz + Math.pow(mult * -rand,0.5);
+        }
+        else
+        {
+            depthNew += dt*D_hVertDz + Math.pow(mult * rand,0.5);
+        }
+        //depthNew += dt*D_hVertDz + Math.pow((2*dt/r)*D_hVert*(this.z + (dt/2)*D_hVertDz) * ThreadLocalRandom.current().nextGaussian(),0.5);
         
         // Add reading of vertical water velocity?
         
-        if (depthNew > 0)
+        if (depthNew < 0)
         {
             depthNew = 0;
         }
@@ -609,6 +666,11 @@ public class Particle {
             el = this.getROMSnearestPointU();
             if (report) {System.out.println("  in ROMS mesh, el = "+el[0]+" "+el[1]);}
         }
+        else if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS_TRI"))
+        {
+            el[0] = this.getElem();
+            if (report) {System.out.println("  in ROMS_TRI mesh, el = "+el[0]);}
+        }
         else
         {
             el[0] = this.getElem();
@@ -659,7 +721,7 @@ public class Particle {
                     if (meshes.size() == 2)
                     {
                         m = meshes.get(1);
-                        if (m.isInMesh(newLoc,false,null))
+                        if (m.isInMesh(newLoc,true,null))
                         {
                             if (report) {System.out.println("        in higher ID mesh, switch to that");}
                             // switch to other mesh
@@ -701,7 +763,7 @@ public class Particle {
                 }
 
                 m = meshes.get(otherMesh);
-                if (m.isInMesh(newLoc,false,null))
+                if (m.isInMesh(newLoc,true,null))
                 {
                     if (report) {System.out.println("    is in other mesh, switch to that");}
                     // switch to other mesh
@@ -736,6 +798,10 @@ public class Particle {
 //        {
             if (report) {System.out.println("Particle "+this.getID()+" original mesh: "+meshID+", new mesh: "+this.getMesh());}
 //        }
+//        if (this.getMesh() != meshID)
+//        {
+//            System.out.println("Particle "+this.getID()+" original mesh: "+meshID+", new mesh: "+this.getMesh());
+//        }
     }
     
     
@@ -752,7 +818,7 @@ public class Particle {
         Mesh m = meshes.get(id);
         this.setMesh(id);
         
-        if (m.getType().equalsIgnoreCase("FVCOM"))
+        if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI"))
         {
             //System.out.println("mesh verified as FVCOM");
             int el = 0;

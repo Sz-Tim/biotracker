@@ -269,7 +269,7 @@ public class IOUtils {
                 {
                     //int numEntries = countWords(line);
                     System.out.println("Creating restart particle "+count);
-                    Particle p = new Particle(line);
+                    Particle p = new Particle(line, rp.species);
                     parts.add(p);
                 }
                 count++;

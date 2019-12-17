@@ -13,7 +13,7 @@ import java.awt.geom.Path2D;
 
 import java.io.IOException;
 
-import extUtils.ConcaveHull;
+//import extUtils.ConcaveHull;
 
 /**
  *
@@ -309,17 +309,10 @@ public class Mesh {
         
         // Do the element check, if required. This will identify when a point is NOT in the mesh
         // when it has fallen inside the convex hull but is outside of any element
-        if (this.getType().equalsIgnoreCase("FVCOM"))
-        {
-            
-            
-            
-        }
-              
         if (checkElements == true && inMesh == true)
         {
             int[] c = new int[5];
-            if (this.getType().equalsIgnoreCase("FVCOM"))
+            if (this.getType().equalsIgnoreCase("FVCOM") || this.getType().equalsIgnoreCase("ROMS_TRI"))
             {
                 int eL = 0;
                 if (elemLoc != null)
