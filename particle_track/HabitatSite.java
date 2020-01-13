@@ -71,7 +71,7 @@ public class HabitatSite {
         if (this.insideMesh == false && exitIfNotInMesh == true)
         {
             //System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
-            System.err.println("Habitat site "+ID+" not within any provided mesh --- "+x+" "+y+": Not creating site");
+            System.out.println(ID+" "+x+" "+y+" Habitat site not within any provided mesh --- : Not creating site");
             this.containingMeshType = "NONE";
         } 
         else

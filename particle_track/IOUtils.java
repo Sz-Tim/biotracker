@@ -123,7 +123,7 @@ public class IOUtils {
  
             String line;
             //boolean printWarning=true;
-            int count = 0;
+            int count = 0, countNotCreated = 0;
             
             while ((line = in.readLine()) != null)	//file reading
             {
@@ -147,11 +147,16 @@ public class IOUtils {
                 if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
                 {
                     habitat.add(site);
+                    count++;
                 }
-                count++;
+                else
+                {
+                    countNotCreated++;
+                }
+                
             }
             in.close();
-            System.out.println("Created "+count+" habitat sites");
+            System.out.println("Created "+count+" habitat sites, skipped "+countNotCreated);
         }
         catch (Exception e)
         {
@@ -1108,26 +1113,15 @@ public class IOUtils {
 //    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
 //            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
 //        for (Particle p : particles) {
-//            double d = 1;
-//            if (rp.pstepsIncMort == true) {
-//                d = p.getDensity();
-//            }
+//            d = p.getDensity();
 //            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
 //            int elemPart = p.getElem();
 //            // psteps arrays are updated by lots of threads
 //            if (p.getViable() == true) {
-//                if (rp.splitPsteps == false) {
-//                    pstepsMature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                }
+//                pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
 //            } else if (p.getFree() == true) {
 //                //System.out.println("Printing to pstepsImmature");
-//                if (rp.splitPsteps == false) {
-//                    pstepsImmature[elemPart][1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                } else {
-//                    pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//                }
+//                pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
 //            }
 //        }
 //    }

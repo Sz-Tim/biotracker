@@ -74,13 +74,13 @@ public class Particle_track {
         System.out.printf("Habitat            = %s\n", rp.habitat);
         System.out.printf("N_parts/site       = %d\n", rp.nparts);
         System.out.printf("hydromod dt (s)    = %f\n", rp.dt);
-        System.out.printf("hydromod rec/file  = %d, %d\n", rp.recordsPerFile1, rp.recordsPerFile2);
+        System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile1);
         System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
         System.out.printf("firstfile          = %d\n", rp.start_ymd);
         System.out.printf("lastfile           = %d\n", rp.end_ymd);
         System.out.printf("Simulated dur. (d) = %f\n", (double) numberOfDays);
         System.out.printf("Simulated dur. (s) = %f\n", (double) numberOfDays * 86400);
-        //System.out.printf("Simulated dur. (s) = %f\n",rp.dt*rp.recordsPerFile*(rp.lastday-rp.firstday+1));
+        //System.out.printf("Simulated dur. (s) = %f\n",rp.dt*rp.recordsPerFile1*(rp.lastday-rp.firstday+1));
         System.out.printf("RK4                = %s\n", rp.rk4);
         System.out.printf("Vertical behaviour = %d\n", rp.behaviour);
         System.out.printf("Viable time (h)    = %f\n", rp.viabletime);
@@ -92,15 +92,7 @@ public class Particle_track {
 
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
-        // --------------------------------------------------------------------------------------
-        // Set the directories required to run the model
-        //String[] dirList = IOUtils.setDataDirectories(location, cluster);
-//        String basedir = dirList[0];
-//        String sitedir = dirList[2];
-//        String datadir = dirList[3];
-//        String datadir2 = dirList[4];
-
-        
+        // --------------------------------------------------------------------------------------       
         List<Mesh> meshes = new ArrayList<>();
         meshes.add(new Mesh(rp.mesh1,rp.mesh1Type,rp.coordRef));
         if (rp.mesh2.equals("") != true)
@@ -116,21 +108,12 @@ public class Particle_track {
         System.out.println("Particle subStepDt = " + subStepDt + " dev_perstep = " + dev_perstep);
         System.out.println("behaviour = " + rp.behaviour);
 
-        //Need
-        
-        
         // --------------------------------------------------------------------------------------
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
         // load array of start node IDs (as stored by matlab)
-        double startlocs[][] = new double[10][3];       
-        double endlocs[][] = new double[10][3];
-        //double open_BC_locs[][] = new double[1][3];
-
-        //startlocs = IOUtils.setupStartLocs(rp.sitefile, rp.sitedir, true);
-        //startlocs = IOUtils.setupStartLocs(rp.location,rp.habitat,rp.basedir);
-        //endlocs = IOUtils.setupEndLocs(rp.habitat, rp.sitedir, startlocs, rp.endlimit);
-//        open_BC_locs = IOUtils.setupOpenBCLocs(rp.location, rp.datadir2);
+        //double startlocs[][] = new double[10][3];       
+        //double endlocs[][] = new double[10][3];
         
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
@@ -145,14 +128,15 @@ public class Particle_track {
         System.out.println("Creating end sites");
         habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, true, meshes, rp);
         
-        int nparts_per_site = rp.nparts;
-        int nTracksSavedPerSite = Math.min(1, nparts_per_site);
-        int nparts = rp.nparts * startlocs.length;
+        //int nparts_per_site = rp.nparts;
+        //int nTracksSavedPerSite = Math.min(1, nparts_per_site);
+        //int nparts = rp.nparts * startlocs.length;
+        int nparts = rp.nparts * habitat.size();
 
-        for (int i = 0; i < startlocs.length; i++) {
-            startlocs[i][0]--;
-            //System.out.println(startlocs[i][0]+" "+startlocs[i][1]+" "+startlocs[i][2]);
-        }
+//        for (int i = 0; i < startlocs.length; i++) {
+//            startlocs[i][0]--;
+//            //System.out.println(startlocs[i][0]+" "+startlocs[i][1]+" "+startlocs[i][2]);
+//        }
 
         // --------------------------------------------------------------------------------------
         // Setup particles
@@ -189,7 +173,6 @@ public class Particle_track {
         // Final setup bits
         // --------------------------------------------------------------------------------------
         System.out.println("Starting time loop");
-
         int[] searchCounts = new int[5];
         double minMaxDistTrav[] = new double[2];
         minMaxDistTrav[0] = 10000000;
