@@ -199,6 +199,7 @@ public class Particle_track {
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
         String locationHeader = "hour ID startDate age startLocation x y elem status density mesh";
+        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth degreeDays";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
         try {
@@ -388,8 +389,8 @@ public class Particle_track {
             // to the day after the simulation finished.
             // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
             // start a new run on the next day.
-            IOUtils.printFileHeader(locationHeader,"locationsEnd_"+currentIsoDate.getDateStr()+".dat");
-            IOUtils.particleLocsToFile_full(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true);
+            IOUtils.printFileHeader(particleRestartHeader,"locationsEnd_"+currentIsoDate.getDateStr()+".dat");
+            IOUtils.particlesToRestartFile(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true);
             
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);

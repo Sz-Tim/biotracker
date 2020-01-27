@@ -1038,6 +1038,46 @@ public class IOUtils {
         }
     }
     
+    /**
+     * 
+     * @param particles
+     * @param currentHour
+     * @param filename
+     * @param append 
+     */
+    public static void particlesToRestartFile(List<Particle> particles, int currentHour, String filename, boolean append)
+    {
+        try
+        {
+            // Create file 
+            FileWriter fstream = new FileWriter(filename,append);
+            PrintWriter out = new PrintWriter(fstream);
+            for (Particle p : particles)
+            {
+                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f %d %.2f %.2f\n",
+                        currentHour,
+                        p.getID(),
+                        p.getStartDate().getDateStr(),
+                        p.getAge(),
+                        p.getStartID(),
+                        p.getLocation()[0],
+                        p.getLocation()[1],
+                        p.getElem(),
+                        p.getStatus(),
+                        p.getDensity(),
+                        p.getMesh(),
+                        p.getZ(),
+                        p.getDegreeDays()
+                );
+            }
+            
+            //Close the output stream
+            out.close();
+        }catch (Exception e){//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    
     
     public static void particleLocsToNetcdfFile()
     {

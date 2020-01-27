@@ -23,7 +23,7 @@ public class Particle {
     
     private String coordRef;
     
-    private ISO_datestr startDate;
+    private final ISO_datestr startDate;
     private double startTime = 0;
     
     private int mesh;
@@ -65,22 +65,22 @@ public class Particle {
     private List<Arrival> arrivals;
     
     // create a new particle at a defined location, at the water surface
-    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, String coordRef, String species)
-    {
-        this.id = id;
-        this.xy[0] = xstart;
-        this.xy[1] = ystart;
-        this.startSiteID = startSiteID;
-        this.startLoc[0] = xstart;
-        this.startLoc[1] = ystart;
-        this.mortRate = mortalityRate;
-        this.z = startDepth; 
-        
-        this.arrivals = new ArrayList<>();
-        
-        this.coordRef = coordRef;
-        this.species = species;
-    }
+//    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, String coordRef, String species)
+//    {
+//        this.id = id;
+//        this.xy[0] = xstart;
+//        this.xy[1] = ystart;
+//        this.startSiteID = startSiteID;
+//        this.startLoc[0] = xstart;
+//        this.startLoc[1] = ystart;
+//        this.mortRate = mortalityRate;
+//        this.z = startDepth; 
+//        
+//        this.arrivals = new ArrayList<>();
+//        
+//        this.coordRef = coordRef;
+//        this.species = species;
+//    }
     public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, 
             ISO_datestr startDate, double startTime, String coordRef, String species)
     {
@@ -88,7 +88,7 @@ public class Particle {
         this.xy[0] = xstart;
         this.xy[1] = ystart;
         this.startSiteID = startSiteID;
-        this.startDate = startDate;
+        this.startDate = new ISO_datestr(startDate.getDateStr());
         this.startTime = startTime;
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
@@ -97,6 +97,8 @@ public class Particle {
         
         this.coordRef = coordRef;
         this.species = species;
+        
+        System.out.println("creating particle, startDate = "+this.startDate.getDateStr());
         
         //this.arrivals = new ArrayList<Arrival>();
     }
@@ -119,6 +121,8 @@ public class Particle {
         this.elem = Integer.parseInt(values[7]);
         this.status = Integer.parseInt(values[8]);
         this.density = Double.parseDouble(values[9]);
+        this.z = Double.parseDouble(values[11]);
+        this.degreeDays = Double.parseDouble(values[12]);
         // Check the details of the particle created
 //        System.out.printf("%d %s %.1f %s %.5f %.5f %d %d %.4f\n",
 //                this.getID(),
@@ -132,6 +136,7 @@ public class Particle {
 //                this.getDensity()
 //        );
         this.species = species;
+        this.coordRef = "OSGB1936";
     }
 
 //    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
