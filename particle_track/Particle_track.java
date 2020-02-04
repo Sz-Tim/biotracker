@@ -198,7 +198,7 @@ public class Particle_track {
         //final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
-        String locationHeader = "hour ID startDate age startLocation x y elem status density mesh";
+        //String locationHeader = "hour ID startDate age startLocation x y elem status density mesh";
         String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth degreeDays";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
@@ -212,7 +212,8 @@ public class Particle_track {
 
                 String today = currentIsoDate.getDateStr();
                 System.out.println(today);
-                IOUtils.printFileHeader(locationHeader,"locations_" + today + ".dat");
+                //IOUtils.printFileHeader(locationHeader,"locations_" + today + ".dat");
+                IOUtils.printFileHeader(particleRestartHeader,"locations_" + today + ".dat");
                 IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".dat");
                 
                 long splitTime = System.currentTimeMillis();
@@ -345,7 +346,8 @@ public class Particle_track {
                     //System.out.println("Print particle locations to file " + today + " " + currentHour);
                     //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".dat", true);
 
-                    IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".dat",true);
+                    //IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".dat",true);
+                    IOUtils.particlesToRestartFile(particles,currentHour,"locations_" + today + ".dat",true);
                                         
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                     for (Particle part : particles) {

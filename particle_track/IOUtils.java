@@ -1016,7 +1016,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f %d\n",
+                out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -1054,7 +1054,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %s %.5f %.5f %d %d %.4f %d %.2f %.2f\n",
+                out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %.2f\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
