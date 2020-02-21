@@ -173,5 +173,24 @@ public class ISO_datestr {
     {
         return day;
     }
+    
+        /**
+     * work out the date from an integer in format YYYYMMDD - Mike Bedington
+     * method
+     *
+     * @param ymd
+     * @return
+     */
+    public static int[] dateIntParse(int ymd) {
+        double start_ymd_mod = (double) (ymd);
+        int startYear = (int) Math.floor(start_ymd_mod / 10000);
+        start_ymd_mod = start_ymd_mod - startYear * 10000;
+        int startMonth = (int) Math.floor(start_ymd_mod / 100);
+        start_ymd_mod = start_ymd_mod - startMonth * 100;
+        int startDay = (int) start_ymd_mod;
+
+        int[] output = new int[]{startDay, startMonth, startYear};
+        return output;
+    }
 
 }

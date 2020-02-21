@@ -121,6 +121,7 @@ public class Particle {
         this.elem = Integer.parseInt(values[7]);
         this.status = Integer.parseInt(values[8]);
         this.density = Double.parseDouble(values[9]);
+        this.mesh = Integer.parseInt(values[10]);
         this.z = Double.parseDouble(values[11]);
         this.degreeDays = Double.parseDouble(values[12]);
         // Check the details of the particle created

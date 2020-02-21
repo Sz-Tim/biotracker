@@ -61,9 +61,9 @@ public class Particle_track {
         // Use this instead of previous to create runProps from CMD line args
         //RunProperties runProps = new RunProperties(args); 
 
-        int[] startDate = dateIntParse(rp.start_ymd);
+        int[] startDate = ISO_datestr.dateIntParse(rp.start_ymd);
         ISO_datestr currentIsoDate = new ISO_datestr(startDate[0], startDate[1], startDate[2]);
-        int[] endDate = dateIntParse(rp.end_ymd);
+        int[] endDate = ISO_datestr.dateIntParse(rp.end_ymd);
         ISO_datestr endIsoDate = new ISO_datestr(endDate[0], endDate[1], endDate[2]);
 
         int numberOfDays = endIsoDate.getDateNum() - currentIsoDate.getDateNum() + 1;
@@ -658,24 +658,7 @@ public class Particle_track {
         return connectMatrix;
     }
 
-    /**
-     * work out the date from an integer in format YYYYMMDD - Mike Bedington
-     * method
-     *
-     * @param ymd
-     * @return
-     */
-    public static int[] dateIntParse(int ymd) {
-        double start_ymd_mod = (double) (ymd);
-        int startYear = (int) Math.floor(start_ymd_mod / 10000);
-        start_ymd_mod = start_ymd_mod - startYear * 10000;
-        int startMonth = (int) Math.floor(start_ymd_mod / 100);
-        start_ymd_mod = start_ymd_mod - startMonth * 100;
-        int startDay = (int) start_ymd_mod;
 
-        int[] output = new int[]{startDay, startMonth, startYear};
-        return output;
-    }
 
     public static void memTest() {
         long heapSize = Runtime.getRuntime().totalMemory();

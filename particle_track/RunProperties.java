@@ -7,7 +7,7 @@ package particle_track;
 
 import java.io.*;
 import java.util.Properties;
-import static particle_track.Particle_track.dateIntParse;
+import static particle_track.ISO_datestr.dateIntParse;
 
 /**
  *
@@ -32,8 +32,8 @@ public class RunProperties {
             salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
-            readHydroVelocityOnly;
-    
+            readHydroVelocityOnly; // read only u,v from hydro files (saves RAM, ignores random extra variables)
+                
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
@@ -53,7 +53,8 @@ public class RunProperties {
             maxParticleAge, // Maximum age for particles. Set to <=0 and it will be ignored.
             viableDegreeDays,maxDegreeDays, // Degree x days to use for settlement viability time and mortality 
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
-            startDepth; // Particle initiation depth
+            startDepth, // Particle initiation depth
+            restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
   
     /**
      * 
@@ -94,7 +95,8 @@ public class RunProperties {
         mesh2Type = properties.getProperty("mesh2Type","");
         
         restartParticles = properties.getProperty("restartParticles",""); 
-    
+        restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays","21"));
+        
         sitefile = properties.getProperty("sitefile","startlocations.dat");
         sitefileEnd = properties.getProperty("sitefileEnd",sitefile);
         
@@ -108,7 +110,7 @@ public class RunProperties {
         numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays","0"));
         if (numberOfDays>0)
         {
-            int[] startDate = dateIntParse(start_ymd);
+            int[] startDate = ISO_datestr.dateIntParse(start_ymd);
             ISO_datestr tempIsoDate = new ISO_datestr(startDate[0], startDate[1], startDate[2]);
             for (int i = 1; i < numberOfDays; i++)
             {

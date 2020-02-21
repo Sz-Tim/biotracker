@@ -320,11 +320,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // set particle to become able to settle after a predefined time
             if (part.getViable()==false)
             {
-                if ((part.getAge()>rp.viabletime) ||
+                if ((part.getAge()>rp.viabletime && rp.viabletime > 0) ||
                     (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0)) 
-                
                 {
-                    //System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
+                    System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
                     part.setViable(true);
                     part.setStatus(2);
                     // This is updated by many threads - calculation now done outside of move
@@ -336,6 +335,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if ((part.getAge()>rp.maxParticleAge && rp.maxParticleAge > 0) ||
                     (part.getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0))
             {
+                System.out.printf("Particle removed, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());
                 part.setFree(false);
                 part.setStatus(666);
             }
@@ -487,7 +487,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         // check whether the particle has gone within a certain range of one of the boundary nodes
         // (make it settle there, even if it is inviable)
         int nBNode = 0;
-        if (m.getType().equalsIgnoreCase("FVCOM"))
+        if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI"))
         {
             nBNode = m.getOpenBoundaryNodes().length;
         }
@@ -498,9 +498,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
         for (int loc = 0; loc < nBNode; loc++)
         {
-            double dist = 3001;
+            double dist = 6001;
 
-            if (m.getType().equalsIgnoreCase("FVCOM"))
+            if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI"))
             {
                 dist = Particle.distanceEuclid2(x, y,
                     m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
@@ -514,7 +514,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             //System.out.println("dist to OBC loc = "+dist);
 
-            double distThresh = 3000;
+            double distThresh = 6000;
 
             if (dist < distThresh)
             {

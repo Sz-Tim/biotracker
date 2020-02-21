@@ -259,6 +259,11 @@ public class IOUtils {
             System.err.println("Cannot open "+rp.restartParticles);
         } 
         
+        int todayInt[] = ISO_datestr.dateIntParse(rp.start_ymd);
+        ISO_datestr today = new ISO_datestr(todayInt[0],todayInt[1],todayInt[2]);
+        int todayDateNum = today.getDateNum();
+        //System.out.println("----- In readRestartParticles, date = "+today.getDateStr()+" ("+todayDateNum+") -----");
+                
         try
         {
             BufferedReader in = new BufferedReader(new FileReader(file));	//reading files in specified directory
@@ -273,14 +278,30 @@ public class IOUtils {
                 if (count > 0)
                 {
                     //int numEntries = countWords(line);
-                    System.out.println("Creating restart particle "+count);
+                    //System.out.println("Creating restart particle "+count);
                     Particle p = new Particle(line, rp.species);
-                    parts.add(p);
+                    boolean add = true;
+                    if (rp.restartParticlesCutoffDays>0)
+                    {
+                        ISO_datestr pStart = p.getStartDate();
+                        int pStartDateNum = pStart.getDateNum();
+                        //System.out.println("particle startDate = "+pStart.getDateStr()+" ("+pStartDateNum+")");
+                        if (todayDateNum - pStartDateNum > rp.restartParticlesCutoffDays)
+                        {
+                            //System.out.println("Particle NOT added");
+                            add = false;
+                        }
+                    }
+                    if (add == true)
+                    {
+                        //System.out.println("Particle added");
+                        parts.add(p);
+                    }
                 }
                 count++;
             }
             in.close();
-            System.out.println("Created "+count+" particles");
+            System.out.println("Created "+parts.size()+" particles");
         }
         catch (Exception e)
         {
