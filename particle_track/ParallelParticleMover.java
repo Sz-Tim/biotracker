@@ -237,6 +237,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             double advectStep[] = new double[2];
 
+            //System.out.println("--------------------------------------------------------------");
+            //System.out.printf("Before movement: ID %d ELEM %d\n",part.getID(), part.getElem());
             if (rp.rk4==true)
             {
                 advectStep = part.rk4Step(hydroFields, meshes,
@@ -247,9 +249,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 advectStep = part.eulerStep(hydroFields, meshes,
                     tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             }
-//            System.out.printf("ADVECT: Euler=[%.3e,%.3e] RK4=[%.3e,%.3e]\n",
-//                advectStep[0],advectStep[1],advectStep2[0],advectStep2[1]);
-
+            //System.out.printf("ADVECT=[%.3e,%.3e]\n",advectStep[0],advectStep[1]);          
+            
             // Reverse velocities if running backwards
             if (rp.backwards == true)
             {
@@ -314,6 +315,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                        
             // Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
             part.meshSelectOrExit(new double[]{newlocx,newlocy},meshes,rp);
+            
+            //System.out.printf("End of movement: ID %d ELEM %d\n",part.getID(), part.getElem());
            
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             
@@ -344,6 +347,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // **************** if able to settle, is it close to a possible settlement location? ******************************
             //System.out.println("Patricle age = "+particles.get(i).getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles.get(i).getViable());
+            //if (false)
             if (part.getViable()==true)
             {
                 //System.out.println(particles[i].getViable());

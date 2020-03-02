@@ -301,7 +301,7 @@ public class Mesh {
         return inMesh;
     }
     
-    public boolean isInMesh(double[] xy, boolean checkElements, int[] elemLoc)
+    public boolean isInMesh(double[] xy, boolean checkElements, boolean checkAllElems, int[] elemLoc)
     {
         Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
         boolean inMesh = cHull.contains(xy[0],xy[1]);
@@ -324,7 +324,7 @@ public class Mesh {
                     //System.out.println("***** elemLoc = null *****");
                 }
                 c = Particle.findContainingElement(xy, eL, 
-                        this.getNodexy(), this.getTrinodes(), this.getNeighbours());
+                        this.getNodexy(), this.getTrinodes(), this.getNeighbours(), checkAllElems);
             }
             else if (this.getType().equalsIgnoreCase("ROMS"))
             {

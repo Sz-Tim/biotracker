@@ -53,7 +53,7 @@ public class HabitatSite {
         for (int m = 0; m < meshes.size(); m ++)
         {
             //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
-            if (meshes.get(m).isInMesh(xy2,true,null))
+            if (meshes.get(m).isInMesh(xy2,true,true,null))
             {
                 this.containingMesh = m;
                 this.insideMesh = true;

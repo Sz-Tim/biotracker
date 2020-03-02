@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
+//import org.apache.commons.lang.ArrayUtils;
+
 /**
  *
  * @author tomdude
@@ -98,7 +100,7 @@ public class Particle {
         this.coordRef = coordRef;
         this.species = species;
         
-        System.out.println("creating particle, startDate = "+this.startDate.getDateStr());
+        //System.out.println("creating particle, startDate = "+this.startDate.getDateStr());
         
         //this.arrivals = new ArrayList<Arrival>();
     }
@@ -688,7 +690,7 @@ public class Particle {
         
         // i)
         Mesh m = meshes.get(meshID);
-        if (m.isInMesh(newLoc,true,el))
+        if (m.isInMesh(newLoc,true,false,el))
         {
             if (report) {System.out.println("  in same mesh as before");}
             // i.i) in mesh > 0
@@ -696,7 +698,7 @@ public class Particle {
             {
                 if (report) {System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");}
                 m = meshes.get(0);
-                if (m.isInMesh(newLoc,true,null))
+                if (m.isInMesh(newLoc,true,true,null))
                 {
                     if (report) {System.out.println("      in lower ID mesh");}
                     // switch to mesh 0
@@ -727,7 +729,7 @@ public class Particle {
                     if (meshes.size() == 2)
                     {
                         m = meshes.get(1);
-                        if (m.isInMesh(newLoc,true,null))
+                        if (m.isInMesh(newLoc,true,true,null))
                         {
                             if (report) {System.out.println("        in higher ID mesh, switch to that");}
                             // switch to other mesh
@@ -769,7 +771,7 @@ public class Particle {
                 }
 
                 m = meshes.get(otherMesh);
-                if (m.isInMesh(newLoc,true,null))
+                if (m.isInMesh(newLoc,true,true,null))
                 {
                     if (report) {System.out.println("    is in other mesh, switch to that");}
                     // switch to other mesh
@@ -828,12 +830,14 @@ public class Particle {
         {
             //System.out.println("mesh verified as FVCOM");
             int el = 0;
+            boolean checkAll = true;
             if (switchedMesh == false)
             {
                 el = this.getElem();
+                checkAll = false;
             }
             int[] c = findContainingElement(this.getLocation(), el, 
-                    m.getNodexy(), m.getTrinodes(), m.getNeighbours());
+                    m.getNodexy(), m.getTrinodes(), m.getNeighbours(), checkAll);
             // if particle is within the mesh, update location normally and save the distance travelled
             this.setElem(c[0]);
             
@@ -1372,13 +1376,95 @@ public class Particle {
      * @return 
      */
     public static int[] findContainingElement(double[] xy, int elemPart,
-            float[][] nodexy, int[][] trinodes, int[][] neighbours)
+            float[][] nodexy, int[][] trinodes, int[][] neighbours, boolean checkAll)
     {
         int[] c = new int[6];
         int[] elems = new int[1];
         elems[0] = elemPart;
         
-        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length-1).toArray();
+        //System.out.println("findContainingElement: elems[0]="+elems[0]);
+        int whereami=whichElement(xy,elems,nodexy,trinodes);
+        //System.out.println("findContainingElement: whereami="+whereami);
+        c[1]=1;
+        
+        // If this fails, look in my neighbours
+        if (whereami==-1)
+        {
+            //int[] elems0 = neighbours[elemPart];
+            c[2]=1;
+            //System.out.println("Looking in neighbours");
+            int elems0[] = new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]};
+            whereami=whichElement(xy,elems0,nodexy,trinodes);
+            
+            // if fails, look in the neighbours of my neighbours
+            if (whereami==-1)
+            {
+                // Find the non-0 neighbours out of the ones just searched
+                int[] nonZeroNeighbours = Arrays.stream(elems0).filter(num -> num != 0).toArray(); 
+                // List THEIR neighbours
+                int elems1[] = new int[nonZeroNeighbours.length*3];
+                for (int i = 0; i < nonZeroNeighbours.length; i++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        elems1[i*3+j] = neighbours[j][nonZeroNeighbours[i]];
+                    }
+                }
+                //System.out.println("Looking in neighbours' neighbours");
+                c[3]=1;
+                whereami=whichElement(xy,elems1,nodexy,trinodes);
+
+                // If fails, look in neighbours' neighbours' neighbours 
+                // Shouldn't really need to get this far? Maybe you should.
+                if (whereami==-1)
+                {
+                    //System.out.println("WARNING: Looking in neighbours' neighbours' neighbours!!!");
+                    c[4]=1;
+                    // Find the non-0 neighbours out of the ones just searched
+                    int[] nonZeroNeighbours1 = Arrays.stream(elems1).filter(num -> num != 0).toArray(); 
+                    // List THEIR neighbours
+                    int elems2[] = new int[nonZeroNeighbours1.length*3];
+                    for (int i = 0; i < nonZeroNeighbours1.length; i++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            elems2[i*3+j] = neighbours[j][nonZeroNeighbours1[i]];
+                        }
+                    }
+                    whereami=whichElement(xy,elems2,nodexy,trinodes);
+                    
+                    // if this fails, look in all elements (desperation) - unless movement is attempting to place particle outside mesh)
+                    if (whereami==-1 && checkAll == true)
+                    {
+                        //System.out.printf("Looking in nearest 80000.... ");
+                        c[5]=1;
+                        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length-1).toArray();
+                        whereami=whichElement(xy,allelems,nodexy,trinodes);
+//                        if (whereami == -1)
+//                        {
+//                            System.out.printf("Movement placed particle outside mesh\n");
+//                        }
+                    }
+                }
+            }
+        }
+        c[0]=whereami;
+//        System.out.printf("%d %d %d %d %d %d %d\n",elemPart,c[0],c[1],c[2],c[3],c[4],c[5]);
+//        if (c[0] == 0 || c[0] == -1)
+//        {
+//            System.out.println("Element out of bounds, fixing location");
+//            System.out.printf("whereami=0 --- %.6e %.6e %d\n",newlocx,newlocy,elemPart);
+//        }
+        return c;
+    }
+    
+    
+    public static int[] findContainingElement_OLD(double[] xy, int elemPart,
+            float[][] nodexy, int[][] trinodes, int[][] neighbours)
+    {
+        int[] c = new int[6];
+        int[] elems = new int[1];
+        elems[0] = elemPart;
         
         //System.out.println("findContainingElement: elems[0]="+elems[0]);
         int whereami=whichElement(xy,elems,nodexy,trinodes);
@@ -1388,36 +1474,37 @@ public class Particle {
         {
             //int[] elems0 = neighbours[elemPart];
             c[2]=1;
-            whereami=whichElement(xy,new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]},nodexy,trinodes);
+            
+            int elems0[] = new int[]{neighbours[0][elemPart],neighbours[1][elemPart],neighbours[2][elemPart]};
+            whereami=whichElement(xy,elems0,nodexy,trinodes);
+            
             // if fails, look in nearest 10 (id numerical)
             if (whereami==-1)
             {
+                //System.out.println("Looking in nearest 10");
                 c[3]=1;
-                //int[] elems1 = new int[10];
-//                for (int j = 0; j < 10; j++)
-//                {
-//                    elems1[j] = Math.min(Math.max(elemPart-5+j,0),allelems.length-1);
-//                }
                 int elems1[] = IntStream.rangeClosed(Math.max(elemPart-5,0), Math.min(elemPart+5,trinodes[0].length-1)).toArray();
                 
                 whereami=whichElement(xy,elems1,nodexy,trinodes);
                 // if fails, look in nearest 500 (id numerical)
                 if (whereami==-1)
                 {
+                    //System.out.println("Looking in nearest 500");
                     c[4]=1;
-//                    int[] elems2 = new int[500];
-//                    for (int j = 0; j < 500; j++)
-//                    {
-//                        elems2[j] = Math.min(Math.max(elemPart-250+j,0),allelems.length-1);
-//                    }
                     int elems2[] = IntStream.rangeClosed(Math.max(elemPart-500,0), Math.min(elemPart+500,trinodes[0].length-1)).toArray();
-                    
                     whereami=whichElement(xy,elems2,nodexy,trinodes);
+                    
                     // if this fails, look in all elements
                     if (whereami==-1)
                     {
+//                        System.out.printf("Looking in nearest 80000.... ");
                         c[5]=1;
+                        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length-1).toArray();
                         whereami=whichElement(xy,allelems,nodexy,trinodes);
+//                        if (whereami == -1)
+//                        {
+//                            System.out.printf("Movement placed particle outside mesh\n");
+//                        }
                     }
                 }
             }
@@ -1509,8 +1596,10 @@ public class Particle {
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
         
         
+//        int elem[] = findContainingElement_OLD(xy, elemPart0,
+//            nodexy, trinodes, neighbours);
         int elem[] = findContainingElement(xy, elemPart0,
-            nodexy, trinodes, neighbours);
+            nodexy, trinodes, neighbours, false);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
         if (elem[0] == -1)
