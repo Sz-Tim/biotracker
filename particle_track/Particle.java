@@ -1896,15 +1896,6 @@ public class Particle {
 //            System.out.println("in eulerStep, about to find nearest points");
             // nearestROMSGridPoint ---> whichROMSelement --->
             
-            // Search for nearest point based on the previous nearest point - assumes we haven't jumped across multiple elements
-            // No longer needed - update all particle location fields at the end of ParallelParticleMover.move
-//            System.out.println("Nearest point U = "+this.nearestROMSGridPointU[0]+" "+this.nearestROMSGridPointU[1]);
-//            this.nearestROMSGridPointU = nearestROMSGridPoint((float)thisLoc[0], (float)thisLoc[1], meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), this.nearestROMSGridPointU);
-//            this.nearestROMSGridPointV = nearestROMSGridPoint((float)thisLoc[0], (float)thisLoc[1], meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), this.nearestROMSGridPointV);
-            
-//            System.out.println("Nearest point U = "+this.nearestROMSGridPointU[0]+" "+this.nearestROMSGridPointU[1]);
-//            System.out.println("Nearest point V = "+this.nearestROMSGridPointV[0]+" "+this.nearestROMSGridPointV[1]);
-            
             // Populate the list of points for interpolation
             double[][] nrListU = nearestListROMS2(thisLoc,meshes.get(meshPart).getLonU(),meshes.get(meshPart).getLatU(),this.nearestROMSGridPointU);
             double[][] nrListV = nearestListROMS2(thisLoc,meshes.get(meshPart).getLonV(),meshes.get(meshPart).getLatV(),this.nearestROMSGridPointV);
