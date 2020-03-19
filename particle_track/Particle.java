@@ -581,16 +581,46 @@ public class Particle {
         return this.degreeDays;
     }
     
-    public void verticalMovement(double D_hVert, double D_hVertDz, double sinkingRateMean, double sinkingRateStd, double tt, double dt, double localDepth)
+    public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity)
     {
         double depthNew = this.z;
-        double dielSwimmingSpeed = 0;
+        //double dielSwimmingSpeed = 0;
+        
+        double sinking_M = rp.sinkingRateMean;
+        double sinking_S = rp.sinkingRateStd;
+        double vertSwim_M = rp.sinkingRateMean;
+        double vertSwim_S = rp.sinkingRateStd;
+        
+        if (rp.species.equalsIgnoreCase("sealice"))
+        {
+            if (this.status==1)
+            {
+                vertSwim_M = 0;
+                vertSwim_S = 0;
+            }
+            if (localSalinity < rp.salinityThreshold)
+            {
+                sinking_M = rp.sinkingRateMean;
+                sinking_S = rp.sinkingRateStd;
+            }
+            else
+            {
+                sinking_M = 0;
+                sinking_S = 0;
+            }
+        }
+        
+        if (rp.species.equalsIgnoreCase("fishfaeces"))
+        {
+            
+        }
+        
         
         if (this.species.equalsIgnoreCase("modiolus"))
         {
             if (this.status==1)
             {
-                sinkingRateMean=0;
+                rp.sinkingRateMean=0;
             }
             else
             {
@@ -603,12 +633,15 @@ public class Particle {
         // Do some stuff with the sinking and diffusion parameters here
         // Simple example here PRESENTLY UNTESTED, and enforces a uniform distribution
         
-        depthNew += dt * (sinkingRateMean + dielSwimmingSpeed + sinkingRateStd*ThreadLocalRandom.current().nextDouble(-1.0,1.0));
+        depthNew += dt * (rp.sinkingRateMean + rp.sinkingRateStd*ThreadLocalRandom.current().nextDouble(-1.0,1.0)
+                 + rp.vertSwimSpeedMean + rp.vertSwimSpeedStd*ThreadLocalRandom.current().nextDouble(-1.0,1.0));
+        
         // Naive vertical diffusion; use this for fixed diffusion parameter
         //depthNew += dt * D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+        
         // Variable vertical diffusion, following Visser (1997) and Ross & Sharples (2004)
         double r = 1.0/3.0;
-        double mult= (2*dt/r)*D_hVert*(this.z + (dt/2)*D_hVertDz);
+        double mult= (2*dt/r)*rp.D_hVert*(this.z + (dt/2)*D_hVertDz);
         double rand= ThreadLocalRandom.current().nextGaussian();
         if (rand < 0)
         {
@@ -618,9 +651,6 @@ public class Particle {
         {
             depthNew += dt*D_hVertDz + Math.pow(mult * rand,0.5);
         }
-        //depthNew += dt*D_hVertDz + Math.pow((2*dt/r)*D_hVert*(this.z + (dt/2)*D_hVertDz) * ThreadLocalRandom.current().nextGaussian(),0.5);
-        
-        // Add reading of vertical water velocity?
         
         if (depthNew < 0)
         {

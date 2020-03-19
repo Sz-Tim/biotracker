@@ -192,27 +192,57 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
             {
                 double D_hVertDz = 0;
+                double localSalinity = 35;
                 // Calculate the gradient in vertical diffusion, if required
-                if (rp.variableDiff==true)
+                if (rp.variableDiff==true || rp.salinityThreshold < 35)
                 {
-                    // Get the vertical diffusivity profile for the particle location
-                    double dep = part.getZ();
-                    double[] diffusionProfile = new double[3];
-                    int l1 = part.getDepthLayer();
-                    int l0 = Math.max(0, l1-1);
-                    int l2 = Math.min(hf.getDiffVert()[1].length, l1+1);
-                    diffusionProfile[0] = hf.getDiffVert()[tt][l0][m.getTrinodes()[0][part.getElem()]];
-                    diffusionProfile[1] = hf.getDiffVert()[tt][l1][m.getTrinodes()[0][part.getElem()]];
-                    diffusionProfile[2] = hf.getDiffVert()[tt][l2][m.getTrinodes()[0][part.getElem()]];
+                    // Calculate the vertical diffusivity profile for the particle location
+                    float dep = (float)part.getZ();
+                    // Get the sigma depths at this location, and compare with particle depth
+                    float[] sigDepths = m.getSiglay();
+                    int layerAbove = 0;
+                    int layerBelow = sigDepths.length;
+                    for (int i = 0; i < sigDepths.length; i++)
+                    {
+                        sigDepths[i] = sigDepths[i]*m.getDepthUvnode()[elemPart];
+                        // Set the index of the layer below the particle. This will default to the highest value if the particle is very close to or on the bed.
+                        if (dep < sigDepths[i])
+                        {
+                            layerBelow = i;
+                        }
+                    }
+                    // Set "layerAbove" to be one index less than "layerBelow", ensuring that it cannot be less than zero (particles on surface)
+                    layerAbove = layerBelow-1;
+                    if (layerAbove < 0)
+                    {
+                        layerAbove = 0;
+                    }
+                                       
+                    float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
+                    float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
+                    float diffusionDifference = Math.abs(diffAbove - diffBelow);
+                    float dZ = sigDepths[layerBelow]-sigDepths[layerAbove];
                     
-                    /****
-                     * TODO: Need to add things to allow calculation of gradients here: the distance between the layers of the model output
-                     */
-                    
+                    // Calculate a gradient, as long as particle is not on the bed or the surface.
+                    // If it is, the gradient will default to zero anyway
+                    if (dZ != 0)
+                    {
+                        D_hVertDz = diffusionDifference/dZ;
+                    }
+
+                    // Check local salinity in order to induce lice sinking behaviour if too low
+                    if (rp.species.equalsIgnoreCase("sealice"))
+                    {
+                        float salAbove = hf.getS()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
+                        float salBelow = hf.getS()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
+                        float salinityDifference = salAbove - salBelow;
+                        float dzPosition = dep - sigDepths[layerAbove];
+                        localSalinity = salAbove + dzPosition*salinityDifference/dZ;
+                    }
                 }
                 
                 //System.out.println("Depth pre-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
-                part.verticalMovement(rp.D_hVert,D_hVertDz,rp.sinkingRateMean,rp.sinkingRateStd,tt,subStepDt,m.getDepthUvnode()[elemPart]);
+                part.verticalMovement(rp,D_hVertDz,tt,subStepDt,m.getDepthUvnode()[elemPart],localSalinity);
                 //System.out.println("Depth post-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
                 // set depth layer based on depth in metres
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());

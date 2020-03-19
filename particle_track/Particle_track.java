@@ -247,7 +247,7 @@ public class Particle_track {
                     // In the case where we read new files every hour, tIndex should be 0. 
                     // Otherwise (as per the case of reading a file once a day FVCOM only mode),
                     // set it equal to current value of tt
-                    int tIndex = 0;
+                    int tIndex = tt;
                     boolean readNewFields = true;
 //                    if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
 //                    {

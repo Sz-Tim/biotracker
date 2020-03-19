@@ -53,6 +53,8 @@ public class RunProperties {
             maxParticleAge, // Maximum age for particles. Set to <=0 and it will be ignored.
             viableDegreeDays,maxDegreeDays, // Degree x days to use for settlement viability time and mortality 
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
+            vertSwimSpeedMean, vertSwimSpeedStd,
+            salinityThreshold,
             startDepth, // Particle initiation depth
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
   
@@ -195,9 +197,14 @@ public class RunProperties {
             System.out.println("maxDegreeDays entered; set maxParticleAge="+maxParticleAge+" so won't be used at 56N!");
         }
         
-        
+        vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean","0"));
+        vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd","0"));
+                
         sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean","0"));
         sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd","0"));
+        
+        salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold","0"));
+        
         properties.list(System.out);
         
     }
