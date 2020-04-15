@@ -43,7 +43,7 @@ public class Particle {
     // release time
     private double releaseTime = 0;
     // vertical position
-    private double z = 0;
+    private double depth = 0;
     private int depLayer = 0;
     // settlement details
     private double age = 0;
@@ -95,7 +95,7 @@ public class Particle {
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
-        this.z = startDepth;
+        this.depth = startDepth;
         
         this.coordRef = coordRef;
         this.species = species;
@@ -124,7 +124,7 @@ public class Particle {
         this.status = Integer.parseInt(values[8]);
         this.density = Double.parseDouble(values[9]);
         this.mesh = Integer.parseInt(values[10]);
-        this.z = Double.parseDouble(values[11]);
+        this.depth = Double.parseDouble(values[11]);
         this.degreeDays = Double.parseDouble(values[12]);
         // Check the details of the particle created
 //        System.out.printf("%d %s %.1f %s %.5f %.5f %d %d %.4f\n",
@@ -311,31 +311,31 @@ public class Particle {
         return this.cornerList;
     }
     
-    public double getZ()
+    public double getDepth()
     {
-        return this.z;
+        return this.depth;
     }
     /**
      * Set depth of particle
      * 
-     * @param z 
+     * @param depth 
      */
-    public void setZ(double z)
+    public void setZ(double depth)
     {
-        this.z = z;
+        this.depth = depth;
     }
     /**
      * Set depth of particle with check against local depth
      * @param z  (this is a negative value)
      * @param localDepth  (this is a positive value)
      */
-    public void setZ(double z, double localDepth)
+    public void setDepth(double depth, double localDepth)
     {
-        if (z < -localDepth)
+        if (depth > localDepth)
         {
-            z = localDepth;
+            depth = localDepth;
         }
-        this.z = z;
+        this.depth = depth;
     }
     public int getDepthLayer()
     {
@@ -446,13 +446,11 @@ public class Particle {
         //System.out.println("in setLayerFromDepth");
         for (int i = 0; i < layers.length; i++)
         {
-            // Switch so that layers are positive proportions of 1.
-            // (z and localDepth are both positive values)
-            layers[i] =  - layers[i];
-            if (Math.abs(this.z - localDepth*layers[i]) < dZmin)
+            // NOTE: changed particle depth to be positive
+            if (Math.abs(this.depth - localDepth*layers[i]) < dZmin)
             {
                 depNearest = i;
-                dZmin = Math.abs(this.z - localDepth*layers[i]);
+                dZmin = Math.abs(this.depth - localDepth*layers[i]);
             }
         }
         //System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
@@ -583,28 +581,40 @@ public class Particle {
     
     public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity)
     {
-        double depthNew = this.z;
+        double depthNew = this.depth;
         //double dielSwimmingSpeed = 0;
         
-        double sinking_M = rp.sinkingRateMean;
-        double sinking_S = rp.sinkingRateStd;
-        double vertSwim_M = rp.sinkingRateMean;
-        double vertSwim_S = rp.sinkingRateStd;
+        double vertSwim_M = 0;
+        double vertSwim_S = 0;
+        double sinking_M = 0;
+        double sinking_S = 0;
         
         if (rp.species.equalsIgnoreCase("sealice"))
         {
+            // Case of naupliar lice - no active surface behaviour
             if (this.status==1)
             {
+                System.out.println("Juvenile: no phototaxis, neutrally buoyant");
                 vertSwim_M = 0;
                 vertSwim_S = 0;
+                sinking_M = 0;
+                sinking_S = 0;
             }
-            if (localSalinity < rp.salinityThreshold)
+            // Case of low salinity - stop swimming to surface and just sink
+            else if (localSalinity < rp.salinityThreshold || tt < 7 || tt > 19)
             {
+                System.out.println("Low salinity OR night time: sinking only (salinity="+localSalinity+", time="+tt);
+                vertSwim_M = 0;
+                vertSwim_S = 0;
                 sinking_M = rp.sinkingRateMean;
                 sinking_S = rp.sinkingRateStd;
             }
+            // Case for "normal" copepodids - no sinking, just swimming
             else
             {
+                System.out.println("Normal water (above salinity threshold) and daytime: phototaxis only");
+                vertSwim_M = rp.vertSwimSpeedMean;
+                vertSwim_S = rp.vertSwimSpeedStd;
                 sinking_M = 0;
                 sinking_S = 0;
             }
@@ -641,7 +651,7 @@ public class Particle {
         
         // Variable vertical diffusion, following Visser (1997) and Ross & Sharples (2004)
         double r = 1.0/3.0;
-        double mult= (2*dt/r)*rp.D_hVert*(this.z + (dt/2)*D_hVertDz);
+        double mult= (2*dt/r)*rp.D_hVert*(this.depth + (dt/2)*D_hVertDz);
         double rand= ThreadLocalRandom.current().nextGaussian();
         if (rand < 0)
         {
@@ -661,7 +671,7 @@ public class Particle {
             depthNew = localDepth;
         }
         
-        this.z = depthNew;
+        this.depth = depthNew;
     }
     
     

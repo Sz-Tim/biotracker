@@ -118,7 +118,7 @@ public class Particle_track {
         // A new way of creating habitat sites, allowing use of more information
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, true, meshes, rp);
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
         for (HabitatSite site : habitat)
         {
             System.out.println(site.toString());
@@ -126,7 +126,7 @@ public class Particle_track {
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
-        habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, true, meshes, rp);
+        habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, false, meshes, rp);
         
         //int nparts_per_site = rp.nparts;
         //int nTracksSavedPerSite = Math.min(1, nparts_per_site);
@@ -247,7 +247,7 @@ public class Particle_track {
                     // In the case where we read new files every hour, tIndex should be 0. 
                     // Otherwise (as per the case of reading a file once a day FVCOM only mode),
                     // set it equal to current value of tt
-                    int tIndex = tt;
+                    int tIndex = 0;
                     boolean readNewFields = true;
 //                    if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
 //                    {
@@ -307,7 +307,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                     //System.out.println(listStep+" "+i+" "+(i*listStep)+" "+((i + 1) * listStep - 1));
                                 }
-                                callables.add(new ParallelParticleMover(subList, time, tIndex, st, subStepDt, rp,
+                                callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
                                         meshes, hydroFields, habitatEnd, allelems, 
                                         searchCounts,
                                         minMaxDistTrav));
@@ -323,7 +323,7 @@ public class Particle_track {
                         } else {
                             // Normal serial loop
                             for (Particle part : particles) {
-                                ParallelParticleMover.move(part, time, tIndex, st, subStepDt, rp,
+                                ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
                                         meshes, 
                                         hydroFields, 
                                         habitatEnd,
@@ -492,23 +492,30 @@ public class Particle_track {
                 if (tt%rp.recordsPerFile1 == 0)
                 {
                     hydroFields.clear();
+                    try 
+                    {
+                        System.out.println("Reading file "+tt);
+                        // Dima file naming format: minch2_20171229_0003.nc
+                        List<File> files1 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
+                                null);    
 
-                    System.out.println("Reading file "+tt);
-                    // Dima file naming format: minch2_20171229_0003.nc
-                    List<File> files1 = (List<File>) FileUtils.listFiles(
-                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                            null);    
+                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
 
-                    ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-
-                    List<File> files2 = (List<File>) FileUtils.listFiles(
-                            new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                            null);    
-                    String[] varNames1 = {"u","v","salinity","temp","zeta"};
-                    // Read both files and combine
-                    hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
+                        List<File> files2 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                                null);    
+                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
+                        // Read both files and combine
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
+                    }
+                    catch (IndexOutOfBoundsException e)
+                    {
+                        System.err.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
+                        System.exit(1);
+                    }
                 }
             }
             else if (meshes.get(i).getType().equalsIgnoreCase("ROMS_TRI"))

@@ -16,6 +16,7 @@ public class HabitatSite {
     private String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
     private float[] xy; // Coordinate for site
     private float depth;
+    private float releaseDepth;
     private float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
     private boolean insideMesh;
@@ -31,7 +32,7 @@ public class HabitatSite {
     {
         this.ID = ID;
         this.xy = new float[]{x,y};
-        this.depth = depth;
+        this.releaseDepth = depth;
         this.scale = scale;
         
         double[] xy2 = new double[]{this.xy[0],this.xy[1]};
@@ -81,6 +82,9 @@ public class HabitatSite {
                 this.containingMeshType = meshes.get(this.containingMesh).getType();
                 //System.out.println("habitat site in FVCOM mesh");
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
+                this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
+                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.depth);
+               
                 if (this.insideMesh == false)
                 {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
@@ -141,7 +145,7 @@ public class HabitatSite {
         String details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI"))
         {
-            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" "+this.nearestFVCOMCentroid+" "+this.containingFVCOMElem
+            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.depth+" "+this.containingMesh+" "+this.nearestFVCOMCentroid+" "+this.containingFVCOMElem
                     +" "+this.containingMesh+" "+this.containingMeshType;
         }
         else if (this.containingMeshType.equalsIgnoreCase("ROMS"))

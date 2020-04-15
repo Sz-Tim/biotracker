@@ -185,59 +185,77 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             {
                 
                 //System.out.println("Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+m.getDepthUvnode()[elemPart]);
-                part.setZ(rp.startDepth,m.getDepthUvnode()[elemPart]);
+                part.setDepth(rp.startDepth,m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
-                //System.out.println("Fixed depth run: Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
+                //System.out.println("Fixed depth run "+tt+" "+st+": Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             }
             else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
             {
+                //System.out.println("Variable depth run");
                 double D_hVertDz = 0;
-                double localSalinity = 35;
+                float localSalinity = 35;
                 // Calculate the gradient in vertical diffusion, if required
                 if (rp.variableDiff==true || rp.salinityThreshold < 35)
                 {
                     // Calculate the vertical diffusivity profile for the particle location
-                    float dep = (float)part.getZ();
+                    float dep = (float)part.getDepth();
+                    float localDepth = m.getDepthUvnode()[elemPart];
                     // Get the sigma depths at this location, and compare with particle depth
                     float[] sigDepths = m.getSiglay();
                     int layerAbove = 0;
+                    // Initially set this to an impossible value: 1 greater than the number of elements
                     int layerBelow = sigDepths.length;
                     for (int i = 0; i < sigDepths.length; i++)
                     {
-                        sigDepths[i] = sigDepths[i]*m.getDepthUvnode()[elemPart];
                         // Set the index of the layer below the particle. This will default to the highest value if the particle is very close to or on the bed.
-                        if (dep < sigDepths[i])
+                        if (dep < sigDepths[i]*localDepth)
                         {
                             layerBelow = i;
+                            break;
                         }
                     }
+                    //System.out.println();
                     // Set "layerAbove" to be one index less than "layerBelow", ensuring that it cannot be less than zero (particles on surface)
                     layerAbove = layerBelow-1;
                     if (layerAbove < 0)
                     {
                         layerAbove = 0;
                     }
-                                       
-                    float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
-                    float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
-                    float diffusionDifference = Math.abs(diffAbove - diffBelow);
-                    float dZ = sigDepths[layerBelow]-sigDepths[layerAbove];
-                    
-                    // Calculate a gradient, as long as particle is not on the bed or the surface.
-                    // If it is, the gradient will default to zero anyway
-                    if (dZ != 0)
+                    if (layerBelow == sigDepths.length)
                     {
-                        D_hVertDz = diffusionDifference/dZ;
+                        layerBelow = layerAbove;
                     }
-
-                    // Check local salinity in order to induce lice sinking behaviour if too low
-                    if (rp.species.equalsIgnoreCase("sealice"))
+                    
+                    float dZ = (sigDepths[layerBelow]-sigDepths[layerAbove])*localDepth;
+                
+                    if (rp.variableDiff==true)
                     {
+                        float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
+                        float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
+                        float diffusionDifference = Math.abs(diffAbove - diffBelow);
+                        // Calculate a gradient, as long as particle is not on the bed or the surface.
+                        // If it is, the gradient will default to zero anyway
+                        if (dZ != 0)
+                        {
+                            D_hVertDz = diffusionDifference/dZ;
+                        }
+                    }
+                    if (rp.salinityThreshold < 35 && rp.species.equalsIgnoreCase("sealice"))
+                    {
+                        // Check local salinity in order to induce lice sinking behaviour if too low
                         float salAbove = hf.getS()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
                         float salBelow = hf.getS()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
-                        float salinityDifference = salAbove - salBelow;
-                        float dzPosition = dep - sigDepths[layerAbove];
-                        localSalinity = salAbove + dzPosition*salinityDifference/dZ;
+                        float salinityDifference = salBelow - salAbove;
+                        float dzPosition = dep - localDepth*sigDepths[layerAbove];
+                        if (dZ != 0)
+                        {
+                            localSalinity = salAbove + dzPosition*salinityDifference/dZ;
+                        }
+                        else
+                        {
+                            localSalinity = salAbove;
+                        }
+                        System.out.println();
                     }
                 }
                 
@@ -287,12 +305,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 advectStep[0] = -advectStep[0];
                 advectStep[1] = -advectStep[1];
             }
-
-            // 3. Calculate diffusion (random walk step)
-//                            if (variableDiff==true)
-//                            {
-//                                D_h=1000*viscofm[tt][elemPart*10+dep];
-//                            }
 
             double diff_X = 0;
             double diff_Y = 0;
@@ -346,7 +358,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
             part.meshSelectOrExit(new double[]{newlocx,newlocy},meshes,rp);
             
-            //System.out.printf("End of movement: ID %d ELEM %d\n",part.getID(), part.getElem());
+            //System.out.printf("End of movement: ID %d X %.1f Y %.1f ELEM %d\n",part.getID(),part.getLocation()[0],part.getLocation()[1], part.getElem());
            
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             

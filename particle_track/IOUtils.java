@@ -1087,7 +1087,7 @@ public class IOUtils {
                         p.getStatus(),
                         p.getDensity(),
                         p.getMesh(),
-                        p.getZ(),
+                        p.getDepth(),
                         p.getDegreeDays()
                 );
             }
