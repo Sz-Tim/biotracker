@@ -23,6 +23,8 @@ import ucar.ma2.ArrayInt;
 import ucar.ma2.InvalidRangeException;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
+
+import extUtils.*;
         
 // import netcdf reading libraries for alternative data import
 // https://publicwiki.deltares.nl/display/FEWSDOC/Reading+and+writing+netcdf+gridded+data+with+Java
@@ -852,7 +854,7 @@ public class IOUtils {
      * @param filename 
      * @param asInt
      */
-    public static void writeFloatArrayToFile(float[][] variable, String filename, boolean asInt)
+    public static void writeFloatArrayToFile(float[][] variable, String filename, boolean asInt, boolean firstColInt)
     {
         try
         {
@@ -863,13 +865,17 @@ public class IOUtils {
             {
                 for (int j = 0; j < variable[0].length; j++)
                 {   
-                    if (asInt==false)
+                    if (asInt || (firstColInt && j==0))
                     {
-                        out.printf("%.4e ",variable[i][j]);
+                        out.printf("%d",(int)variable[i][j]);
                     }
                     else
                     {
-                        out.printf("%d ",(int)variable[i][j]);
+                        out.printf("%.4e",variable[i][j]);
+                    }
+                    if (j < variable[0].length-1)
+                    {
+                       out.printf(" ");
                     }
                 }
                 out.printf("\n");
@@ -1137,7 +1143,7 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    
+        
     
     /**
      * Print (append) single particle location to file
@@ -1162,38 +1168,73 @@ public class IOUtils {
     }
     
     
-    //    /**
-//     * Make additions to the element presence counts (PSTEPS)
-//     *
-//     * @param particles
-//     * @param rp
-//     * @param pstepsMature
-//     * @param pstepsImmature
-//     * @param subStepDt
-//     */
-//    public static void pstepUpdater(List<Particle> particles, RunProperties rp,
-//            double[][] pstepsMature, double[][] pstepsImmature, double subStepDt) {
-//        for (Particle p : particles) {
-//            d = p.getDensity();
-//            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
-//            int elemPart = p.getElem();
-//            // psteps arrays are updated by lots of threads
-//            if (p.getViable() == true) {
-//                pstepsMature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//            } else if (p.getFree() == true) {
-//                //System.out.println("Printing to pstepsImmature");
-//                pstepsImmature[elemPart][p.getStartID() + 1] += d * (subStepDt / 3600);//*1.0/rp.stepsPerStep;
-//            }
-//        }
-//    }
-    
     /**
-     * Take a snapshot of the number of mature particles in each cell
+     * Make additions to the element presence counts (PSTEPS)
+     *
      * @param particles
      * @param rp
-     * @param nSourceSites
-     * @return 
+     * @param pstepsMature
+     * @param pstepsImmature
+     * @param subStepDt
      */
+    public static void pstepsUpdater(List<Particle> particles, RunProperties rp,
+            float[][] pstepsMature, float[][] pstepsImmature, double dt) 
+    {
+        //System.out.println("size pstepsImmature: "+pstepsMature.length+" "+pstepsMature[0].length);
+        //System.out.println("size pstepsMature: "+pstepsImmature.length+" "+pstepsImmature[0].length);
+        
+        for (Particle p : particles) {
+            double d = p.getDensity();
+            //System.out.println("density = "+d+" mortRate = "+p.getMortRate());
+            int elemPart = p.getElem();
+
+            int col = 0;
+            if (rp.splitPsteps == true)
+            {
+                col = p.getStartIndex();
+            }
+            
+            if (p.getViable() == true) {
+                pstepsMature[elemPart][col] += (float)d * (float)(dt / 3600);//*1.0/rp.stepsPerStep;
+            } else if (p.getFree() == true) {
+                //System.out.println("Printing to pstepsImmature");
+                pstepsImmature[elemPart][col] += (float)d * (float)(dt / 3600);//*1.0/rp.stepsPerStep;
+            }
+        }
+    }
+    
+    public static void pstepsSparseUpdater(List<Particle> particles, RunProperties rp,
+            List<SparseFloatArray> pstepsMature, List<SparseFloatArray> pstepsImmature, double subStepDt)
+    {
+        for (Particle p : particles) 
+        {
+            double d = p.getDensity();
+            int elemPart = p.getElem();
+            int col = 1;
+            if (rp.splitPsteps == true)
+            {
+                col = p.getStartIndex() + 1;
+            }
+            if (p.getViable() == true) {
+                SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
+                arr.put(col, arr.get(elemPart) + (float)d * (float)(subStepDt / 3600)); // place the new value in the array
+                pstepsMature.set(col,arr); // put the array back in the list
+
+            } else if (p.getFree() == true) {
+                SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
+                arr.put(col, arr.get(elemPart) + (float)d * (float)(subStepDt / 3600)); // place the new value in the array
+                pstepsImmature.set(col,arr); // put the array back in the list
+            }
+        }
+    }
+    
+//    /**
+//     * Take a snapshot of the number of mature particles in each cell
+//     * @param particles
+//     * @param rp
+//     * @param nSourceSites
+//     * @return 
+//     */
 //    public static double[][] pstepMatureSnapshot(List<Particle> particles, RunProperties rp,
 //            int nSourceSites) {   
 //        int pstepCols = 2; 

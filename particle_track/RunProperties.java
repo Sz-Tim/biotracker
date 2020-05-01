@@ -32,7 +32,9 @@ public class RunProperties {
             salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
-            readHydroVelocityOnly; // read only u,v from hydro files (saves RAM, ignores random extra variables)
+            readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
+            recordPsteps, splitPsteps, // record particle element densities? split by source site?
+            recordConnectivity, recordLocations, recordArrivals; // record connectivity? particle locations? arrivals at sites?
                 
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
@@ -43,7 +45,8 @@ public class RunProperties {
             thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
             parallelThreads, // Number of threads to use in parallel execution
-            minchVersion; 
+            minchVersion, // Another element of the filename for hydrodynamic files
+            pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Timestep (s) per record
@@ -155,6 +158,14 @@ public class RunProperties {
         // DEPRECATED
         //oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
     
+        recordPsteps = Boolean.parseBoolean(properties.getProperty("recordPsteps","true"));
+        splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps","true"));
+        pstepsInterval = Integer.parseInt(properties.getProperty("pstepsInterval","24"));
+        recordConnectivity = Boolean.parseBoolean(properties.getProperty("recordConnectivity","true"));
+        connectivityInterval = Integer.parseInt(properties.getProperty("connectivityInterval","24"));
+        recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations","true"));
+        recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals","true"));
+        
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario","0"));
         nparts = Integer.parseInt(properties.getProperty("nparts","5"));
         releaseTime = Double.parseDouble(properties.getProperty("releaseTime","0"));

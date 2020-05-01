@@ -22,6 +22,7 @@ public class Particle {
     private double[] xy = new double[2];
     final private double[] startLoc = new double[2];
     private String startSiteID = "0";
+    private int startSiteIndex = 0;
     
     private String coordRef;
     
@@ -83,13 +84,14 @@ public class Particle {
 //        this.coordRef = coordRef;
 //        this.species = species;
 //    }
-    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, 
+    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate, 
             ISO_datestr startDate, double startTime, String coordRef, String species)
     {
         this.id = id;
         this.xy[0] = xstart;
         this.xy[1] = ystart;
         this.startSiteID = startSiteID;
+        this.startSiteIndex = startIndex;
         this.startDate = new ISO_datestr(startDate.getDateStr());
         this.startTime = startTime;
         this.startLoc[0] = xstart;
@@ -217,6 +219,10 @@ public class Particle {
     public String getStartID()
     {
         return this.startSiteID;
+    }
+    public int getStartIndex()
+    {
+        return this.startSiteIndex;
     }
     public ISO_datestr getStartDate()
     {

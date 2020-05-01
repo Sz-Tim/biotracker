@@ -117,7 +117,7 @@ public class Mesh {
             }
             convexHull = ConvexHull.convexHull(uvnodeT);
             //IOUtils.writeFloatArrayToFile(uvnodeT, "uvnode_FVCOM.dat", false);
-            IOUtils.writeFloatArrayToFile(convexHull, "convexHull_"+type+".dat", false);
+            IOUtils.writeFloatArrayToFile(convexHull, "convexHull_"+type+".dat", false, false);
             // This isn't working at the moment
             // At the very least, it's incredibly slow.
 //            ConcaveHull ch2 = new ConcaveHull();
@@ -163,7 +163,7 @@ public class Mesh {
                 vXy[i] = new float[]{vx1[i][0],vy1[i][0]};
             }
             convexHull = ConvexHull.convexHull(uXy);
-            IOUtils.writeFloatArrayToFile(convexHull, "convexHull_ROMS.dat", false);
+            IOUtils.writeFloatArrayToFile(convexHull, "convexHull_ROMS.dat", false, false);
             
             // List the corners to verify which way around the netCDF array is read in
             System.out.println("ROMS grid size: "+lon_u.length+" "+lon_u[0].length);
@@ -259,6 +259,14 @@ public class Mesh {
     public String getType()
     {
         return meshType;
+    }
+    public int getNElems()
+    {
+        return depthUvnode.length;
+    }
+    public int getNNodes()
+    {
+        return depthNodexy.length;
     }
     
     /**

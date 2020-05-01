@@ -26,7 +26,9 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
  
-import java.awt.geom.Path2D;
+//import java.awt.geom.Path2D;
+
+import extUtils.*;
 
 /**
  *
@@ -123,6 +125,18 @@ public class Particle_track {
         {
             System.out.println(site.toString());
         }
+//        // Record the names for reference later when calculating psteps
+        List<String> siteNames = new ArrayList<>();
+        for (int h = 0; h <  habitat.size(); h++)
+        {
+            siteNames.add(habitat.get(h).getID());
+            System.out.println(siteNames.get(h));
+        }
+        System.out.println("list indices: "+siteNames.indexOf("AIRD2") + ", " + siteNames.indexOf("AIRD6"));
+        
+        
+        
+        
         // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd = new ArrayList<>();
         System.out.println("Creating end sites");
@@ -202,6 +216,21 @@ public class Particle_track {
         String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth degreeDays";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
         
+        // Set up arrays to hold particle density*hour counts
+        int pstepsInd2 = 2;
+        if (rp.splitPsteps==true)
+        {
+            pstepsInd2 = habitat.size();
+        }
+        float[][] pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2 ];
+        float[][] pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
+        
+        //List<SparseFloatArray> pstepsImmature = new ArrayList<>(habitat.size());
+        //List<SparseFloatArray> pstepsMature = new ArrayList<>(habitat.size());
+        
+        // Set up array to hold connectivity counts
+        float[][] connectivity = new float[habitat.size()][habitat.size()];
+
         try {
             // --------------------------------------------------------------------------------------
             // Start time loop
@@ -213,8 +242,14 @@ public class Particle_track {
                 String today = currentIsoDate.getDateStr();
                 System.out.println(today);
                 //IOUtils.printFileHeader(locationHeader,"locations_" + today + ".dat");
-                IOUtils.printFileHeader(particleRestartHeader,"locations_" + today + ".dat");
-                IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".dat");
+                if (rp.recordLocations == true)
+                {
+                    IOUtils.printFileHeader(particleRestartHeader,"locations_" + today + ".dat");
+                }
+                if (rp.recordArrivals == true)
+                {
+                    IOUtils.printFileHeader(arrivalHeader,"arrivals_" + today + ".dat");
+                }
                 
                 long splitTime = System.currentTimeMillis();
                 System.out.printf("\n------ Day %d (%s) - Stepcount %d (%f hrs) ------ \n",
@@ -233,6 +268,9 @@ public class Particle_track {
                 System.out.println("Arrival count     = " + freeViableSettleExit[2]);
                 System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
 
+                
+                
+                
                 // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int tt = 0; tt < 24; tt++) {
@@ -244,20 +282,12 @@ public class Particle_track {
                     int currentHour = tt;
                     //System.out.printf("%d \n", tt + 1);
                     
-                    // In the case where we read new files every hour, tIndex should be 0. 
-                    // Otherwise (as per the case of reading a file once a day FVCOM only mode),
-                    // set it equal to current value of tt
-                    int tIndex = 0;
+                    // Read new hydrodynamic fields?
                     boolean readNewFields = true;
-//                    if (meshes.size()==1 && meshes.get(0).getType().equalsIgnoreCase("FVCOM"))
-//                    {
-//                        tIndex = tt;
-                        if (tt != 0)
-                        {
-                            readNewFields = false;
-                        }
-//                    }
-                    
+                    if (tt != 0)
+                    {
+                        readNewFields = false;
+                    }
                     if (readNewFields == true)
                     {
                         // Get new hydro fields
@@ -347,16 +377,63 @@ public class Particle_track {
                     //IOUtils.particleLocsToFile_full(particles, "locations_" + today + "_" + currentHour + ".dat", true);
 
                     //IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".dat",true);
-                    IOUtils.particlesToRestartFile(particles,currentHour,"locations_" + today + ".dat",true);
+                    if (rp.recordLocations == true)
+                    {
+                        IOUtils.particlesToRestartFile(particles,currentHour,"locations_" + today + ".dat",true);
+                    }
                                         
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                     for (Particle part : particles) {
                         if (part.getSettledThisHour()==true) // previously had clause oldOutput==false here
                         {
-                            IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
+                            // Save arrival
+                            if (rp.recordArrivals==true)
+                            {
+                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
+                            }
+                            // Add arrival to connectivity file
+                            int sourceIndex = part.getStartIndex();
+                            String destSite = part.getLastArrival();
+                            int destIndex = siteNames.indexOf(destSite);
+                            //System.out.println("Connection made: SOURCE "+sourceIndex+" "+part.getStartID()+" DESTINATION "+destIndex+" "+destSite);
+                            connectivity[sourceIndex][destIndex] += part.getDensity();
+                            
+                            // Reset ability to settle
                             part.setSettledThisHour(false);
                         }
                     }
+                    
+                    // Hourly updates to pstep arrays
+                    IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
+                    //IOUtils.pstepsSparseUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
+                    
+                    // If
+                    if ((stepcount+1)%rp.pstepsInterval == 0)
+                    {
+                        //IOUtils.writeFloatArrayToFile(pstepsImmature, "pstepsImmature_" + today + "_" + tt + "_" + stepcount + ".dat", false, false);
+                        //IOUtils.writeFloatArrayToFile(pstepsMature, "pstepsMature_" + today + "_" + tt + "_" + stepcount + ".dat", false, false);
+                        // Trim arrays to non-zero rows and write to file
+                        //System.out.println("Trimming immature file");
+                        float[][] psImmTrim = null;
+                        try { psImmTrim = nonZeroRows(pstepsImmature);} catch (Exception e){}
+                        //System.out.println("Trimming mature file");
+                        float[][] psMatTrim = null;
+                        try { psMatTrim = nonZeroRows(pstepsMature);} catch (Exception e){}
+                        System.out.println("Writing psteps");
+                        IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + (stepcount+1) + ".dat", false, true);
+                        IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + (stepcount+1) + ".dat", false, true);
+                        
+                        pstepsImmature = new float[meshes.get(0).getNElems()][habitat.size()];
+                        pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
+                    }
+                    
+                    if ((stepcount+1)%rp.connectivityInterval == 0)
+                    {
+                        System.out.println("Writing connectivity");
+                        IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + (stepcount+1) + ".dat", false, false);
+                        connectivity = new float[habitat.size()][habitat.size()];
+                    }
+                    
 
                     // Clean up "dead" (666) and "exited" (66) particles
                     List<Particle> particlesToRemove = new ArrayList<>(0);
@@ -393,6 +470,10 @@ public class Particle_track {
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader,"locationsEnd_"+currentIsoDate.getDateStr()+".dat");
             IOUtils.particlesToRestartFile(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true);
+            
+            
+            
+            
             
             System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
@@ -436,7 +517,7 @@ public class Particle_track {
                 int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
                 int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
 
-                Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), numParticlesCreated+i, 
+                Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated+i, 
                         rp.mortalityRate, currentDate, currentTime, rp.coordRef, rp.species);
                 p.setMesh(meshStart);
                 p.setElem(elemFVCOMStart);
@@ -627,6 +708,8 @@ public class Particle_track {
     
     
     
+    
+    
 
     /**
      * Count the number of particles in different states (free, viable, settled,
@@ -651,6 +734,10 @@ public class Particle_track {
         return freeViableSettleExit;
     }
     
+    
+    
+    
+    
     // calculate a connectivity matrix detailing the 
     public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int npartsPerSite)
     {
@@ -665,7 +752,62 @@ public class Particle_track {
         return connectMatrix;
     }
 
-
+    
+    public static int[] nonZeroVals(int[] A) {
+        int count = 0;
+        for (int i = 0; i < A.length; i++) {
+            if (A[i] != 0) {
+                count++;
+            }
+        }
+        int[] temp = new int[count];
+        int p = 0;
+        for (int i = 0; i < A.length; i++) {
+            if (A[i] != 0) {
+                temp[p++] = A[i];
+            }
+        }
+        return temp;
+    }
+    
+    public static float[][] nonZeroRows(float[][] A) {
+        int count = 0;
+        List<Integer> list = new ArrayList<Integer>();
+        
+        for (int i = 0; i < A.length; i++) {
+            // Check whether ANY of the elements on this row !=0
+            for (int j = 0; j < A[0].length; j++){
+                if (A[i][j] > 0) {
+                    list.add(i);
+                    count++;
+                    break;
+                }
+            }
+        }
+        System.out.println("count "+count);
+        float[][] temp = null;
+        if (count > 0)
+        {
+            temp = new float[count][A[0].length+1];
+            System.out.println("temp size = "+temp.length+" "+temp[0].length);
+            //System.out.println("A size = "+A.length+" "+A[0].length);
+            int p = 0;
+            for (int i = 0; i < list.size(); i++) {
+                int row = list.get(i);
+                temp[p][0] = row;
+                for (int j = 0; j < A[0].length; j++){
+                    //System.out.println(A[row][j]);
+                    if (A[row][j] > 0) {
+                        temp[p][j+1] = A[row][j];
+                    }
+                }
+                p++;
+            }
+        }
+        return temp;
+    }
+    
+    
 
     public static void memTest() {
         long heapSize = Runtime.getRuntime().totalMemory();
