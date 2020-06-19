@@ -1699,7 +1699,7 @@ public class Particle {
         int meshPart = this.getMesh();
         
         int dep = this.getDepthLayer();
-        System.out.printf("RK4Step: Location = [%.6e,%.6e], Element = %d, Depth = %d, tt=%d, st=%d\n",this.getLocation()[0],this.getLocation()[1],elemPart,dep,tt,st);
+        //System.out.printf("RK4Step: Location = [%.6e,%.6e], Element = %d, Depth = %d, tt=%d, st=%d\n",this.getLocation()[0],this.getLocation()[1],elemPart,dep,tt,st);
         double[] advectStep = new double[2];
         
         
@@ -1799,8 +1799,8 @@ public class Particle {
         // Generally they do, but sometimes they really don't (calculating Euler steps with
         // similar time step to RK4 is not advisable as sensitive to complex current features).
         // Further the approximation for printing below doesn't include the time interpolation.
-        System.out.printf("RK4 calc (%d): advectStep=[%.3e,%.3e] vel0=[%.3e,%.3e] dt=%.3e vel0*dt=[%.3e,%.3e]\n",
-                st,advectStep[0],advectStep[1],vel[0],vel[1],dt,vel[0]*dt,vel[1]*dt);
+//        System.out.printf("RK4 calc (%d): advectStep=[%.3e,%.3e] vel0=[%.3e,%.3e] dt=%.3e vel0*dt=[%.3e,%.3e]\n",
+//                st,advectStep[0],advectStep[1],vel[0],vel[1],dt,vel[0]*dt,vel[1]*dt);
         return advectStep;
     }
     /**
@@ -1809,7 +1809,7 @@ public class Particle {
      * @param xy             Location of new velocity to be used (current location plus spatial step)
      * @param elemPart
      * @param dep
-     * @param timeStepAhead   Time step ahead i.e. "2.0" if half-step ahead, "1.0" if full step ahead
+     * @param timeStepAhead   Time step ahead i.e. "1.0/2.0" if half-step ahead, "1.0" if full step ahead
      * @param neighbours
      * @param uvnode
      * @param nodexy
@@ -1855,7 +1855,7 @@ public class Particle {
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0)
             {
-                System.out.println("Tried to go on land");
+                //System.out.println("Tried to go on land");
                 return xy_step;
             }
 
