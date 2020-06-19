@@ -193,19 +193,25 @@ public class RunProperties {
         
         species = properties.getProperty("species","none"); 
         viabletime = Double.parseDouble(properties.getProperty("viabletime","86"));
-        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","-1"));
+        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge","336"));
         
         viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays","-1"));
         maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays","-1"));
         if (viableDegreeDays != -1)
         {
-            viabletime = viableDegreeDays*20;
+            //viabletime = viableDegreeDays*20;
+            viabletime = -1;
             System.out.println("viableDegreeDays entered; set viabletime="+viabletime+" so won't be used at 56N!");
         }
         if (maxDegreeDays != -1)
         {
-            maxParticleAge = maxDegreeDays*20;
+            //maxParticleAge = maxDegreeDays*20;
+            maxParticleAge = -1;
             System.out.println("maxDegreeDays entered; set maxParticleAge="+maxParticleAge+" so won't be used at 56N!");
+        }
+        if ((viableDegreeDays != -1 || maxParticleAge != -1) && readHydroVelocityOnly == true)
+        {
+            System.err.println("readHydroVelocityOnly==true AND trying to use degree-days for development => won't develop or die!");
         }
         
         vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean","0"));

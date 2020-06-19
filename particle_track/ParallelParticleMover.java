@@ -187,7 +187,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 //System.out.println("Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+m.getDepthUvnode()[elemPart]);
                 part.setDepth(rp.startDepth,m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
-                //System.out.println("Fixed depth run "+tt+" "+st+": Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
+                System.out.println("Fixed depth run "+tt+" "+st+": Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             }
             else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI"))
             {
@@ -264,7 +264,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 //System.out.println("Depth post-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
                 // set depth layer based on depth in metres
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart],m.getSiglay());
-                //System.out.println("Normal run: Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
+                System.out.println("Normal run: Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             }
             
             // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
