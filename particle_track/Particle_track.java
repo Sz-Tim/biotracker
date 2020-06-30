@@ -125,6 +125,15 @@ public class Particle_track {
         {
             System.out.println(site.toString());
         }
+        
+        FileWriter fstream = new FileWriter("startSitesUsed.dat",false);
+        PrintWriter out = new PrintWriter(fstream);
+        for (int s = 0; s < habitat.size(); s++)
+        {
+            out.println(habitat.get(s).toString());
+        }
+        out.close();
+        
 //        // Record the names for reference later when calculating psteps
         List<String> siteNames = new ArrayList<>();
         for (int h = 0; h <  habitat.size(); h++)

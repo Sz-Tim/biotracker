@@ -142,15 +142,16 @@ public class HabitatSite {
     @Override
     public String toString()
     {
-        String details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh;
+        //String details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh;
+        String details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI"))
         {
-            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.depth+" "+this.containingMesh+" "+this.nearestFVCOMCentroid+" "+this.containingFVCOMElem
-                    +" "+this.containingMesh+" "+this.containingMeshType;
+            details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.depth+"\t"+this.containingMesh+"\t"+this.nearestFVCOMCentroid+"\t"+this.containingFVCOMElem
+                    +"\t"+this.containingMesh+"\t"+this.containingMeshType;
         }
         else if (this.containingMeshType.equalsIgnoreCase("ROMS"))
         {
-            details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh+" U_grid: ("
+            details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.containingMesh+" U_grid: ("
                     +this.nearestROMSGridPointU[0]+","+this.nearestROMSGridPointU[1]+") ("
                     +this.containingROMSElemU[0]+","+this.nearestROMSGridPointU[1]+")";
         }
