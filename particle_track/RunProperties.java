@@ -34,8 +34,9 @@ public class RunProperties {
             setStartDepth, fixDepth, // set particle depth at initiation?
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
-            recordConnectivity, recordLocations, recordArrivals; // record connectivity? particle locations? arrivals at sites?
-                
+            recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
+            duplicateLastDay; // Should hydro file for last day be duplicated for interpolation puproses during last hour of simulation (false except when in operational mode)    
+            
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
@@ -152,6 +153,7 @@ public class RunProperties {
         startDepth = Integer.parseInt(properties.getProperty("startDepth","0"));
                
         readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly","false"));
+        duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay","false"));
         
         parallel = Boolean.parseBoolean(properties.getProperty("parallel","true"));
         parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads","4"));

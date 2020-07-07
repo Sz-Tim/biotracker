@@ -248,6 +248,19 @@ public class Particle_track {
             //for (int fnum = rp.firstday; fnum <= rp.lastday; fnum++)
             for (int fnum = 0; fnum < numberOfDays; fnum++) {
 
+                // ******* Is it the last day of the simulation? *******
+                // If so, readHydroFields will read the last day file twice, and use the first hour of endDay as hour1
+                // of endDay+1 for interpolation purposes.
+                // Other design choices possible:
+                // - stop particles at hour 23 on last day (introduces and hour gap if using for restart)
+                // - do no interpolation for last hour of run
+                // Whatever you choose - a small error would be introduced. Could do using actual next day file but this
+                // means losing a day's worth of hydrodynamic data if running in operational mode.
+                boolean isLastDay = false;
+                if (fnum == numberOfDays-1 && rp.duplicateLastDay == true){
+                    isLastDay = true;
+                }
+                        
                 String today = currentIsoDate.getDateStr();
                 System.out.println(today);
                 //IOUtils.printFileHeader(locationHeader,"locations_" + today + ".dat");
@@ -301,7 +314,7 @@ public class Particle_track {
                     {
                         // Get new hydro fields
                         hydroFields.clear();
-                        hydroFields = readHydroFields(meshes,currentIsoDate,tt,rp);
+                        hydroFields = readHydroFields(meshes,currentIsoDate,tt,isLastDay,rp);
                     }
                                        
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
@@ -568,7 +581,7 @@ public class Particle_track {
      * @param rp
      * @return 
      */
-    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int tt, RunProperties rp) throws IOException
+    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int tt, boolean isLastDay, RunProperties rp) throws IOException
     {
         List<HydroField> hydroFields = new ArrayList<>();
         
@@ -592,6 +605,11 @@ public class Particle_track {
                                 null);    
 
                         ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+                        if (isLastDay)
+                        {
+                            System.out.println("** Last day - reading same hydro file twice **");
+                            tomorrow = currentIsoDate;
+                        }
 
                         List<File> files2 = (List<File>) FileUtils.listFiles(
                                 new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),

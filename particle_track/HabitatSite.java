@@ -146,8 +146,9 @@ public class HabitatSite {
         String details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI"))
         {
-            details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.depth+"\t"+this.containingMesh+"\t"+this.nearestFVCOMCentroid+"\t"+this.containingFVCOMElem
-                    +"\t"+this.containingMesh+"\t"+this.containingMeshType;
+            details = this.ID+"\t"+this.xy[0]+"\t"+this.xy[1]+"\t"+this.depth+"\t"
+                    +this.containingMesh+"\t"+this.nearestFVCOMCentroid+"\t"+this.containingFVCOMElem
+                    +"\t"+this.containingMeshType;
         }
         else if (this.containingMeshType.equalsIgnoreCase("ROMS"))
         {
