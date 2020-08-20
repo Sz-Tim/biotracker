@@ -463,7 +463,7 @@ public class Particle_track {
                     {
                         if (part.getStatus()==666 || part.getStatus()==66)
                         {
-                            System.out.printf("Removing particle %d, age %f degreeDays %f status %d\n",part.getID(),part.getAge(),part.getDegreeDays(),part.getStatus());
+                            //System.out.printf("Removing particle %d, age %f degreeDays %f status %d\n",part.getID(),part.getAge(),part.getDegreeDays(),part.getStatus());
                             particlesToRemove.add(part);
                         }
                     }
@@ -599,6 +599,9 @@ public class Particle_track {
                     {
                         System.out.println("Reading file "+tt);
                         // Dima file naming format: minch2_20171229_0003.nc
+                        
+                        
+                        
                         List<File> files1 = (List<File>) FileUtils.listFiles(
                                 new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                                 new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
