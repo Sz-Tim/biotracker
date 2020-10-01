@@ -136,6 +136,47 @@ public class ISO_datestr {
         return tomorrow;
     }
 
+    public static ISO_datestr getYesterday(ISO_datestr today)
+    {
+        ISO_datestr yesterday = new ISO_datestr(today.getDay(),today.getMonth(),today.getYear());
+        // If first of month, need to set day to be last day of previous month
+        if(yesterday.day == 1)
+        {
+            if(yesterday.month==1)
+            {
+                yesterday.month = 12;
+                yesterday.year--;
+                boolean isLeapYear = false;
+                for (int i = 0; i < yesterday.leapYears.length; i++) 
+                {
+                    if(yesterday.leapYears[i]==yesterday.year)
+                    {
+                        isLeapYear=true;
+                    }
+                }
+                if(isLeapYear)
+                {
+                    yesterday.monthDays[1][1]=29;
+                }
+                else
+                {
+                    yesterday.monthDays[1][1]=28;
+                }
+            }           
+            else
+            {
+                yesterday.month--;
+            }  
+            yesterday.day=yesterday.monthDays[yesterday.month -1][1];
+        }
+        else
+        {
+            yesterday.day--;
+        } 
+        return yesterday;
+    }
+
+    
     public void takeDay()
     {
         if(this.day == 1)

@@ -238,8 +238,12 @@ public class Particle_track {
         //List<SparseFloatArray> pstepsMature = new ArrayList<>(habitat.size());
         
         // Set up array to hold connectivity counts
+        
         float[][] connectivity = new float[habitat.size()][habitat.size()];
 
+        
+        System.out.println("BACKWARDS? "+rp.backwards);
+        
         try {
             // --------------------------------------------------------------------------------------
             // Start time loop
@@ -296,8 +300,6 @@ public class Particle_track {
                 // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int tt = 0; tt < 24; tt++) {
-                    // alternatively, run loop backwards
-                    //for (int tt = lasttime; tt >= firsttime; tt--)
 
                     System.out.printf("--------- HOUR %d ----------\n",tt);
                     // Calculate current time of the day (complete hours elapsed since midnight)
@@ -475,8 +477,18 @@ public class Particle_track {
                     stepcount++;
                 }
                 System.out.printf("\n");
-                
-                currentIsoDate.addDay();
+                       
+                //System.out.println("BACKWARDS? "+rp.backwards);
+                if (rp.backwards==false)
+                {
+                    //System.out.println("Adjusting date to next day");
+                    currentIsoDate.addDay();
+                }
+                else
+                {
+                    //System.out.println("Adjusting date to previous day");
+                    currentIsoDate.takeDay();
+                }
                 
                 // Check some particle info
 //                for (Particle part : particles)
@@ -599,34 +611,65 @@ public class Particle_track {
                     {
                         System.out.println("Reading file "+tt);
                         // Dima file naming format: minch2_20171229_0003.nc
+                       
+                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
                         
-                        
-                        
-                        List<File> files1 = (List<File>) FileUtils.listFiles(
+                        // Normal "forwards time"
+                        if (rp.backwards==false)
+                        {
+                            List<File> files1 = (List<File>) FileUtils.listFiles(
                                 new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
                                 new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-                                null);    
-
-                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-                        if (isLastDay)
+                                null); 
+                            ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+                            if (isLastDay)
+                            {
+                                System.out.println("** Last day - reading same hydro file twice **");
+                                tomorrow = currentIsoDate;
+                            }
+                            List<File> files2 = (List<File>) FileUtils.listFiles(
+                                    new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                    new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                                    null);     
+                                                    // Read both files and combine
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
+                        } 
+                        // Instead read time backwards, so need yesterday instead
+                        else
                         {
-                            System.out.println("** Last day - reading same hydro file twice **");
-                            tomorrow = currentIsoDate;
+                            List<File> files1 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*_rev.nc"), 
+                                null); 
+                            ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
+                            if (isLastDay)
+                            {
+                                System.out.println("** Last day - reading same hydro file twice **");
+                                yesterday = currentIsoDate;
+                            }
+                            List<File> files2 = (List<File>) FileUtils.listFiles(
+                                    new File(rp.datadir+rp.datadirPrefix+yesterday.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                    new WildcardFileFilter(rp.location+rp.minchVersion+"_"+yesterday.getYear()+String.format("%02d",yesterday.getMonth())+String.format("%02d",yesterday.getDay())+"*_rev.nc"), 
+                                    null);     
+                            // Read both files and combine
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
                         }
+                        
 
-                        List<File> files2 = (List<File>) FileUtils.listFiles(
-                                new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                                new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                                null);    
-                        String[] varNames1 = {"u","v","salinity","temp","zeta"};
-                        // Read both files and combine
-                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
                     }
                     catch (Exception e)
                     {
                         System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
-                        System.err.println("Requested file: "+rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")
+                        if (rp.backwards==false)
+                        {
+                            System.err.println("Requested file: "+rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")
                                 +rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc");
+                        }
+                        else
+                        {
+                            System.err.println("Requested file: "+rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")
+                                +rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*_rev.nc");
+                        }
                         System.exit(1);
                     }
                 }
