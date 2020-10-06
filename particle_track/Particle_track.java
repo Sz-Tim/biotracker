@@ -241,9 +241,6 @@ public class Particle_track {
         
         float[][] connectivity = new float[habitat.size()][habitat.size()];
 
-        
-        System.out.println("BACKWARDS? "+rp.backwards);
-        
         try {
             // --------------------------------------------------------------------------------------
             // Start time loop
@@ -428,8 +425,11 @@ public class Particle_track {
                     }
                     
                     // Hourly updates to pstep arrays
-                    IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
+                    if (rp.recordPsteps==true)
+                    {
+                        IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
                     //IOUtils.pstepsSparseUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
+                    }
                     
                     // If
                     if ((stepcount+1)%rp.pstepsInterval == 0)
