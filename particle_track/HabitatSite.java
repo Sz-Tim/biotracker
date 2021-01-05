@@ -48,7 +48,7 @@ public class HabitatSite {
         this.containingMesh = 0;
         this.insideMesh = false;
         // Use this to force checking of FVCOM mesh (single mesh scenario)
-        boolean exitIfNotInMesh = true;
+        boolean exitIfNotInMesh = false;
         
         //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
@@ -68,7 +68,7 @@ public class HabitatSite {
         this.nearestFVCOMCentroid = -1;
         this.containingFVCOMElem = -1;
         
-        //System.out.println("Containing mesh = "+this.containingMesh);
+        //System.out.println("Containing mesh = "+this.containingMesh+" insideMesh="+this.insideMesh);
         if (this.insideMesh == false && exitIfNotInMesh == true)
         {
             //System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
@@ -79,11 +79,13 @@ public class HabitatSite {
         {
             if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM") || meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS_TRI"))
             {
+                //System.out.println(ID+" "+x+" "+y+" Habitat site within provided mesh --- : CREATING SITE");
                 this.containingMeshType = meshes.get(this.containingMesh).getType();
                 //System.out.println("habitat site in FVCOM mesh");
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
+                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.nearestFVCOMCentroid);
                 this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
-                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.depth);
+                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.depth+" "+this.nearestFVCOMCentroid);
                
                 if (this.insideMesh == false)
                 {
@@ -105,6 +107,8 @@ public class HabitatSite {
                 this.containingFVCOMElem = Particle.whichElement(xy2, 
                             IntStream.rangeClosed(0, meshes.get(this.containingMesh).getUvnode()[0].length-1).toArray(), 
                             meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());
+                int a = this.containingFVCOMElem;
+                System.out.println(ID+" "+x+" "+y+" "+a);
             } 
             else if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS"))
             {

@@ -145,7 +145,9 @@ public class IOUtils {
                 {
                     scale = (float)Double.parseDouble(values[scaleCol]);
                 }
+                //System.out.println("Read locations, need to add site");
                 HabitatSite site = new HabitatSite(ID,x,y,depth,scale,meshes,rp);
+                System.out.println("meshType = "+site.getContainingMeshType());
                 if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
                 {
                     habitat.add(site);
@@ -330,15 +332,21 @@ public class IOUtils {
     public static float[] readNetcdfFloat1D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        float[] floatOut = new float[10];
+        float[] floatOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
-            if (dataVar == null) {
-                System.out.println("Cant find Variable: "+variable);
+            if (dataVar == null ) {
+                System.out.println("  Can't find Variable: "+variable);
+                return(floatOut);
             }   
             
             int[] shape = dataVar.getShape();
             //int origin = 0;
+            if (shape.length > 1)
+            {
+                return(floatOut);
+            }
             
             try
             {
@@ -364,17 +372,21 @@ public class IOUtils {
 	    ioe.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-        } 
+        } finally {
+            
+        }
         return floatOut;
     }
     public static int[] readNetcdfInteger1D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        int[] intOut = new int[10];
+        int[] intOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.out.println("Can't find Variable: "+variable);
+                System.out.println("  Can't find Variable: "+variable);
+                return(intOut);
             }   
             
             int[] shape = dataVar.getShape();
@@ -407,11 +419,14 @@ public class IOUtils {
     public static float[][] readNetcdfFloat2D(String filename, String variable, int[] origin, int[] shape)
     {
 //        System.out.println("Reading variable: "+variable);
-        float[][] floatOut = new float[2][10];
+        //float[][] floatOut = new float[2][10];
+        float[][] floatOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.err.println("Can't find Variable: "+variable);
+                System.err.println("  Can't find Variable: "+variable);
+                return(floatOut);
             }     
 //            int[] origin = new int[2];
 //            int[] shape = dataVar.getShape();
@@ -471,11 +486,14 @@ public class IOUtils {
     public static int[][] readNetcdfInteger2D(String filename, String variable)
     {
         System.out.println("Reading variable: "+variable);
-        int[][] intOut = new int[2][10];
+        //int[][] intOut = new int[2][10];
+        int[][] intOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.out.println("Can't find Variable: "+variable);
+                System.out.println("  Can't find Variable: "+variable);
+                return(intOut);
             }   
             
             int[] shape = dataVar.getShape();
@@ -543,11 +561,14 @@ public class IOUtils {
     public static float[][][] readNetcdfFloat3D(String filename, String variable, int[] origin, int[] shape)
     {
 //        System.out.println("Reading variable: "+variable);
-        float[][][] floatOut = new float[2][2][10];
+        //float[][][] floatOut = new float[2][2][10];
+        float[][][] floatOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.err.println("Can't find Variable: "+variable);
+                System.err.println("  Can't find Variable: "+variable);
+                return(floatOut);
             }   
             
             // set origin externally, always?
@@ -625,11 +646,14 @@ public class IOUtils {
     public static float[][][][] readNetcdfFloat4D(String filename, String variable, int[] origin, int[] shape)
     {
         System.out.println("Reading variable: "+variable);
-        float[][][][] floatOut = new float[2][2][10][1];
+        //float[][][][] floatOut = new float[2][2][10][1];
+        float[][][][] floatOut = null;
+        
         try (NetcdfFile dataFile = NetcdfFile.open(filename, null)) {
             Variable dataVar = dataFile.findVariable(variable);
             if (dataVar == null) {
-                System.err.println("Can't find Variable: "+variable);
+                System.err.println("  Can't find Variable: "+variable);
+                return(floatOut);
             }   
             
             // set origin externally, always?
@@ -1072,7 +1096,7 @@ public class IOUtils {
      * @param filename
      * @param append 
      */
-    public static void particlesToRestartFile(List<Particle> particles, int currentHour, String filename, boolean append)
+    public static void particlesToRestartFile(List<Particle> particles, int currentHour, String filename, boolean append, RunProperties rp)
     {
         try
         {
@@ -1081,21 +1105,39 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles)
             {
-                out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %.2f\n",
-                        currentHour,
-                        p.getID(),
-                        p.getStartDate().getDateStr(),
-                        p.getAge(),
-                        p.getStartID(),
-                        p.getLocation()[0],
-                        p.getLocation()[1],
-                        p.getElem(),
-                        p.getStatus(),
-                        p.getDensity(),
-                        p.getMesh(),
-                        p.getDepth(),
-                        p.getDegreeDays()
-                );
+                if (rp.coordRef.equalsIgnoreCase("WGS84")){
+                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %.2f\n",
+                            currentHour,
+                            p.getID(),
+                            p.getStartDate().getDateStr(),
+                            p.getAge(),
+                            p.getStartID(),
+                            p.getLocation()[0],
+                            p.getLocation()[1],
+                            p.getElem(),
+                            p.getStatus(),
+                            p.getDensity(),
+                            p.getMesh(),
+                            p.getDepth(),
+                            p.getDegreeDays()
+                    );
+                } else {
+                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %.2f\n",
+                            currentHour,
+                            p.getID(),
+                            p.getStartDate().getDateStr(),
+                            p.getAge(),
+                            p.getStartID(),
+                            p.getLocation()[0],
+                            p.getLocation()[1],
+                            p.getElem(),
+                            p.getStatus(),
+                            p.getDensity(),
+                            p.getMesh(),
+                            p.getDepth(),
+                            p.getDegreeDays()
+                    );
+                }
             }
             
             //Close the output stream

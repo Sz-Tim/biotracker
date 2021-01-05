@@ -155,6 +155,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Increment in particle age
             part.incrementAge(subStepDt/3600.0); // particle age in hours
             // Increment in particle degree days accumulated (can be used for maturation or mortality in larvae)
+//            System.out.println("--- "+tt+" "+part.getDepthLayer()+" "+part.getElem()+" ---");
             if (rp.readHydroVelocityOnly == false)
             {
                 double temperature = hf.getT()[tt][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
@@ -334,6 +335,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 dx = dXY2[0];
                 dy = dXY2[1];
             }
+//            } else {
+//                System.out.printf("distance %.04f %.04f (lat: %.04f)",dx,dy,part.getLocation()[1]);
+//            }
             
             // 4. update particle location
             double newlocx=part.getLocation()[0] + dx; 

@@ -35,7 +35,8 @@ public class RunProperties {
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
-            duplicateLastDay; // Should hydro file for last day be duplicated for interpolation puproses during last hour of simulation (false except when in operational mode)    
+            duplicateLastDay, // Should hydro file for last day be duplicated for interpolation puproses during last hour of simulation (false except when in operational mode)    
+            checkOpenBoundaries; // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
@@ -99,6 +100,8 @@ public class RunProperties {
         mesh2 = properties.getProperty("mesh2","");
         mesh1Type = properties.getProperty("mesh1Type","");
         mesh2Type = properties.getProperty("mesh2Type","");
+        
+        checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries","true"));
         
         restartParticles = properties.getProperty("restartParticles",""); 
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays","21"));

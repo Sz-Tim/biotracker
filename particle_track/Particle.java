@@ -767,7 +767,10 @@ public class Particle {
             {
                 if (report) {System.out.println("    this is the lowest ID mesh, checking boundaries");}
                 // boundary check
-                int bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
+                int bnode = -1;
+                if (rp.checkOpenBoundaries == true){
+                    bnode = ParallelParticleMover.openBoundaryCheck((float)newLoc[0],(float)newLoc[1],m,rp);
+                }
                 if (bnode != -1)
                 {
                     if (report) {System.out.println("      close to a mesh boundary node");}
@@ -1282,8 +1285,8 @@ public class Particle {
             }
             
             //System.out.printf("tt %d i %d",tt,i);
-//            System.out.printf(" --- elem %d dist %.4f weight %.4e --- vel = %.4f %.4f\n",
-//                (int)nrList[i][0],nrList[i][1],weights[i],u[tt][depLayer][(int)nrList[i][0]],v[tt][depLayer][(int)nrList[i][0]]);
+//            System.out.printf(" --- tt %d depLayer %d elem %d dist %.4f weight %.4e --- vel = %.4f %.4f\n",
+//                tt,depLayer,(int)nrList[i][0],nrList[i][1],weights[i],u[tt][depLayer][(int)nrList[i][0]],v[tt][depLayer][(int)nrList[i][0]]);
 //            System.out.println("velocityFromNearestList: "+i+" "+tt+" "+depLayer+" "+(int)nrList[i][0]);
             usum=usum+weights[i]*u[tt][depLayer][(int)nrList[i][0]];
             vsum=vsum+weights[i]*v[tt][depLayer][(int)nrList[i][0]];

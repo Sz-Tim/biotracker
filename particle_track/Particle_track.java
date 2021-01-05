@@ -121,10 +121,10 @@ public class Particle_track {
         List<HabitatSite> habitat = new ArrayList<>();
         System.out.println("Creating start sites");
         habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
-        for (HabitatSite site : habitat)
-        {
-            System.out.println(site.toString());
-        }
+//        for (HabitatSite site : habitat)
+//        {
+//            System.out.println(site.toString());
+//        }
         
         FileWriter fstream = new FileWriter("startSitesUsed.dat",false);
         PrintWriter out = new PrintWriter(fstream);
@@ -139,9 +139,9 @@ public class Particle_track {
         for (int h = 0; h <  habitat.size(); h++)
         {
             siteNames.add(habitat.get(h).getID());
-            System.out.println(siteNames.get(h));
+            //System.out.println(siteNames.get(h));
         }
-        System.out.println("list indices: "+siteNames.indexOf("AIRD2") + ", " + siteNames.indexOf("AIRD6"));
+        //System.out.println("list indices: "+siteNames.indexOf("AIRD2") + ", " + siteNames.indexOf("AIRD6"));
         
         
         
@@ -400,7 +400,7 @@ public class Particle_track {
                     //IOUtils.particleLocsToFile_full(particles,currentHour,"locations_" + today + ".dat",true);
                     if (rp.recordLocations == true)
                     {
-                        IOUtils.particlesToRestartFile(particles,currentHour,"locations_" + today + ".dat",true);
+                        IOUtils.particlesToRestartFile(particles,currentHour,"locations_" + today + ".dat",true,rp);
                     }
                                         
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
@@ -503,7 +503,7 @@ public class Particle_track {
             // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader,"locationsEnd_"+currentIsoDate.getDateStr()+".dat");
-            IOUtils.particlesToRestartFile(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true);
+            IOUtils.particlesToRestartFile(particles,0,"locationsEnd_"+currentIsoDate.getDateStr()+".dat",true,rp);
             
             
             
@@ -628,9 +628,9 @@ public class Particle_track {
                                 tomorrow = currentIsoDate;
                             }
                             List<File> files2 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-                                    new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-                                    null);     
+                                new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
+                                null);     
                                                     // Read both files and combine
                             hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(),files2.get(0).getCanonicalPath(),varNames1,null,null,null,"FVCOM",rp.readHydroVelocityOnly));
                         } 
