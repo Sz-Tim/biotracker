@@ -301,11 +301,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             //System.out.printf("ADVECT=[%.3e,%.3e]\n",advectStep[0],advectStep[1]);          
             
             // Reverse velocities if running backwards
-            if (rp.backwards == true)
-            {
-                advectStep[0] = -advectStep[0];
-                advectStep[1] = -advectStep[1];
-            }
+//            if (rp.backwards == true)
+//            {
+//                advectStep[0] = -advectStep[0];
+//                advectStep[1] = -advectStep[1];
+//            }
 
             double diff_X = 0;
             double diff_Y = 0;
