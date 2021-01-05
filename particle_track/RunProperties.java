@@ -101,7 +101,7 @@ public class RunProperties {
         mesh1Type = properties.getProperty("mesh1Type","");
         mesh2Type = properties.getProperty("mesh2Type","");
         
-        checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries","true"));
+        checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries","false"));
         
         restartParticles = properties.getProperty("restartParticles",""); 
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays","21"));
