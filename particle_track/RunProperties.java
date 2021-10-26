@@ -21,7 +21,8 @@ public class RunProperties {
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
-            coordRef; // Coordinate reference system
+            coordRef, // Coordinate reference system
+            seasonalDensityPath; // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
             
             
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
@@ -93,6 +94,8 @@ public class RunProperties {
         datadir2 = properties.getProperty("datadir2","/home/sa01da/data/oss/");
         datadir2Prefix = properties.getProperty("datadirPrefix","");
         datadir2Suffix = properties.getProperty("datadirSuffix","_OLD");
+
+        seasonalDensityPath = properties.getProperty("seasonalDensityPath","");
         
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion","2"));
         
