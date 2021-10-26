@@ -137,7 +137,7 @@ public class Mesh {
                 System.out.println("  Siglay is defined on mesh, read and extract first line");
                 float[][] siglayGrid = IOUtils.readNetcdfFloat2D(meshFilename,"siglay",null,null);
                 //System.out.println(siglayGrid.length+" "+siglayGrid[0].length);
-                siglay = new float[10];
+                siglay = new float[siglayGrid.length];
                 for (int i = 0; i < siglayGrid.length; i++)
                 {
                     siglay[i] = siglayGrid[i][0];
