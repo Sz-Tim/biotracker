@@ -147,7 +147,7 @@ public class IOUtils {
                 }
                 //System.out.println("Read locations, need to add site");
                 HabitatSite site = new HabitatSite(ID,x,y,depth,scale,meshes,rp);
-                System.out.println("meshType = "+site.getContainingMeshType());
+                //System.out.println("meshType = "+site.getContainingMeshType());
                 if (!site.getContainingMeshType().equalsIgnoreCase("NONE"))
                 {
                     habitat.add(site);
@@ -321,6 +321,19 @@ public class IOUtils {
         int nLines = countLines(new File(fullFileName));
         int[][] vals = IOUtils.readFileIntArray(fullFileName,nLines,1," ",true);
         int[] valsOut = new int[nLines];
+        for (int i = 0; i < nLines; i++)
+        {
+            valsOut[i] = vals[i][0];
+        }
+        return valsOut;
+    }
+
+
+    public static double[] readFileDouble1D(String fullFileName) throws Exception
+    {
+        int nLines = countLines(new File(fullFileName));
+        double[][] vals = IOUtils.readFileDoubleArray(fullFileName,nLines,1," ",true);
+        double[] valsOut = new double[nLines];
         for (int i = 0; i < nLines; i++)
         {
             valsOut[i] = vals[i][0];

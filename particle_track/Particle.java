@@ -106,6 +106,28 @@ public class Particle {
         
         //this.arrivals = new ArrayList<Arrival>();
     }
+
+    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate, double startDensity,
+                    ISO_datestr startDate, double startTime, String coordRef, String species)
+    {
+        this.id = id;
+        this.xy[0] = xstart;
+        this.xy[1] = ystart;
+        this.startSiteID = startSiteID;
+        this.startSiteIndex = startIndex;
+        this.startDate = new ISO_datestr(startDate.getDateStr());
+        this.startTime = startTime;
+        this.startLoc[0] = xstart;
+        this.startLoc[1] = ystart;
+        this.mortRate = mortalityRate;
+        this.density = startDensity;
+        this.depth = startDepth;
+
+        this.coordRef = coordRef;
+        this.species = species;
+
+        System.out.println("creating particle, startDate = " + this.startDate.getDateStr() + ", start site = " + this.startSiteID + ", density = " + this.density);
+    }
     
     /**
      * Create a new particle from the line of a location ASCII file.

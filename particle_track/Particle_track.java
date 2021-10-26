@@ -329,6 +329,7 @@ public class Particle_track {
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated+(rp.nparts*habitat.size());
                         System.out.println("numberOfParticles: "+numParticlesCreated+" "+particles.size());
+                        System.out.printf("    Starting densities: %4.3f, month: %d \n", newParts.get(0).getDensity(), currentIsoDate.getMonth());
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario==0)
                         {
@@ -513,6 +514,8 @@ public class Particle_track {
             System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
            
             executorService.shutdownNow();
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             executorService.shutdownNow();
         }
@@ -533,8 +536,12 @@ public class Particle_track {
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, 
-            RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated)
-    {
+            RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated) throws Exception {
+        double startDensity = 1.0;
+        if (!rp.seasonalDensityPath.isEmpty()) {
+            double[] monthDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
+            startDensity = monthDensities[currentDate.getMonth()-1];
+        }
         //System.out.printf("In createNewParticles: nparts %d startlocsSize %d\n",rp.nparts,startlocs.length);
         List<Particle> newParts = new ArrayList<>(rp.nparts*habitat.size());
         for (int i = 0; i < rp.nparts*habitat.size(); i++)
@@ -552,7 +559,7 @@ public class Particle_track {
                 int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
 
                 Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated+i, 
-                        rp.mortalityRate, currentDate, currentTime, rp.coordRef, rp.species);
+                        rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordRef, rp.species);
                 p.setMesh(meshStart);
                 p.setElem(elemFVCOMStart);
                 p.setROMSElemU(elemROMSStartU);
