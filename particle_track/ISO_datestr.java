@@ -9,7 +9,7 @@ package particle_track;
 import java.util.Arrays;
 
 /**
- * Only works for years 1993 - 2023
+ * Only works for years 1993 - 2023 // updated SA01TS: leap years fixed; works until 2100
  * @author SA02MB
  */
 public class ISO_datestr {
@@ -17,21 +17,13 @@ public class ISO_datestr {
     private int month;
     private int year;
     private int[][] monthDays = new int[][]{{1,31},{2,28},{3,31},{4,30},{5,31},{6,30},{7,31},{8,31},{9,30},{10,31},{11,30},{12,31}};
-    private final int[] leapYears = new int[]{1992,1996,2000,2004,2008,2012,2016,2020,2024,2028,2032};
     
     public ISO_datestr(int inDay, int inMonth, int inYear)
     {
         this.day = inDay;
         this.month = inMonth;
         this.year  = inYear;
-
-        for (int i = 0; i < this.leapYears.length; i++) 
-        {
-            if(this.leapYears[i]==inYear)
-            {
-                monthDays[1][1]=29;
-            }
-        }
+        monthDays[1][1] = this.isLeapYear() ? 29 : 28;
      }
     
     public ISO_datestr(String dateString)
@@ -39,14 +31,7 @@ public class ISO_datestr {
         this.year = Integer.parseInt(dateString.substring(0, 4));
         this.month= Integer.parseInt(dateString.substring(4, 6));
         this.day = Integer.parseInt(dateString.substring(6, 8));
-        
-        for (int i = 0; i < this.leapYears.length; i++) 
-        {
-            if(this.leapYears[i]==this.year)
-            {
-                monthDays[1][1]=29;
-            }
-        }
+        monthDays[1][1] = this.isLeapYear() ? 29 : 28;
     }
 
     public String getDateStr()
@@ -80,15 +65,7 @@ public class ISO_datestr {
             if(this.month==12)
             {this.month = 1;
              this.year++;
-             boolean isLeapYear = false;
-               for (int i = 0; i < this.leapYears.length; i++) {
-                if(this.leapYears[i]==this.year)
-                {isLeapYear=true;}
-                }
-               if(isLeapYear)
-               {monthDays[1][1]=29;}
-               else
-               {monthDays[1][1]=28;}
+             monthDays[1][1] = this.isLeapYear() ? 29 : 28;
             }           
             else
             {this.month++;}      
@@ -107,22 +84,7 @@ public class ISO_datestr {
             {
                 tomorrow.month = 1;
                 tomorrow.year++;
-                boolean isLeapYear = false;
-                for (int i = 0; i < tomorrow.leapYears.length; i++) 
-                {
-                    if(tomorrow.leapYears[i]==tomorrow.year)
-                    {
-                        isLeapYear=true;
-                    }
-                }
-                if(isLeapYear)
-                {
-                    tomorrow.monthDays[1][1]=29;
-                }
-                else
-                {
-                    tomorrow.monthDays[1][1]=28;
-                }
+                tomorrow.monthDays[1][1] = tomorrow.isLeapYear() ? 29 : 28;
             }           
             else
             {
@@ -146,22 +108,7 @@ public class ISO_datestr {
             {
                 yesterday.month = 12;
                 yesterday.year--;
-                boolean isLeapYear = false;
-                for (int i = 0; i < yesterday.leapYears.length; i++) 
-                {
-                    if(yesterday.leapYears[i]==yesterday.year)
-                    {
-                        isLeapYear=true;
-                    }
-                }
-                if(isLeapYear)
-                {
-                    yesterday.monthDays[1][1]=29;
-                }
-                else
-                {
-                    yesterday.monthDays[1][1]=28;
-                }
+                yesterday.monthDays[1][1] = yesterday.isLeapYear() ? 29 : 28;
             }           
             else
             {
@@ -184,15 +131,7 @@ public class ISO_datestr {
             {this.month = 12;
              this.day = this.monthDays[this.month -1][1];
              this.year--;
-             boolean isLeapYear = false;
-               for (int i = 0; i < this.leapYears.length; i++) {
-                if(this.leapYears[i]==this.year)
-                {isLeapYear=true;}
-                }
-               if(isLeapYear)
-               {monthDays[1][1]=29;}
-               else
-               {monthDays[1][1]=28;}
+             monthDays[1][1] = this.isLeapYear() ? 29 : 28;
             }           
             else
             {this.month--;
@@ -214,8 +153,15 @@ public class ISO_datestr {
     {
         return day;
     }
+
+    /**
+    * Added 2021-10-19 Tim Szewczyk
+    **/
+    public boolean isLeapYear() {
+        return this.year % 4 == 0;
+    }
     
-        /**
+    /**
      * work out the date from an integer in format YYYYMMDD - Mike Bedington
      * method
      *
