@@ -48,7 +48,7 @@ public class HabitatSite {
         this.containingMesh = 0;
         this.insideMesh = false;
         // Use this to force checking of FVCOM mesh (single mesh scenario)
-        boolean exitIfNotInMesh = false;
+        boolean exitIfNotInMesh = true;
         
         //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m ++)
