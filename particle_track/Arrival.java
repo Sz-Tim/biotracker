@@ -10,9 +10,9 @@ package particle_track;
  * so that particles can build a list of arrival instances that they make, independently
  * of the simulation-wide arrays. This avoid concurrent updating, but requires postprocessing
  * at the end of the run to count arrivals.
- * 
+ * <p>
  * NOT PRESENTLY USED 21/11/18
- * 
+ *
  * @author sa01ta
  */
 public class Arrival {
@@ -20,29 +20,27 @@ public class Arrival {
     private int arrivalLocation;
     private double arrivalTime;
     private double arrivalDensity;
-    
-    public Arrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity)
-    {
-        this.sourceLocation=sourceLocation;
-        this.arrivalLocation=arrivalLocation;
-        this.arrivalTime=arrivalTime;
-        this.arrivalDensity=arrivalDensity;
+
+    public Arrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity) {
+        this.sourceLocation = sourceLocation;
+        this.arrivalLocation = arrivalLocation;
+        this.arrivalTime = arrivalTime;
+        this.arrivalDensity = arrivalDensity;
     }
-    
-    public int getSourceLocation()
-    {
+
+    public int getSourceLocation() {
         return this.sourceLocation;
     }
-    public int getArrivalLocation()
-    {
+
+    public int getArrivalLocation() {
         return this.arrivalLocation;
     }
-    public double getArrivalTime()
-    {
+
+    public double getArrivalTime() {
         return this.arrivalTime;
     }
-    public double getArrivalDensity()
-    {
+
+    public double getArrivalDensity() {
         return this.arrivalDensity;
     }
 }
