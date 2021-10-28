@@ -53,8 +53,8 @@ public class ConvexHull {
     public static float[][] convexHull(float[][] p) {
         // Convert array to a list of points
         List<MyPoint> pt = new ArrayList<>();
-        for (int i = 0; i < p.length; i++) {
-            pt.add(new MyPoint(p[i][0], p[i][1]));
+        for (float[] floats : p) {
+            pt.add(new MyPoint(floats[0], floats[1]));
         }
         // Find the convex hull
         List<MyPoint> hull = convexHull(pt);
@@ -132,8 +132,8 @@ public class ConvexHull {
         }
 
         float[][] h = convexHull(p);
-        for (int i = 0; i < h.length; i++) {
-            System.out.println(h[i][0] + " " + h[i][1]);
+        for (float[] floats : h) {
+            System.out.println(floats[0] + " " + floats[1]);
         }
 
     }

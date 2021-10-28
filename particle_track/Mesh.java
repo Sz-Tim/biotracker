@@ -361,7 +361,7 @@ public class Mesh {
 
         // Do the element check, if required. This will identify when a point is NOT in the mesh
         // when it has fallen inside the convex hull but is outside of any element
-        if (checkElements == true && inMesh == true) {
+        if (checkElements && inMesh) {
             int[] c = new int[5];
             if (this.getType().equalsIgnoreCase("FVCOM") || this.getType().equalsIgnoreCase("ROMS_TRI")) {
                 int eL = 0;

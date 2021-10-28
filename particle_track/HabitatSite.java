@@ -67,7 +67,7 @@ public class HabitatSite {
         this.containingFVCOMElem = -1;
 
         //System.out.println("Containing mesh = "+this.containingMesh+" insideMesh="+this.insideMesh);
-        if (this.insideMesh == false && exitIfNotInMesh == true) {
+        if (!this.insideMesh && exitIfNotInMesh) {
             //System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
             System.out.println(ID + " " + x + " " + y + " Habitat site not within any provided mesh --- : Not creating site");
             this.containingMeshType = "NONE";
@@ -81,7 +81,7 @@ public class HabitatSite {
                 this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
                 //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.depth+" "+this.nearestFVCOMCentroid);
 
-                if (this.insideMesh == false) {
+                if (!this.insideMesh) {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
                     System.out.println("Habitat site (" + xy[0] + "," + xy[1] + ") outside mesh. Nearest centroid: " + this.nearestFVCOMCentroid
                             + " (" + meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid] + "," + meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid] + ")"

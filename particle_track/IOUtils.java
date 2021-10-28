@@ -151,7 +151,7 @@ public class IOUtils {
         }
 
         // Make a copy if required
-        if (makeLocalCopy == true) {
+        if (makeLocalCopy) {
             String outName = "startlocs.dat";
             try {
                 Files.copy(file.toPath(), Paths.get(outName));
@@ -229,7 +229,7 @@ public class IOUtils {
             System.err.println("Cannot open " + rp.restartParticles);
         }
 
-        int todayInt[] = ISO_datestr.dateIntParse(rp.start_ymd);
+        int[] todayInt = ISO_datestr.dateIntParse(rp.start_ymd);
         ISO_datestr today = new ISO_datestr(todayInt[0], todayInt[1], todayInt[2]);
         int todayDateNum = today.getDateNum();
         //System.out.println("----- In readRestartParticles, date = "+today.getDateStr()+" ("+todayDateNum+") -----");
@@ -258,7 +258,7 @@ public class IOUtils {
                             add = false;
                         }
                     }
-                    if (add == true) {
+                    if (add) {
                         //System.out.println("Particle added");
                         parts.add(p);
                     }
@@ -488,9 +488,9 @@ public class IOUtils {
         float[] A1D = new float[A.length * A[0].length];
 
         int index = 0;
-        for (int i = 0; i < A.length; i++) {
+        for (float[] floats : A) {
             for (int j = 0; j < A[0].length; j++) {
-                A1D[index++] = A[i][j];
+                A1D[index++] = floats[j];
             }
         }
 
@@ -683,7 +683,7 @@ public class IOUtils {
             {
 
                 int numEntries = countWords(line);
-                if (numEntries < cols && printWarning == true) {
+                if (numEntries < cols && printWarning) {
                     System.out.println("WARNING: Number of entries on line = " + numEntries);
                     printWarning = false;
                 }
@@ -718,10 +718,10 @@ public class IOUtils {
             //System.err.println("******************* Cannot read from file "+filename+" ******************************");
             //failed = true;
         }
-        if (note == true && failed == false) {
+        if (note && !failed) {
             System.out.printf("Created %dx%d array from file: %s\n", myDouble.length, myDouble[0].length, filename);
             System.out.println("Array sum at read time = " + sum);
-        } else if (failed == true) {
+        } else if (failed) {
             System.out.println("FAILED to read file " + filename);
             System.exit(1);
         }
@@ -767,9 +767,9 @@ public class IOUtils {
             System.err.println("******************* Cannot read from file " + filename + " ******************************");
             failed = true;
         }
-        if (note == true && failed == false) {
+        if (note && !failed) {
             System.out.printf("Created %dx%d array from file: %s\n", myInt.length, myInt[0].length, filename);
-        } else if (failed == true) {
+        } else if (failed) {
             System.out.println("FAILED to read file " + filename);
             System.exit(1);
         }
@@ -1121,13 +1121,13 @@ public class IOUtils {
             int elemPart = p.getElem();
 
             int col = 0;
-            if (rp.splitPsteps == true) {
+            if (rp.splitPsteps) {
                 col = p.getStartIndex();
             }
 
-            if (p.getViable() == true) {
+            if (p.getViable()) {
                 pstepsMature[elemPart][col] += (float) d * (float) (dt / 3600);//*1.0/rp.stepsPerStep;
-            } else if (p.getFree() == true) {
+            } else if (p.getFree()) {
                 //System.out.println("Printing to pstepsImmature");
                 pstepsImmature[elemPart][col] += (float) d * (float) (dt / 3600);//*1.0/rp.stepsPerStep;
             }
@@ -1140,15 +1140,15 @@ public class IOUtils {
             double d = p.getDensity();
             int elemPart = p.getElem();
             int col = 1;
-            if (rp.splitPsteps == true) {
+            if (rp.splitPsteps) {
                 col = p.getStartIndex() + 1;
             }
-            if (p.getViable() == true) {
+            if (p.getViable()) {
                 SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
                 arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
                 pstepsMature.set(col, arr); // put the array back in the list
 
-            } else if (p.getFree() == true) {
+            } else if (p.getFree()) {
                 SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
                 arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
                 pstepsImmature.set(col, arr); // put the array back in the list

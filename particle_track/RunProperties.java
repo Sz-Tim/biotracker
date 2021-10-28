@@ -33,6 +33,7 @@ public class RunProperties {
             salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
+            verticalDynamics, // should vertical dynamics be included? Turns on velocities, diffusion, and swimming behaviour; ONLY implemented for FVCOM
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
@@ -44,8 +45,8 @@ public class RunProperties {
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
-    //depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
-    thresh, // Threshold distance for "settlement" (m)
+            //depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
+            thresh, // Threshold distance for "settlement" (m)
             behaviour, // Particle behaviour - see Particle.java
             parallelThreads, // Number of threads to use in parallel execution
             minchVersion, // Another element of the filename for hydrodynamic files
@@ -182,6 +183,7 @@ public class RunProperties {
         // would ideally sense from the hydro file
         //depthLayers = Integer.parseInt(properties.getProperty("depthLayers","10"));       
 
+        verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         thresh = Integer.parseInt(properties.getProperty("thresh", "500"));
         behaviour = Integer.parseInt(properties.getProperty("behaviour", "1"));
 
@@ -205,7 +207,7 @@ public class RunProperties {
             maxParticleAge = -1;
             System.out.println("maxDegreeDays entered; set maxParticleAge=" + maxParticleAge + " so won't be used at 56N!");
         }
-        if ((viableDegreeDays != -1 || maxParticleAge != -1) && readHydroVelocityOnly == true) {
+        if ((viableDegreeDays != -1 || maxParticleAge != -1) && readHydroVelocityOnly) {
             System.err.println("readHydroVelocityOnly==true AND trying to use degree-days for development => won't develop or die!");
         }
 

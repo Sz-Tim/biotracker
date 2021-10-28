@@ -65,7 +65,7 @@ public class HydroField {
         if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
             v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            if (readHydroVelocityOnly == false) {
+            if (!readHydroVelocityOnly) {
                 s = IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shapeST);
                 t = IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST);
                 el = IOUtils.readNetcdfFloat2D(filename, varNames[4], origin2, shapeST2);
@@ -74,7 +74,7 @@ public class HydroField {
         } else if (type.equalsIgnoreCase("ROMS")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
             v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            if (readHydroVelocityOnly == false) {
+            if (!readHydroVelocityOnly) {
                 float[][][] elTmp = IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shape);
                 System.out.println("elTmp (" + elTmp.length + "," + elTmp[0].length + "," + elTmp[0][0].length + ")");
                 el = new float[elTmp[0].length][elTmp[0][0].length];
@@ -147,7 +147,7 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename1);
             u1 = IOUtils.readNetcdfFloat3D(filename1, varNames[0], origin, shape);
             v1 = IOUtils.readNetcdfFloat3D(filename1, varNames[1], origin, shape);
-            if (readHydroVelocityOnly == false) {
+            if (!readHydroVelocityOnly) {
                 s1 = IOUtils.readNetcdfFloat3D(filename1, varNames[2], origin, shapeST);
                 t1 = IOUtils.readNetcdfFloat3D(filename1, varNames[3], origin, shapeST);
                 el1 = IOUtils.readNetcdfFloat2D(filename1, varNames[4], origin2, shapeST2);  // origin and shape need to lose a dimension (middle one) here
@@ -162,7 +162,7 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename2);
             u2 = IOUtils.readNetcdfFloat3D(filename2, varNames[0], origin, shape);
             v2 = IOUtils.readNetcdfFloat3D(filename2, varNames[1], origin, shape);
-            if (readHydroVelocityOnly == false) {
+            if (!readHydroVelocityOnly) {
                 s2 = IOUtils.readNetcdfFloat3D(filename2, varNames[2], origin, shapeST);
                 t2 = IOUtils.readNetcdfFloat3D(filename2, varNames[3], origin, shapeST);
                 el2 = IOUtils.readNetcdfFloat2D(filename2, varNames[4], origin2, shapeST2);  // origin and shape need to lose a dimension here (depth)
@@ -200,7 +200,7 @@ public class HydroField {
         u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
         v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
         // Next three quantities are recorded at nodes in FVCOM
-        if (readHydroVelocityOnly == false) {
+        if (!readHydroVelocityOnly) {
             if (s1 != null) {
                 s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
             }
@@ -219,7 +219,7 @@ public class HydroField {
         boolean createTest = false;
         float testU = 0;
         float testV = (float) 0.1;
-        if (createTest == true) {
+        if (createTest) {
             for (int tt = 0; tt < u.length; tt++) {
                 for (int dep = 0; dep < u[0].length; dep++) {
                     for (int elem = 0; elem < u[0][0].length; elem++) {
@@ -227,7 +227,7 @@ public class HydroField {
                         v[tt][dep][elem] = testV;
                         sumU += u[tt][dep][elem];
                     }
-                    if (readHydroVelocityOnly == false) {
+                    if (!readHydroVelocityOnly) {
                         for (int node = 0; node < el1[0].length; node++) {
 
                             if (s2 != null) {
@@ -248,7 +248,7 @@ public class HydroField {
             }
         } else {
 
-            float sumUDep[] = new float[u1[0].length];
+            float[] sumUDep = new float[u1[0].length];
             for (int tt = 0; tt < u1.length; tt++) {
                 for (int dep = 0; dep < u1[0].length; dep++) {
                     for (int elem = 0; elem < u1[0][0].length; elem++) {
@@ -257,7 +257,7 @@ public class HydroField {
                         sumU += u[tt][dep][elem];
                         sumUDep[dep] += u[tt][dep][elem];
                     }
-                    if (readHydroVelocityOnly == false) {
+                    if (!readHydroVelocityOnly) {
                         for (int node = 0; node < el1[0].length; node++) {
                             if (s1 != null) {
                                 s[tt][dep][node] = s1[tt][dep][node];
@@ -284,7 +284,7 @@ public class HydroField {
                     v[u.length - 1][dep][elem] = v2[0][dep][elem];
                     sumU += u[u.length - 1][dep][elem];
                 }
-                if (readHydroVelocityOnly == false) {
+                if (!readHydroVelocityOnly) {
                     for (int node = 0; node < el1[0].length; node++) {
                         if (s2 != null) {
                             s[u.length - 1][dep][node] = s2[0][dep][node];
@@ -386,7 +386,7 @@ public class HydroField {
             }
         }
 
-        if (print == true) {
+        if (print) {
             System.out.println("Array sum (dimension:" + dimension + " index:" + index + ") = " + s);
         }
 

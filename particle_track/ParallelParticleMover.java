@@ -136,7 +136,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
         //System.out.println("movepart");
         // Set particles free once they pass their defined release time (hours)
-        if (part.getFree() == false) {
+        if (!part.getFree()) {
             if (time > part.getReleaseTime()) {
                 part.setFree(true);
                 part.setStatus(1);
@@ -145,12 +145,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 //freeViableSettleExit[0]++;
             }
         }
-        if (part.getFree() == true && part.getArrived() == false && part.getBoundaryExit() == false) {
+        if (part.getFree() && !part.getArrived() && !part.getBoundaryExit()) {
             // Increment in particle age
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             // Increment in particle degree days accumulated (can be used for maturation or mortality in larvae)
 //            System.out.println("--- "+tt+" "+part.getDepthLayer()+" "+part.getElem()+" ---");
-            if (rp.readHydroVelocityOnly == false) {
+            if (!rp.readHydroVelocityOnly) {
                 double temperature = hf.getT()[tt][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
                 part.incrementDegreeDays(temperature, rp);
             }
@@ -175,7 +175,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                }
 //            }
 
-            if (rp.fixDepth == true) {
+            if (rp.fixDepth) {
 
                 //System.out.println("Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+m.getDepthUvnode()[elemPart]);
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
@@ -186,7 +186,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 double D_hVertDz = 0;
                 float localSalinity = 35;
                 // Calculate the gradient in vertical diffusion, if required
-                if (rp.variableDiff == true || rp.salinityThreshold < 35) {
+                if (rp.variableDiff || rp.salinityThreshold < 35) {
                     // Calculate the vertical diffusivity profile for the particle location
                     float dep = (float) part.getDepth();
                     float localDepth = m.getDepthUvnode()[elemPart];
@@ -214,7 +214,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
                     float dZ = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;
 
-                    if (rp.variableDiff == true) {
+                    if (rp.variableDiff) {
                         float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
                         float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
                         float diffusionDifference = Math.abs(diffAbove - diffBelow);
@@ -262,11 +262,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setDensity();
             }
 
-            double advectStep[] = new double[2];
+            double[] advectStep = new double[2];
 
             //System.out.println("--------------------------------------------------------------");
             //System.out.printf("Before movement: ID %d ELEM %d\n",part.getID(), part.getElem());
-            if (rp.rk4 == true) {
+            if (rp.rk4) {
                 advectStep = part.rk4Step(hydroFields, meshes,
                         tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             } else {
@@ -284,7 +284,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             double diff_X = 0;
             double diff_Y = 0;
-            if (rp.diffusion == true) {
+            if (rp.diffusion) {
                 // Use in-built RNG that is intented for multithread concurrent use. Also saves importing anything.
                 diff_X = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
                 diff_Y = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
@@ -337,7 +337,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
 
             // set particle to become able to settle after a predefined time
-            if (part.getViable() == false) {
+            if (!part.getViable()) {
                 if ((part.getAge() > rp.viabletime && rp.viabletime > 0) ||
                         (part.getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0)) {
                     //System.out.printf("Particle became viable, ID %d age %f degreeDays %f\n",part.getID(),part.getAge(),part.getDegreeDays());                                  
@@ -360,7 +360,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // **************** if able to settle, is it close to a possible settlement location? ******************************
             //System.out.println("Patricle age = "+particles.get(i).getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles.get(i).getViable());
             //if (false)
-            if (part.getViable() == true) {
+            if (part.getViable()) {
                 //System.out.println(particles[i].getViable());
 
                 for (HabitatSite site : habitatEnd) {
@@ -377,11 +377,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 //                        distThresh = distThresh / 111206;
 //                    }
 
-                    if (dist < distThresh && part.getSettledThisHour() == false) {
+                    if (dist < distThresh && !part.getSettledThisHour()) {
                         //IOUtils.arrivalToFile(part, currentDate, whereami, loc, filename, true);
 
                         //System.out.printf("settlement: %d at %d\n",i,loc);
-                        if (rp.endOnArrival == true) {
+                        if (rp.endOnArrival) {
                             part.setArrived(true);
                             part.setStatus(3);
                         }

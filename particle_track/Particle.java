@@ -440,7 +440,7 @@ public class Particle {
                 break;
         }
         // enable running file with two depth layers ("top"=0 and "bottom"=1)
-        if (reducedFile == true) {
+        if (reducedFile) {
             if (this.depLayer > 0) {
                 this.depLayer = 1;
             }
@@ -798,7 +798,7 @@ public class Particle {
                     this.setLocation(newLoc[0], newLoc[1]);
                     this.placeInMesh(meshes, 0, false);
                     move = 1;
-                    // stay in same mesh and keep going! 
+                    // stay in same mesh and keep going!
                 }
             }
         } else {
@@ -875,7 +875,7 @@ public class Particle {
             //System.out.println("mesh verified as FVCOM");
             int el = 0;
             boolean checkAll = true;
-            if (switchedMesh == false) {
+            if (!switchedMesh) {
                 el = this.getElem();
                 checkAll = false;
             }
@@ -887,7 +887,7 @@ public class Particle {
         } else if (m.getType().equalsIgnoreCase("ROMS")) {
             //System.out.println("mesh verified as ROMS");
             int[] searchCentreU = null, searchCentreV = null;
-            if (switchedMesh == false) {
+            if (!switchedMesh) {
                 searchCentreU = this.getROMSnearestPointU();
                 searchCentreV = this.getROMSnearestPointV();
             }
@@ -906,7 +906,7 @@ public class Particle {
                     nearV);
             //System.out.println("found which element");
 
-            // Need to save nearest point, in order to read into 
+            // Need to save nearest point, in order to read into
             this.setROMSnearestPointU(nearU);
             this.setROMSnearestPointV(nearV);
             this.setROMSElemU(containingROMSElemU);
@@ -1078,9 +1078,7 @@ public class Particle {
 
         //int nPoints = nearList.length;
         int nPoints = 4;
-        for (int i = 0; i < nPoints; i++) {
-            nearList[i] = allDists[i];
-        }
+        System.arraycopy(allDists, 0, nearList, 0, nPoints);
 
         //System.out.printf("In Particle.nearestCentroid "+nearest+"\n");
         return nearList;
@@ -1150,7 +1148,7 @@ public class Particle {
 
         // Look at each of the four possible boxes in turn.
         // In the Marine Institute ROMS grids, U/V points are arranged in a matrix starting
-        // in the NW corner. 
+        // in the NW corner.
 
         // In arrays read in by MATLAB from file:
         // Increasing row (first) index means decreasing latitude.
@@ -1324,8 +1322,7 @@ public class Particle {
      * @return
      */
     public static double distanceEuclid(double x1, double y1, double x2, double y2) {
-        double dist = Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-        return dist;
+        return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
     }
 
     /**
@@ -1350,8 +1347,7 @@ public class Particle {
             distXY = ParallelParticleMover.distanceDegreesToMetres(distXY, new double[]{x1, y2});
         }
 
-        double dist = Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1]);
-        return dist;
+        return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1]);
     }
 
 
@@ -1385,7 +1381,7 @@ public class Particle {
             //int[] elems0 = neighbours[elemPart];
             c[2] = 1;
             //System.out.println("Looking in neighbours");
-            int elems0[] = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
+            int[] elems0 = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
             whereami = whichElement(xy, elems0, nodexy, trinodes);
 
             // if fails, look in the neighbours of my neighbours
@@ -1393,7 +1389,7 @@ public class Particle {
                 // Find the non-0 neighbours out of the ones just searched
                 int[] nonZeroNeighbours = Arrays.stream(elems0).filter(num -> num != 0).toArray();
                 // List THEIR neighbours
-                int elems1[] = new int[nonZeroNeighbours.length * 3];
+                int[] elems1 = new int[nonZeroNeighbours.length * 3];
                 for (int i = 0; i < nonZeroNeighbours.length; i++) {
                     for (int j = 0; j < 3; j++) {
                         elems1[i * 3 + j] = neighbours[j][nonZeroNeighbours[i]];
@@ -1403,7 +1399,7 @@ public class Particle {
                 c[3] = 1;
                 whereami = whichElement(xy, elems1, nodexy, trinodes);
 
-                // If fails, look in neighbours' neighbours' neighbours 
+                // If fails, look in neighbours' neighbours' neighbours
                 // Shouldn't really need to get this far? Maybe you should.
                 if (whereami == -1) {
                     //System.out.println("WARNING: Looking in neighbours' neighbours' neighbours!!!");
@@ -1411,7 +1407,7 @@ public class Particle {
                     // Find the non-0 neighbours out of the ones just searched
                     int[] nonZeroNeighbours1 = Arrays.stream(elems1).filter(num -> num != 0).toArray();
                     // List THEIR neighbours
-                    int elems2[] = new int[nonZeroNeighbours1.length * 3];
+                    int[] elems2 = new int[nonZeroNeighbours1.length * 3];
                     for (int i = 0; i < nonZeroNeighbours1.length; i++) {
                         for (int j = 0; j < 3; j++) {
                             elems2[i * 3 + j] = neighbours[j][nonZeroNeighbours1[i]];
@@ -1420,7 +1416,7 @@ public class Particle {
                     whereami = whichElement(xy, elems2, nodexy, trinodes);
 
                     // if this fails, look in all elements (desperation) - unless movement is attempting to place particle outside mesh)
-                    if (whereami == -1 && checkAll == true) {
+                    if (whereami == -1 && checkAll) {
                         //System.out.printf("Looking in nearest 80000.... ");
                         c[5] = 1;
                         int[] allelems = IntStream.rangeClosed(0, trinodes[0].length - 1).toArray();
@@ -1458,21 +1454,21 @@ public class Particle {
             //int[] elems0 = neighbours[elemPart];
             c[2] = 1;
 
-            int elems0[] = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
+            int[] elems0 = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
             whereami = whichElement(xy, elems0, nodexy, trinodes);
 
             // if fails, look in nearest 10 (id numerical)
             if (whereami == -1) {
                 //System.out.println("Looking in nearest 10");
                 c[3] = 1;
-                int elems1[] = IntStream.rangeClosed(Math.max(elemPart - 5, 0), Math.min(elemPart + 5, trinodes[0].length - 1)).toArray();
+                int[] elems1 = IntStream.rangeClosed(Math.max(elemPart - 5, 0), Math.min(elemPart + 5, trinodes[0].length - 1)).toArray();
 
                 whereami = whichElement(xy, elems1, nodexy, trinodes);
                 // if fails, look in nearest 500 (id numerical)
                 if (whereami == -1) {
                     //System.out.println("Looking in nearest 500");
                     c[4] = 1;
-                    int elems2[] = IntStream.rangeClosed(Math.max(elemPart - 500, 0), Math.min(elemPart + 500, trinodes[0].length - 1)).toArray();
+                    int[] elems2 = IntStream.rangeClosed(Math.max(elemPart - 500, 0), Math.min(elemPart + 500, trinodes[0].length - 1)).toArray();
                     whereami = whichElement(xy, elems2, nodexy, trinodes);
 
                     // if this fails, look in all elements
@@ -1570,7 +1566,7 @@ public class Particle {
 
 //        int elem[] = findContainingElement_OLD(xy, elemPart0,
 //            nodexy, trinodes, neighbours);
-        int elem[] = findContainingElement(xy, elemPart0,
+        int[] elem = findContainingElement(xy, elemPart0,
                 nodexy, trinodes, neighbours, false);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
@@ -1790,7 +1786,7 @@ public class Particle {
         // compute velocities at start and end of entire step, at the new location
 //        double[] vel = velocityFromNearestList(xNrList,tt,u,v,dep);
 //        double[] velplus1 = velocityFromNearestList(xNrList,tt+1,u,v,dep);
-        // Do the relevant temporal interpolation for this part of the step             
+        // Do the relevant temporal interpolation for this part of the step
         xy_step[0] = dt * (vel[0] + ((double) (st + timeStepAhead) / (double) stepsPerStep) * (velplus1[0] - vel[0]));
         xy_step[1] = dt * (vel[1] + ((double) (st + timeStepAhead) / (double) stepsPerStep) * (velplus1[1] - vel[1]));
 

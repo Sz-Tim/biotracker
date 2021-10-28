@@ -9,7 +9,7 @@ package particle_track;
 import java.util.Arrays;
 
 /**
- * Only works for years 1993 - 2023 // updated SA01TS: leap years fixed; works until 2100
+ * Only works for years 1993 - 2023 // updated SA04TS: leap years fixed; works until 2100
  *
  * @author SA02MB
  */
@@ -17,7 +17,7 @@ public class ISO_datestr {
     private int day;
     private int month;
     private int year;
-    private int[][] monthDays = new int[][]{{1, 31}, {2, 28}, {3, 31}, {4, 30}, {5, 31}, {6, 30}, {7, 31}, {8, 31}, {9, 30}, {10, 31}, {11, 30}, {12, 31}};
+    private final int[][] monthDays = new int[][]{{1, 31}, {2, 28}, {3, 31}, {4, 30}, {5, 31}, {6, 30}, {7, 31}, {8, 31}, {9, 30}, {10, 31}, {11, 30}, {12, 31}};
 
     public ISO_datestr(int inDay, int inMonth, int inYear) {
         this.day = inDay;
@@ -34,8 +34,7 @@ public class ISO_datestr {
     }
 
     public String getDateStr() {
-        String dateStr = String.format("%04d", this.year) + String.format("%02d", this.month) + String.format("%02d", this.day);
-        return dateStr;
+        return String.format("%04d", this.year) + String.format("%02d", this.month) + String.format("%02d", this.day);
     }
 
     public int getDateNum() {
@@ -48,8 +47,7 @@ public class ISO_datestr {
                 monthDaysTot = monthDaysTot + monthDays[i][1];
             }
         }
-        int dateNum = yearDaysTot + leapYearDaysTot + monthDaysTot + this.day;
-        return dateNum;
+        return yearDaysTot + leapYearDaysTot + monthDaysTot + this.day;
     }
 
     public void addDay() {
