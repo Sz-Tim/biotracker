@@ -596,7 +596,12 @@ public class Particle_track {
                         System.out.println("Reading file " + tt);
                         // Dima file naming format: minch2_20171229_0003.nc
 
-                        String[] varNames1 = {"u", "v", "salinity", "temp", "zeta"};
+                        String[] varNames1;
+                        if (rp.verticalDynamics) {
+                            varNames1 = new String[]{"u", "v", "salinity", "temp", "zeta", "ww"};
+                        } else {
+                            varNames1 = new String[]{"u", "v", "salinity", "temp", "zeta"};
+                        }
 
                         // Normal "forwards time"
                         if (!rp.backwards) {
