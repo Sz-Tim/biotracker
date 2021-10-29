@@ -152,8 +152,8 @@ public class RunProperties {
         readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly", "false"));
         duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
 
-        parallel = Boolean.parseBoolean(properties.getProperty("parallel", "true"));
         parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads", "4"));
+        parallel = parallelThreads > 1;
         // DEPRECATED
         //oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
 
