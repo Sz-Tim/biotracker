@@ -288,7 +288,7 @@ public class IOUtils {
 
     public static double[] readFileDouble1D(String fullFileName) throws Exception {
         int nLines = countLines(new File(fullFileName));
-        double[][] vals = IOUtils.readFileDoubleArray(fullFileName, nLines, 1, " ", true);
+        double[][] vals = IOUtils.readFileDoubleArray(fullFileName, nLines, 1, " ", false);
         double[] valsOut = new double[nLines];
         for (int i = 0; i < nLines; i++) {
             valsOut[i] = vals[i][0];
@@ -887,8 +887,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %d %d\n", tt, particles[i].getID(),
-                        particles[i].getLocation()[0], particles[i].getLocation()[1],
+                out.printf("%d %d %.1f %.1f %.1f %d %d\n", tt, particles[i].getID(),
+                        particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getDepth(),
                         particles[i].getElem(), particles[i].getStatus());
             }
             //Close the output stream
@@ -904,8 +904,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %d %d\n", tt, particles.get(i).getID(),
-                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1],
+                out.printf("%d %d %.1f %.1f %.1f %d %d\n", tt, particles.get(i).getID(),
+                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(),
                         particles.get(i).getElem(), particles.get(i).getStatus());
             }
             //Close the output stream
@@ -927,7 +927,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.length; i++) {
-                out.printf("%d %f %f %f %f\n", i, particles[i].getStartLocation()[0], particles[i].getStartLocation()[1],
+                out.printf("%d %f %f %f %f %f\n", i,
+                        particles[i].getStartLocation()[0], particles[i].getStartLocation()[1], particles[i].getDepth(),
                         particles[i].getLocation()[0], particles[i].getLocation()[1]);
             }
             //Close the output stream
@@ -943,8 +944,9 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.size(); i++) {
-                out.printf("%d %f %f %f %f\n", i, particles.get(i).getStartLocation()[0],
-                        particles.get(i).getStartLocation()[1], particles.get(i).getLocation()[0], particles.get(i).getLocation()[1]);
+                out.printf("%d %f %f %f %f %f\n", i,
+                        particles.get(i).getStartLocation()[0], particles.get(i).getStartLocation()[1],
+                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth());
             }
             //Close the output stream
             out.close();
@@ -967,7 +969,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
-                out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d\n",
+                out.printf("%d %d %s %.1f %s %.1f %.1f %.1f %d %d %.4f %d\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -975,6 +977,7 @@ public class IOUtils {
                         p.getStartID(),
                         p.getLocation()[0],
                         p.getLocation()[1],
+                        p.getDepth(),
                         p.getElem(),
                         p.getStatus(),
                         p.getDensity(),
@@ -1108,7 +1111,7 @@ public class IOUtils {
      * @param rp
      * @param pstepsMature
      * @param pstepsImmature
-     * @param subStepDt
+     * @param dt
      */
     public static void pstepsUpdater(List<Particle> particles, RunProperties rp,
                                      float[][] pstepsMature, float[][] pstepsImmature, double dt) {
