@@ -27,16 +27,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final double subStepDt;
     private final RunProperties rp;
 
-    //    private final float[][][] u;
-//    private final float[][][] v;
-//    private final int[][] neighbours;
-//    private final float[][] uvnode;
-//    private final float[][] nodexy;
-//    private final int[][] trinodes;
     private final int[] allelems;
-//    private final float[] depthUvnode;
-//    private final float[] sigvec2;
-//    private final int[] open_BC_locs;
 
     private final List<Mesh> meshes;
     private final List<HydroField> hydroFields;
@@ -70,12 +61,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
-            //System.out.println("Time "+time+" - Moving particle "+part.getID());
-//            move(part, time, tt, st, subStepDt, rp, 
-//                                    u, v, neighbours, uvnode, nodexy, trinodes, allelems, depthUvnode, sigvec2, 
-//                                    habitatEnd, open_BC_locs,
-//                                    searchCounts, 
-//                                    minMaxDistTrav);
             move(part, time, tt, st, subStepDt, rp, meshes, hydroFields, habitatEnd, allelems, searchCounts,
                     minMaxDistTrav);
         }
@@ -100,15 +85,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param searchCounts
      * @param minMaxDistTrav
      */
-//    (Particle part, double time, int tt, int st, double subStepDt,
-//            RunProperties rp, 
-//            float u[][][], float v[][][],
-//            int[][] neighbours, float[][] uvnode,  float[][] nodexy, 
-//            int[][] trinodes, int[] allelems,
-//            float[] depthUvnode, float[] siglay,
-//            List<HabitatSite> habitatEnd, int[] open_BC_locs,
-//            int[] searchCounts,
-//            double[] minMaxDistTrav)
     public static void move(Particle part, double time, int tt, int st, double subStepDt,
                             RunProperties rp,
                             List<Mesh> meshes,
@@ -117,85 +93,50 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             int[] allelems,
                             int[] searchCounts,
                             double[] minMaxDistTrav) {
-        //System.out.println("--- "+tt+" "+st+" "+" --- Moving particle "+part.getID()+" --- "+part.printLocation());
-        //System.out.println("Particle location at start of ParallelParticleMover.move: "+part.printLocation());
-
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
         int elemPart = part.getElem();
 
-        //System.out.println("movepart");
         // Set particles free once they pass their defined release time (hours)
         if (!part.getFree()) {
             if (time > part.getReleaseTime()) {
                 part.setFree(true);
                 part.setStatus(1);
-                //System.out.println("Particle "+i+" released from "+particles[i].getLocation()[0]+" "+particles[i].getLocation()[1]+" at t="+time);
-                // This is updated by many threads - calculation now done outside of move
-                //freeViableSettleExit[0]++;
             }
         }
         if (part.getFree() && !part.getArrived() && !part.getBoundaryExit()) {
-            // Increment in particle age
+
+            // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
-            // Increment in particle degree days accumulated (can be used for maturation or mortality in larvae)
-//            System.out.println("--- "+tt+" "+part.getDepthLayer()+" "+part.getElem()+" ---");
             if (!rp.readHydroVelocityOnly) {
                 double temperature = hf.getT()[tt][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
                 part.incrementDegreeDays(temperature, rp);
             }
-//            else
-//            {
-//                System.out.println("Warning: temperature not available to calculate development");
-//            }
 
-//            System.out.printf("PARTICLE %d : %s\n",part.getID(),part.printLocation());
-
-            //System.out.println("particle able to move");
-
-            //System.out.printf("%d\n",elemPart);
-            // set and get the DEPTH layer for the particle based on tide state
-//            if (tt>0)
-//            {
-//                if (el[tt][trinodes[elemPart][0]]>el[tt-1][trinodes[elemPart][0]])
-//                {
-//                    particles[i].setDepthLayer(behaviour,"flood");
-//                } else {
-//                    particles[i].setDepthLayer(behaviour,"ebb");
-//                }
-//            }
-
+            // Find particle depth layer
             if (rp.fixDepth) {
-
-                //System.out.println("Setting particle depth: "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" "+elemPart+" "+m.getDepthUvnode()[elemPart]);
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
-//                System.out.println("Fixed depth run "+tt+" "+st+": Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
-                //System.out.println("Variable depth run");
                 double D_hVertDz = 0;
-                float localSalinity = 35;
+                float localSalinity = 35; // TODO: Why is this set to 35? 35 is used in subsequent if statements...
                 // Calculate the gradient in vertical diffusion, if required
                 if (rp.variableDiff || rp.salinityThreshold < 35) {
                     // Calculate the vertical diffusivity profile for the particle location
                     float dep = (float) part.getDepth();
-                    float localDepth = m.getDepthUvnode()[elemPart];
+                    float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
                     // Get the sigma depths at this location, and compare with particle depth
+                    // For particles on surface or sea bed, set layerAbove = layerBelow = [0 or sigDepths.length-1]
                     float[] sigDepths = m.getSiglay();
-                    int layerAbove = 0;
-                    // Initially set this to an impossible value: 1 greater than the number of elements
                     int layerBelow = sigDepths.length;
                     for (int i = 0; i < sigDepths.length; i++) {
-                        // Set the index of the layer below the particle. This will default to the highest value if the particle is very close to or on the bed.
                         if (dep < sigDepths[i] * localDepth) {
                             layerBelow = i;
                             break;
                         }
                     }
-                    //System.out.println();
-                    // Set "layerAbove" to be one index less than "layerBelow", ensuring that it cannot be less than zero (particles on surface)
-                    layerAbove = layerBelow - 1;
+                    int layerAbove = layerBelow - 1;
                     if (layerAbove < 0) {
                         layerAbove = 0;
                     }
@@ -203,14 +144,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         layerBelow = layerAbove;
                     }
 
-                    float dZ = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;
+                    float dZ = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;  // height of sigma layer
 
                     if (rp.variableDiff) {
-                        float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
+                        float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];  // TODO: vertical diffusion coefficient is not currently read in
                         float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
                         float diffusionDifference = Math.abs(diffAbove - diffBelow);
-                        // Calculate a gradient, as long as particle is not on the bed or the surface.
-                        // If it is, the gradient will default to zero anyway
+                        // Calculate a gradient, as long as particle is not on the bed or the surface, else default = 0
                         if (dZ != 0) {
                             D_hVertDz = diffusionDifference / dZ;
                         }
@@ -226,64 +166,45 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         } else {
                             localSalinity = salAbove;
                         }
-                        System.out.println();
                     }
                 }
-
-                //System.out.println("Depth pre-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
                 part.verticalMovement(rp, D_hVertDz, tt, subStepDt, m.getDepthUvnode()[elemPart], localSalinity);
-                //System.out.println("Depth post-calc "+part.getStartID()+" "+part.getZ()+" "+part.getDepthLayer()+" ");
-                // set depth layer based on depth in metres
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
-//                System.out.println("Normal run: Setting particle depth: "+part.getStartID()+" "+part.getDepth()+" "+part.getDepthLayer()+" "+elemPart+" "+part.getMesh()+" "+part.getStatus()+" "+m.getDepthUvnode()[elemPart]);
             }
 
-            // Find the salinity in the neighbourhood of the particle (used to compute instantaneous mortality rate).
-            // This is stored at NODES as opposed to ELEMENT CENTROIDS.
-            // So need to get the value from each of the corners and calculate 
-            // a value at the particle location (similar method to getting velocity from nearest centroids).
+            // Implement mortality once per hour
+            // TODO: This code is old and outdated. Also, salinity is calculated above if rp.salinityThreshold < 35
             if (st == 0) {
                 double salinity = 0;
                 double mort = 0;
-//                                if (rp.salinityMort == true)
-//                                {
-//                                    salinity = particles[i].salinity(tt,sal,trinodes);
-//                                    particles[i].setMortRate(salinity);
-//                                }
+//                if (rp.salinityMort == true) {
+//                    salinity = part.salinity(tt,sal,trinodes);
+//                    part.setMortRate(salinity);
+//                }
                 part.setDensity();
             }
 
             double[] advectStep = new double[2];
-
-            //System.out.println("--------------------------------------------------------------");
-            //System.out.printf("Before movement: ID %d ELEM %d\n",part.getID(), part.getElem());
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes,
-                        tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
+                advectStep = part.rk4Step(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             } else {
-                advectStep = part.eulerStep(hydroFields, meshes,
-                        tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
+                advectStep = part.eulerStep(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
             }
-            //System.out.printf("ADVECT=[%.3e,%.3e]\n",advectStep[0],advectStep[1]);          
 
             // Reverse velocities if running backwards
-//            if (rp.backwards == true)
-//            {
-//                advectStep[0] = -advectStep[0];
-//                advectStep[1] = -advectStep[1];
-//            }
+            if (rp.backwards) {
+                advectStep[0] = -advectStep[0];
+                advectStep[1] = -advectStep[1];
+            }
 
             double diff_X = 0;
             double diff_Y = 0;
             if (rp.diffusion) {
-                // Use in-built RNG that is intented for multithread concurrent use. Also saves importing anything.
+                // Use in-built RNG that is intended for multithread concurrent use. Also saves importing anything.
                 diff_X = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
                 diff_Y = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
             }
-            double[] behave_uv = part.behaveVelocity(rp.behaviour);
-
-            //System.out.println("D_h = "+rp.D_h+" diff_X = "+diff_X+" diff_Y "+diff_Y+" ran1 = "+ran1+" ran2 = "+ran2);
-//            System.out.println("Distances travelled: X "+advectStep[0]+" "+diff_X+" --- Y "+advectStep[1]+" "+diff_Y);
+            double[] behave_uv = part.behaveVelocity(rp.behaviour); // method does nothing; placeholder for more motile species?
 
             double dx = advectStep[0] + subStepDt * behave_uv[0] + diff_X;
             double dy = advectStep[1] + subStepDt * behave_uv[1] + diff_Y;
@@ -292,87 +213,39 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 // These two methods always give the same first significant figure and generally the second, later sig. figs. differ in general
                 //double[] dXY1 = distanceMetresToDegrees1(new double[]{dx,dy}, part.getLocation());
                 double[] dXY2 = distanceMetresToDegrees2(new double[]{dx, dy}, part.getLocation());
-
-//                System.out.printf("distance %.04f %.04f (lat: %.04f) --- Method1 x: %.04e y: %.04e --- Method2 x: %.04e y: %.04e\n",
-//                        dx,dy,part.getLocation()[1],dXY1[0],dXY1[1],dXY2[0],dXY2[1]);
-
                 dx = dXY2[0];
                 dy = dXY2[1];
             }
-//            } else {
-//                System.out.printf("distance %.04f %.04f (lat: %.04f)",dx,dy,part.getLocation()[1]);
-//            }
 
-            // 4. update particle location
+            // Update particle location, changing mesh or exit status if necessary
             double newlocx = part.getLocation()[0] + dx;
             double newlocy = part.getLocation()[1] + dy;
-            //System.out.println("Old = ("+part.getLocation()[0]+", "+part.getLocation()[1]+") --- New = ("+newlocx+", "+newlocy+")");
-
-            // find element containing particle and update seach counts for diagnosis
-
-            int[] c = null;
-
-            int[] el = new int[2];
-            if (m.getType().equalsIgnoreCase("ROMS")) {
-                el = part.getROMSnearestPointU();
-                //System.out.println("NearestROMSPointU: "+el[0]+" "+el[1]);
-            } else {
-                el[0] = part.getElem();
-            }
-
-            // Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
 
-            //System.out.printf("End of movement: ID %d X %.1f Y %.1f ELEM %d\n",part.getID(),part.getLocation()[0],part.getLocation()[1], part.getElem());
-
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
-
             // set particle to become able to settle after a predefined time
             if (!part.getViable()) {
                 if (part.canBecomeViable(rp)) {
                     part.setViable(true);
                     part.setStatus(2);
-                    // This is updated by many threads - calculation now done outside of move
-                    //freeViableSettleExit[1]++;
                 }
             }
-
             // Stop particles in their tracks if they exceed a maximum age
             if (part.isTooOld(rp)) {
                 part.setFree(false);
                 part.setStatus(666);
             }
 
-
             // **************** if able to settle, is it close to a possible settlement location? ******************************
-            //System.out.println("Patricle age = "+particles.get(i).getAge()+" Viabletime/3600 = "+viabletime/3600.0+" viable = "+particles.get(i).getViable());
-            //if (false)
             if (part.getViable()) {
-                //System.out.println(particles[i].getViable());
-
                 for (HabitatSite site : habitatEnd) {
-                    //System.out.println("In habitatEnd check "+part.getLocation()[0]+" "+part.getLocation()[1]);
-//                    double dist = Math.sqrt((part.getLocation()[0]-site.getLocation()[0])*(part.getLocation()[0]-site.getLocation()[0])+
-//                            (part.getLocation()[1]-site.getLocation()[1])*(part.getLocation()[1]-site.getLocation()[1]));
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
                             site.getLocation()[0], site.getLocation()[1], rp.coordRef);
-
-                    double distThresh = rp.thresh;
-                    // Correct the threshold distance to a value in degrees, if required - REMOVED
-//                    if (rp.coordRef.equalsIgnoreCase("WGS84"))
-//                    {
-//                        distThresh = distThresh / 111206;
-//                    }
-
-                    if (dist < distThresh && !part.getSettledThisHour()) {
-                        //IOUtils.arrivalToFile(part, currentDate, whereami, loc, filename, true);
-
-                        //System.out.printf("settlement: %d at %d\n",i,loc);
+                    if (dist < rp.thresh && !part.getSettledThisHour()) {
                         if (rp.endOnArrival) {
                             part.setArrived(true);
                             part.setStatus(3);
                         }
-
                         part.setSettledThisHour(true);
                         part.setLastArrival(site.getID());
                         break;

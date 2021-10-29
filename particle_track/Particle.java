@@ -398,7 +398,7 @@ public class Particle {
      * 1 - passive, stay on surface
      * 2 - passive, stay on bottom (layer 10)
      * 3 - passive, stay in mid layer (layer 5)
-     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18
+     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18 // modify so this is during daylight hours
      * 5 - rapid drop (1->10) at hour 6, then gradually move back up
      * 6 - top during flood tides, mid during ebb (local)
      * 7 - mid during flood tides, bed during ebb (local)
@@ -774,7 +774,7 @@ public class Particle {
                 }
                 // boundary check
                 int bnode = -1;
-                if (rp.checkOpenBoundaries == true) {
+                if (rp.checkOpenBoundaries) {
                     bnode = ParallelParticleMover.openBoundaryCheck((float) newLoc[0], (float) newLoc[1], m, rp);
                 }
                 if (bnode != -1) {
