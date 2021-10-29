@@ -202,7 +202,7 @@ public class Particle_track {
 
         int stepcount = 0;
         int calcCount = 0;
-        double time = 0; // time is updataed in HOURS as the simulation progresses
+        double time = 0; // time is updated in HOURS as the simulation progresses
         int printCount = 0;
 
         int[] freeViableSettleExit = new int[4];

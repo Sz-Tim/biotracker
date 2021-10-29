@@ -26,8 +26,8 @@ public class Mesh {
     // Variables which are used in case of FVCOM triangular mesh
     private float[][] uvnode; // element centroid locations
     private float[][] nodexy; // element node locations
-    private float[] depthUvnode; // depth at each element centroid
-    private float[] depthNodexy; // depth at each mesh (xy)node
+    private float[] depthUvnode; // depth below geoid at each element centroid
+    private float[] depthNodexy; // depth below geoid at each mesh (xy)node; positive values
     private int[][] trinodes; // the nodes at the corners of each element
     private int[][] neighbours;
     private int[] openBoundaryNodes;
@@ -342,7 +342,6 @@ public class Mesh {
      * should normally find the nearest/containing node or element in addition to the
      * mesh ID.
      *
-     * @param mesh
      * @param xy
      * @return
      */

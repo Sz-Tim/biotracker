@@ -346,7 +346,7 @@ public class Particle {
     /**
      * Set depth of particle with check against local depth
      *
-     * @param z          (this is a negative value)
+     * @param depth          (this is a negative value)
      * @param localDepth (this is a positive value)
      */
     public void setDepth(double depth, double localDepth) {
@@ -863,7 +863,8 @@ public class Particle {
     /**
      * This method updates the particle mesh neighbourhood information, dealing with a change in mesh ID if required
      *
-     * @param m            The mesh that has been shown to contain a particle
+     * @param meshes            The mesh that has been shown to contain a particle
+     * @param id
      * @param switchedMesh Logical, has the particle changed mesh?
      */
     public void placeInMesh(List<Mesh> meshes, int id, boolean switchedMesh) {
@@ -1222,7 +1223,6 @@ public class Particle {
      * @param tt
      * @param u
      * @param v
-     * @param numLayers
      * @param depLayer
      * @return
      */
@@ -1544,11 +1544,8 @@ public class Particle {
      *
      * @param xy
      * @param elemPart0
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
+     * @param meshes
+     * @param meshPart
      * @param coordRef
      * @return
      */
@@ -1597,13 +1594,8 @@ public class Particle {
     /**
      * Update particle location using an RK4 integration step.
      *
-     * @param u
-     * @param v
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
+     * @param hydroFields
+     * @param meshes
      * @param tt
      * @param st
      * @param dt
@@ -1625,7 +1617,7 @@ public class Particle {
 
 
         // Should call neighbourCellsList if in an FVCOM mesh.
-        // Otherwise should use another method to  set the list of nearest velocity points.
+        // Otherwise should use another method to set the list of nearest velocity points.
         double[] vel = new double[2];
         double[] velplus1 = new double[2];
 
@@ -1724,13 +1716,9 @@ public class Particle {
      * @param elemPart
      * @param dep
      * @param timeStepAhead Time step ahead i.e. "1.0/2.0" if half-step ahead, "1.0" if full step ahead
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
-     * @param u
-     * @param v
+     * @param meshes
+     * @param meshPart
+     * @param hydroFields
      * @param tt
      * @param st
      * @param dt

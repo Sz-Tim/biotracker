@@ -93,20 +93,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param st
      * @param subStepDt
      * @param rp
-     * @param u
-     * @param v
-     * @param neighbours
-     * @param uvnode
-     * @param nodexy
-     * @param trinodes
-     * @param allelems
-     * @param depthUvnode
-     * @param siglay
+     * @param meshes
+     * @param hydroFields
      * @param habitatEnd
-     * @param open_BC_locs
+     * @param allelems
      * @param searchCounts
-     * @param particle_info
-     * @param settle_density
      * @param minMaxDistTrav
      */
 //    (Particle part, double time, int tt, int st, double subStepDt,
