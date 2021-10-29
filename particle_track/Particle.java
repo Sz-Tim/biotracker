@@ -524,6 +524,20 @@ public class Particle {
         return this.boundaryExit;
     }
 
+    public boolean canBecomeViable(RunProperties rp) {
+        boolean byAge = getAge() > rp.viabletime && rp.viabletime > 0;
+        boolean byDegreeDays = getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0;
+        boolean byPrevious = getViable();
+        return byAge || byDegreeDays || byPrevious;
+    }
+
+    public boolean isTooOld(RunProperties rp) {
+        boolean byAge = getAge() > rp.maxParticleAge && rp.maxParticleAge > 0;
+        boolean byDegreeDays = getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0;
+        boolean byPrevious = getStatus() == 666;
+        return byAge || byDegreeDays || byPrevious;
+    }
+
     public double[] behaveVelocity(int behaviour) {
         double[] uv = new double[2];
         return uv;
