@@ -182,8 +182,14 @@ public class Particle_track {
         // TODO: At present this holds only one file per mesh at this point; is there a way to get the whole list of files in the date range, and check presence before starting?
         // --------------------------------------------------------------------------------------
         List<HydroField> hydroFields = new ArrayList<>();
-//        List<List<File>> fileList = new ArrayList<>();
-        String[] varNames = new String[]{"", "", "", "", ""};
+        ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
+        if(!missingHydroFiles.isEmpty()) {
+            System.out.println("\nError! Cannot find the following hydrodynamic files:");
+            for (String missing: missingHydroFiles) {
+                System.out.println(missing);
+            }
+            System.exit(0);
+        }
 
         // --------------------------------------------------------------------------------------
         // Set up times at which to print particle locations to file 
