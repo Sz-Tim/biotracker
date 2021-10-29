@@ -17,10 +17,9 @@ import java.nio.file.Paths;
 
 import java.util.*;
 
-import ucar.ma2.ArrayDouble;
-import ucar.ma2.ArrayFloat;
-import ucar.ma2.ArrayInt;
-import ucar.ma2.InvalidRangeException;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
+import ucar.ma2.*;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
 
@@ -1158,6 +1157,24 @@ public class IOUtils {
             }
         }
     }
+
+    public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
+        ArrayList<String> missingHydroFiles = new ArrayList<>();
+        ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());
+        System.out.println("Checking files from " + startDate.getDateStr() + " to " + endDate.getDateStr());
+        for (int i = 0; i < numberOfDays; i++) {
+            List<File> checkFile = (List<File>) FileUtils.listFiles(
+                    new File(rp.datadir + rp.datadirPrefix + checkDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + checkDate.getYear() + String.format("%02d", checkDate.getMonth()) + String.format("%02d", checkDate.getDay()) + "*.nc"),
+                    null);
+            if (checkFile.isEmpty()) {
+                missingHydroFiles.add(checkDate.getDateStr());
+            }
+            checkDate.addDay();
+        }
+        return missingHydroFiles;
+    }
+
 
 //    /**
 //     * Take a snapshot of the number of mature particles in each cell
