@@ -97,6 +97,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
         int elemPart = part.getElem();
+        int nDims = rp.verticalDynamics ? 3 : 2;
 
         // Set particles free once they pass their defined release time (hours)
         if (!part.getFree()) {
@@ -184,17 +185,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setDensity();
             }
 
-            double[] advectStep = new double[2];
+            double[] advectStep = new double[nDims];
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
+                advectStep = part.rk4Step(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
             } else {
-                advectStep = part.eulerStep(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef);
+                advectStep = part.eulerStep(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
             }
 
             // Reverse velocities if running backwards
             if (rp.backwards) {
-                advectStep[0] = -advectStep[0];
-                advectStep[1] = -advectStep[1];
+                for (int i = 0; i < advectStep.length; i++) {
+                    advectStep[i] *= -1;
+                }
             }
 
             double diff_X = 0;
@@ -218,9 +220,15 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Update particle location, changing mesh or exit status if necessary
+            //System.out.println("Particle movement: " + dx + dy + (rp.verticalDynamics ? advectStep[2] : ""));
             double newlocx = part.getLocation()[0] + dx;
             double newlocy = part.getLocation()[1] + dy;
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
+            if (rp.verticalDynamics) {
+                double newDepth = part.getDepth() + advectStep[2];
+                part.setDepth(newDepth, m.getDepthUvnode()[elemPart]);
+                part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
+            }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             // set particle to become able to settle after a predefined time

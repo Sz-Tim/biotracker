@@ -401,7 +401,7 @@ public class Particle {
      * 1 - passive, stay on surface
      * 2 - passive, stay on bottom (layer 10)
      * 3 - passive, stay in mid layer (layer 5)
-     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18 // modify so this is during daylight hours
+     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18
      * 5 - rapid drop (1->10) at hour 6, then gradually move back up
      * 6 - top during flood tides, mid during ebb (local)
      * 7 - mid during flood tides, bed during ebb (local)
@@ -461,16 +461,35 @@ public class Particle {
     public void setLayerFromDepth(double localDepth, float[] layers) {
         int depNearest = 0;
         double dZmin = 1000;
-        //System.out.println("in setLayerFromDepth");
         for (int i = 0; i < layers.length; i++) {
-            // NOTE: changed particle depth to be positive
             if (Math.abs(this.depth - localDepth * layers[i]) < dZmin) {
                 depNearest = i;
                 dZmin = Math.abs(this.depth - localDepth * layers[i]);
             }
         }
-        //System.out.printf("setting depth layer: %d (%f, particle depth = %f)\n",depNearest,localDepth*layers[depNearest],this.z);
         this.setDepthLayer(depNearest);
+    }
+
+    public int findLayerFromDepth(double depth, double localDepth, float[] layers) {
+        int depNearest = 0;
+        double dZmin = 1000;
+        for (int i = 0; i < layers.length; i++) {
+            if (Math.abs(depth - localDepth * layers[i]) < dZmin) {
+                depNearest = i;
+                dZmin = Math.abs(depth - localDepth * layers[i]);
+            }
+        }
+        return depNearest;
+    }
+
+    public double distanceToNearestDepthLayer(double localDepth, float[] layers) {
+        double dZmin = 1000;
+        for (float layer : layers) {
+            if (Math.abs(this.depth - localDepth * layer) < dZmin) {
+                dZmin = Math.abs(this.depth - localDepth * layer);
+            }
+        }
+        return dZmin;
     }
 
     public double verticalDiffusion() {
@@ -605,9 +624,10 @@ public class Particle {
     }
 
     public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity) {
+        // TODO: Add swimming values from literature
+        // TODO: Add salinity avoidance sinking rates from literature
+        // TODO: Add isDaytime parameter to set swimming behaviour
         double depthNew = this.depth;
-        //double dielSwimmingSpeed = 0;
-
         double vertSwim_M = 0;
         double vertSwim_S = 0;
         double sinking_M = 0;
@@ -616,7 +636,7 @@ public class Particle {
         if (rp.species.equalsIgnoreCase("sealice")) {
             // Case of naupliar lice - no active surface behaviour
             if (this.status == 1) {
-                System.out.println("Juvenile: no phototaxis, neutrally buoyant");
+                //System.out.println("Juvenile: no phototaxis, neutrally buoyant");
                 vertSwim_M = 0;
                 vertSwim_S = 0;
                 sinking_M = 0;
@@ -624,7 +644,7 @@ public class Particle {
             }
             // Case of low salinity - stop swimming to surface and just sink
             else if (localSalinity < rp.salinityThreshold || tt < 7 || tt > 19) {
-                System.out.println("Low salinity OR night time: sinking only (salinity=" + localSalinity + ", time=" + tt);
+                //System.out.println("Low salinity OR night time: sinking only (salinity=" + localSalinity + ", time=" + tt);
                 vertSwim_M = 0;
                 vertSwim_S = 0;
                 sinking_M = rp.sinkingRateMean;
@@ -632,7 +652,7 @@ public class Particle {
             }
             // Case for "normal" copepodids - no sinking, just swimming
             else {
-                System.out.println("Normal water (above salinity threshold) and daytime: phototaxis only");
+                //System.out.println("Normal water (above salinity threshold) and daytime: phototaxis only");
                 vertSwim_M = rp.vertSwimSpeedMean;
                 vertSwim_S = rp.vertSwimSpeedStd;
                 sinking_M = 0;
@@ -1243,10 +1263,11 @@ public class Particle {
      * @param depLayer
      * @return
      */
-    public static double[] velocityFromNearestList(double[][] nrList, int tt, float u[][][], float v[][][], int depLayer) {
-        double[] velocity = new double[2];
+    public static double[] velocityFromNearestList(double[][] nrList, int tt, float u[][][], float v[][][], float w[][][], int depLayer, boolean verticalDynamics) {
+        int nDims = verticalDynamics ? 3 : 2;
+        double[] velocity = new double[nDims];
         double[] weights = new double[nrList.length];
-        double usum = 0, vsum = 0, sum = 0;
+        double usum = 0, vsum = 0, wsum = 0, sum = 0;
         for (int i = 0; i < nrList.length; i++) {
             if (nrList[i][1] != 0) {
                 weights[i] = 1.0 / (nrList[i][1] * nrList[i][1]);
@@ -1254,21 +1275,19 @@ public class Particle {
                 weights[i] = 1;
             }
 
-            //System.out.printf("tt %d i %d",tt,i);
-//            System.out.printf(" --- tt %d depLayer %d elem %d dist %.4f weight %.4e --- vel = %.4f %.4f\n",
-//                tt,depLayer,(int)nrList[i][0],nrList[i][1],weights[i],u[tt][depLayer][(int)nrList[i][0]],v[tt][depLayer][(int)nrList[i][0]]);
-//            System.out.println("velocityFromNearestList: "+i+" "+tt+" "+depLayer+" "+(int)nrList[i][0]);
             usum = usum + weights[i] * u[tt][depLayer][(int) nrList[i][0]];
             vsum = vsum + weights[i] * v[tt][depLayer][(int) nrList[i][0]];
-//            usum=usum+weights[i]*u[tt][(int)nrList[i][0]*numLayers+depLayer];
-//            vsum=vsum+weights[i]*v[tt][(int)nrList[i][0]*numLayers+depLayer];
+            if (verticalDynamics) {
+                wsum = wsum + weights[i] * w[tt][depLayer][(int) nrList[i][0]];
+            }
             sum = sum + weights[i];
         }
-        usum = usum / sum;
-        vsum = vsum / sum;
-        velocity[0] = usum;
-        velocity[1] = vsum;
-//        System.out.printf("Interpolated Velocity = %.4f %.4f\n",velocity[0],velocity[1]);
+        velocity[0] = usum / sum;
+        velocity[1] = vsum / sum;
+        if (verticalDynamics) {
+            velocity[2] = wsum / sum;
+            //System.out.printf("Interpolated Velocity = %.4f %.4f %.4f in depth layer %d\n", velocity[0], velocity[1], velocity[2], depLayer);
+        }
         return velocity;
     }
 
@@ -1583,8 +1602,7 @@ public class Particle {
      * @param coordRef
      * @return
      */
-    public static double[][] neighbourCellsList(double[] xy, int elemPart0, int meshPart,
-                                                List<Mesh> meshes, String coordRef) {
+    public static double[][] neighbourCellsList(double[] xy, int elemPart0, int meshPart, List<Mesh> meshes, String coordRef) {
         double[][] nrList = new double[5][2];
         // distance to elem
         //int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
@@ -1597,8 +1615,7 @@ public class Particle {
 
 //        int elem[] = findContainingElement_OLD(xy, elemPart0,
 //            nodexy, trinodes, neighbours);
-        int[] elem = findContainingElement(xy, elemPart0,
-                nodexy, trinodes, neighbours, false);
+        int[] elem = findContainingElement(xy, elemPart0, nodexy, trinodes, neighbours, false);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
         if (elem[0] == -1) {
@@ -1639,51 +1656,40 @@ public class Particle {
      */
     public double[] rk4Step(List<HydroField> hydroFields, // velocities
                             List<Mesh> meshes,      // other mesh info
-                            int tt, int st, double dt,                                  // locate particle in space and time
-                            int stepsPerStep, String coordRef)   // info on simulation length
-    {
+                            int tt, int st, double dt,           // locate particle in space and time
+                            int stepsPerStep, String coordRef, boolean verticalDynamics) {  // info on simulation length
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
+        int nDims = verticalDynamics ? 3 : 2;
+        int depLayer = this.getDepthLayer();
 
-        int dep = this.getDepthLayer();
-        //System.out.printf("RK4Step: Location = [%.6e,%.6e], Element = %d, Depth = %d, tt=%d, st=%d\n",this.getLocation()[0],this.getLocation()[1],elemPart,dep,tt,st);
-        double[] advectStep = new double[2];
-
-
-        // Should call neighbourCellsList if in an FVCOM mesh.
-        // Otherwise should use another method to set the list of nearest velocity points.
-        double[] vel = new double[2];
-        double[] velplus1 = new double[2];
+        double[] advectStep = new double[nDims];
+        double[] vel = new double[nDims];
+        double[] velplus1 = new double[nDims];
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
-            this.nrList = neighbourCellsList(this.getLocation(), elemPart, meshPart,
-                    meshes, coordRef);
-            //this.setNrListToNeighbourCells(neighbours,uvnode);
+            this.nrList = neighbourCellsList(this.getLocation(), elemPart, meshPart, meshes, coordRef);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
-            //System.out.println("Start step");
             // Velocity from start of timestep
-            vel = velocityFromNearestList(this.getNrList(), tt,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
+            vel = velocityFromNearestList(this.getNrList(), tt, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-            velplus1 = velocityFromNearestList(this.getNrList(), tt + 1,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
-            //double[] velplus1 = getNextVel(tt,recordsPerFile,fnum,lastday,this.getNrList(),u,v,u1,v1,numLayers,dep);
+            velplus1 = velocityFromNearestList(this.getNrList(), tt + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
 
-        }
-        // Add methods here to find nearest nodes for interpolation
-        else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
-            // nearestROMSGridPoint ---> whichROMSelement --->
+        } else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
+            if (verticalDynamics) {
+                System.out.println("Error: vertical dynamics not implemented for ROMS");
+                System.exit(0);
+            }
             this.nrListROMSU = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
             this.nrListROMSV = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), null);
             vel = velocityFromNearestListROMS(this.nrListROMSU, this.nrListROMSV, tt, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
             velplus1 = velocityFromNearestListROMS(this.nrListROMSU, this.nrListROMSV, tt + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
         }
-
-
-        double[] k1 = new double[2];
-        k1[0] = dt * (vel[0] + ((double) st / (double) stepsPerStep) * (velplus1[0] - vel[0]));
-        k1[1] = dt * (vel[1] + ((double) st / (double) stepsPerStep) * (velplus1[1] - vel[1]));
+        double[] k1 = new double[nDims];
+        for (int i = 0; i < nDims; i++) {
+            k1[i]  = dt * (vel[i] + ((double) st / (double) stepsPerStep) * (velplus1[i] - vel[i]));
+        }
 
         // 3. Compute k_2 (spatial interpolation at half step, temporal interp at half step)
         // Estimated half-step location using Euler
@@ -1695,11 +1701,13 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
         }
+        double k1Depth = verticalDynamics ? this.getDepth() + k1[2] : this.getDepth();
+        depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k2 = stepAhead(
-                new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0},
-                elemPart, dep, 1.0 / 2.0,
+                new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0}, k1Depth,
+                elemPart, depLayer, 1.0 / 2.0,
                 meshes, meshPart, hydroFields,
-                tt, st, dt, stepsPerStep, coordRef);
+                tt, st, dt, stepsPerStep, coordRef, verticalDynamics);
 
         // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
         //System.out.println("Half step (k2 -> k3)");
@@ -1707,11 +1715,13 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
         }
+        double k2Depth = verticalDynamics ? this.getDepth() + k2[2] : this.getDepth();
+        depLayer = findLayerFromDepth(k2Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k3 = stepAhead(
-                new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0},
-                elemPart, dep, 1.0 / 2.0,
+                new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0}, k2Depth,
+                elemPart, depLayer, 1.0 / 2.0,
                 meshes, meshPart, hydroFields,
-                tt, st, dt, stepsPerStep, coordRef);
+                tt, st, dt, stepsPerStep, coordRef, verticalDynamics);
 
         // 5. Compute k_4 (spatial interpolation at end step)
         //System.out.println("End step (k3 -> k4)");
@@ -1719,19 +1729,22 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
         }
+        double k3Depth = verticalDynamics ? this.getDepth() + k3[2] : this.getDepth();
+        depLayer = findLayerFromDepth(k3Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k4 = stepAhead(
-                new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]},
-                elemPart, dep, 1.0,
+                new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]}, k3Depth,
+                elemPart, depLayer, 1.0,
                 meshes, meshPart, hydroFields,
-                tt, st, dt, stepsPerStep, coordRef);
+                tt, st, dt, stepsPerStep, coordRef, verticalDynamics);
 
         // 6. Add it all together
         if (k1[0] == 0 || k2[0] == 0 || k3[0] == 0 || k4[0] == 0) {
 //            System.out.printf("RK4 attempt to step out of mesh: Location = [%.6e,%.6e], Element = %d\n",
 //                    this.getLocation()[0],this.getLocation()[1],elemPart);
         } else {
-            advectStep[0] = (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6.0;
-            advectStep[1] = (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6.0;
+            for (int i = 0; i < nDims; i++) {
+                advectStep[i] = (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6.0;
+            }
         }
 
         // Check that things approximately tie up with corresponding Euler step distance
@@ -1748,7 +1761,7 @@ public class Particle {
      *
      * @param xy            Location of new velocity to be used (current location plus spatial step)
      * @param elemPart
-     * @param dep
+     * @param depLayer
      * @param timeStepAhead Time step ahead i.e. "1.0/2.0" if half-step ahead, "1.0" if full step ahead
      * @param meshes
      * @param meshPart
@@ -1760,59 +1773,51 @@ public class Particle {
      * @param coordRef
      * @return
      */
-    public static double[] stepAhead(double[] xy, int elemPart, int dep, double timeStepAhead,
+    public static double[] stepAhead(double[] xy, double depth, int elemPart, int depLayer, double timeStepAhead,
                                      List<Mesh> meshes, int meshPart,
                                      List<HydroField> hydroFields,
                                      int tt, int st, double dt,
-                                     int stepsPerStep, String coordRef) {
-        double[] xy_step = new double[2];
-        double[] vel = new double[2];
-        double[] velplus1 = new double[2];
-
-        // Generate a "neighbour cells list" for this location
-        //double[][] xNrList = neighbourCellsList(xy,elemPart,neighbours,uvnode,nodexy,trinodes,allelems,coordRef);
+                                     int stepsPerStep, String coordRef, boolean verticalDynamics) {
+        int nDim = verticalDynamics ? 3 : 2;
+        double[] xyz_step = new double[nDim];
+        double[] vel = new double[nDim];
+        double[] velplus1 = new double[nDim];
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
-            double[][] xNrList = neighbourCellsList(xy, elemPart, meshPart,
-                    meshes, coordRef);
-            //this.setNrListToNeighbourCells(neighbours,uvnode);
+            double[][] xNrList = neighbourCellsList(xy, elemPart, meshPart, meshes, coordRef);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
-            //System.out.println("Start step");
             // Velocity from start of timestep
-            vel = velocityFromNearestList(xNrList, tt,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
+            vel = velocityFromNearestList(xNrList, tt, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-            velplus1 = velocityFromNearestList(xNrList, tt + 1,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
+            velplus1 = velocityFromNearestList(xNrList, tt + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {
-                //System.out.println("Tried to go on land");
-                return xy_step;
+                return xyz_step;
             }
 
-        }
-        // Add methods here to find nearest nodes for interpolation
-        else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
+        } else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
+            if (verticalDynamics) {
+                System.out.println("Error in rk4Step: vertical dynamics not implemented for ROMS");
+                System.exit(0);
+            }
             // nearestROMSGridPoint ---> whichROMSelement --->
             double[][] nrListU = nearestListROMS(xy, meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
             double[][] nrListV = nearestListROMS(xy, meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), null);
             vel = velocityFromNearestListROMS(nrListU, nrListV, tt, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
             velplus1 = velocityFromNearestListROMS(nrListU, nrListV, tt + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
             if (nrListU[0][0] == 0) {
-                return xy_step;
+                return xyz_step;
             }
         }
 
-        // compute velocities at start and end of entire step, at the new location
-//        double[] vel = velocityFromNearestList(xNrList,tt,u,v,dep);
-//        double[] velplus1 = velocityFromNearestList(xNrList,tt+1,u,v,dep);
         // Do the relevant temporal interpolation for this part of the step
-        xy_step[0] = dt * (vel[0] + ((double) (st + timeStepAhead) / (double) stepsPerStep) * (velplus1[0] - vel[0]));
-        xy_step[1] = dt * (vel[1] + ((double) (st + timeStepAhead) / (double) stepsPerStep) * (velplus1[1] - vel[1]));
+        for (int i = 0; i < xyz_step.length; i++) {
+            xyz_step[i] = dt * (vel[i] + ((double) (st + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
+        }
 
-        return xy_step;
+        return xyz_step;
     }
 
     /**
@@ -1830,7 +1835,7 @@ public class Particle {
     public double[] eulerStep(List<HydroField> hydroFields, // velocities
                               List<Mesh> meshes,     // other mesh info
                               int tt, int st, double dt,                                  // locate particle in space and time
-                              int stepsPerStep, String coordRef) {
+                              int stepsPerStep, String coordRef, boolean verticalDynamics) {
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
         int dep = this.getDepthLayer();
@@ -1847,18 +1852,17 @@ public class Particle {
 //            meshPart, meshes, allelems,coordRef);
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
-            double[][] xNrList = neighbourCellsList(thisLoc, elemPart, meshPart,
-                    meshes, coordRef);
+            double[][] xNrList = neighbourCellsList(thisLoc, elemPart, meshPart, meshes, coordRef);
             //this.setNrListToNeighbourCells(neighbours,uvnode);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             //System.out.println("Start step");
             // Velocity from start of timestep
             vel = velocityFromNearestList(xNrList, tt,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
+                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), dep, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
             velplus1 = velocityFromNearestList(xNrList, tt + 1,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), dep);
+                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), dep, verticalDynamics);
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {
