@@ -38,7 +38,8 @@ public class RunProperties {
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation puproses during last hour of simulation (false except when in operational mode)    
-            checkOpenBoundaries; // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
+            checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
+            verboseSetUp;
 
     int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
@@ -111,6 +112,8 @@ public class RunProperties {
         location = properties.getProperty("location", "minch");
         habitat = properties.getProperty("habitat", "");
         suffix = properties.getProperty("suffix", "");
+
+        verboseSetUp = Boolean.parseBoolean(properties.getProperty("verboseSetUp", "true"));
 
         coordRef = properties.getProperty("coordRef", "WGS84");
 
