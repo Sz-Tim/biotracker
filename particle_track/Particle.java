@@ -660,26 +660,11 @@ public class Particle {
             }
         }
 
-        if (rp.species.equalsIgnoreCase("fishfaeces")) {
-
-        }
-
-
-        if (this.species.equalsIgnoreCase("modiolus")) {
-            if (this.status == 1) {
-                rp.sinkingRateMean = 0;
-            } else {
-                // Use the supplied
-                //sinkingRateMean=
-            }
-
-        }
-
         // Do some stuff with the sinking and diffusion parameters here
         // Simple example here PRESENTLY UNTESTED, and enforces a uniform distribution
 
-        depthNew += dt * (rp.sinkingRateMean + rp.sinkingRateStd * ThreadLocalRandom.current().nextDouble(-1.0, 1.0)
-                + rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextDouble(-1.0, 1.0));
+        depthNew += dt * (sinking_M + sinking_S * ThreadLocalRandom.current().nextDouble(-1.0, 1.0)
+                + vertSwim_M + vertSwim_S * ThreadLocalRandom.current().nextDouble(-1.0, 1.0));
 
         // Naive vertical diffusion; use this for fixed diffusion parameter
         //depthNew += dt * D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
