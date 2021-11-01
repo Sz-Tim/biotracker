@@ -886,8 +886,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %.1f %d %d\n", tt, particles[i].getID(),
-                        particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getDepth(),
+                out.printf("%d %d %.1f %.1f %.1f %d %d %d\n", tt, particles[i].getID(),
+                        particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getDepth(), particles[i].getDepthLayer(),
                         particles[i].getElem(), particles[i].getStatus());
             }
             //Close the output stream
@@ -903,8 +903,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %.1f %d %d\n", tt, particles.get(i).getID(),
-                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(),
+                out.printf("%d %d %.1f %.1f %.1f %d %d %d\n", tt, particles.get(i).getID(),
+                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(), particles.get(i).getDepthLayer(),
                         particles.get(i).getElem(), particles.get(i).getStatus());
             }
             //Close the output stream
@@ -926,8 +926,8 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.length; i++) {
-                out.printf("%d %f %f %f %f %f\n", i,
-                        particles[i].getStartLocation()[0], particles[i].getStartLocation()[1], particles[i].getDepth(),
+                out.printf("%d %f %f %f %d %f %f\n", i,
+                        particles[i].getStartLocation()[0], particles[i].getStartLocation()[1], particles[i].getDepth(), particles[i].getDepthLayer(),
                         particles[i].getLocation()[0], particles[i].getLocation()[1]);
             }
             //Close the output stream
@@ -943,9 +943,9 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.size(); i++) {
-                out.printf("%d %f %f %f %f %f\n", i,
+                out.printf("%d %f %f %f %f %f %d\n", i,
                         particles.get(i).getStartLocation()[0], particles.get(i).getStartLocation()[1],
-                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth());
+                        particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(), particles.get(i).getDepthLayer());
             }
             //Close the output stream
             out.close();
@@ -968,7 +968,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
-                out.printf("%d %d %s %.1f %s %.1f %.1f %.1f %d %d %.4f %d\n",
+                out.printf("%d %d %s %.1f %s %.1f %.1f %.1f %d %d %d %.4f %d\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -977,6 +977,7 @@ public class IOUtils {
                         p.getLocation()[0],
                         p.getLocation()[1],
                         p.getDepth(),
+                        p.getDepthLayer(),
                         p.getElem(),
                         p.getStatus(),
                         p.getDensity(),
@@ -1004,7 +1005,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
                 if (rp.coordRef.equalsIgnoreCase("WGS84")) {
-                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %.2f\n",
+                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f\n",
                             currentHour,
                             p.getID(),
                             p.getStartDate().getDateStr(),
@@ -1017,10 +1018,11 @@ public class IOUtils {
                             p.getDensity(),
                             p.getMesh(),
                             p.getDepth(),
+                            p.getDepthLayer(),
                             p.getDegreeDays()
                     );
                 } else {
-                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %.2f\n",
+                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f\n",
                             currentHour,
                             p.getID(),
                             p.getStartDate().getDateStr(),
@@ -1033,6 +1035,7 @@ public class IOUtils {
                             p.getDensity(),
                             p.getMesh(),
                             p.getDepth(),
+                            p.getDepthLayer(),
                             p.getDegreeDays()
                     );
                 }
@@ -1040,6 +1043,7 @@ public class IOUtils {
 
             //Close the output stream
             out.close();
+            System.out.println("\n---- Writing locations for restart file");
         } catch (Exception e) {//Catch exception if any
             System.err.println("Error: " + e.getMessage());
         }
