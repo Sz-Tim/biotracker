@@ -1339,6 +1339,10 @@ public class Particle {
         return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
     }
 
+    public static double distanceEuclid(double x1, double y1, double z1, double x2, double y2, double z2) {
+        return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2));
+    }
+
     /**
      * Compute the Euclidean distance (in metres) between two points.
      * If the supplied points are WGS84 coordinates, convert their x,y separation
@@ -1362,6 +1366,19 @@ public class Particle {
         }
 
         return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1]);
+    }
+
+    public static double distanceEuclid2(double x1, double y1, double z1, double x2, double y2, double z2, String coordRef) {
+        double dx = x1 - x2;
+        double dy = y1 - y2;
+
+        double[] distXY = new double[]{dx, dy};
+
+        if (coordRef.equalsIgnoreCase("WGS84")) {
+            distXY = ParallelParticleMover.distanceDegreesToMetres(distXY, new double[]{x1, y2});
+        }
+
+        return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1] + (z1 - z2) * (z1 - z2));
     }
 
 
