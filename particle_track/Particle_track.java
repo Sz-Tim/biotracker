@@ -166,6 +166,15 @@ public class Particle_track {
         System.out.println("simLengthHours " + simLengthHours);
 
         // --------------------------------------------------------------------------------------
+        // Load daylight hours
+        // --------------------------------------------------------------------------------------
+        int[][] daylightHours = new int[numberOfDays][2];
+        boolean isDaytime = false;
+        if (!rp.daylightPath.isEmpty()) {
+            daylightHours = IOUtils.readDaylightHours(rp.daylightPath, currentIsoDate, endIsoDate, numberOfDays, " ", false);
+        }
+
+        // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
         System.out.println("Starting time loop");
@@ -255,6 +264,9 @@ public class Particle_track {
 
                     System.out.printf("--------- HOUR %d ----------\n", tt);
                     // Calculate current time of the day (complete hours elapsed since midnight)
+                    if (!rp.daylightPath.isEmpty()) {
+                        isDaytime = daylightHours[fnum][0] <= tt && daylightHours[fnum][1] >= tt;
+                    }
 
                     // Read new hydrodynamic fields?
                     if (tt == 0) {
@@ -298,7 +310,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, time, tt, st, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav));
+                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -310,7 +322,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, time, tt, st, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav);
+                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime);
                             }
                         }
 

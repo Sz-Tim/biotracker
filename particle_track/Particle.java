@@ -623,7 +623,7 @@ public class Particle {
         return this.degreeDays;
     }
 
-    public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity) {
+    public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity, boolean isDaytime) {
         // TODO: Add swimming values from literature
         // TODO: Add salinity avoidance sinking rates from literature
         // TODO: Add isDaytime parameter to set swimming behaviour
@@ -643,7 +643,7 @@ public class Particle {
                 sinking_S = 0;
             }
             // Case of low salinity - stop swimming to surface and just sink
-            else if (localSalinity < rp.salinityThreshold || tt < 7 || tt > 19) {
+            else if (localSalinity < rp.salinityThreshold || !isDaytime) {
                 //System.out.println("Low salinity OR night time: sinking only (salinity=" + localSalinity + ", time=" + tt);
                 vertSwim_M = 0;
                 vertSwim_S = 0;

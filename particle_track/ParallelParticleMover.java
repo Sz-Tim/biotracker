@@ -35,6 +35,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final List<HabitatSite> habitatEnd;
     private final int[] searchCounts;
     private final double[] minMaxDistTrav;
+    private final boolean isDaytime;
 
     public ParallelParticleMover(List<Particle> particles, double time, int tt, int st, double subStepDt,
                                  RunProperties rp,
@@ -43,7 +44,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  List<HabitatSite> habitatEnd,
                                  int[] allelems,
                                  int[] searchCounts,
-                                 double[] minMaxDistTrav) {
+                                 double[] minMaxDistTrav,
+                                 boolean isDaytime) {
         this.particles = particles;
         this.time = time;
         this.tt = tt;
@@ -56,13 +58,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.habitatEnd = habitatEnd;
         this.searchCounts = searchCounts;
         this.minMaxDistTrav = minMaxDistTrav;
+        this.isDaytime = isDaytime;
     }
 
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             move(part, time, tt, st, subStepDt, rp, meshes, hydroFields, habitatEnd, allelems, searchCounts,
-                    minMaxDistTrav);
+                    minMaxDistTrav, isDaytime);
         }
         return new ArrayList<Particle>();
     }
@@ -92,7 +95,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             List<HabitatSite> habitatEnd,
                             int[] allelems,
                             int[] searchCounts,
-                            double[] minMaxDistTrav) {
+                            double[] minMaxDistTrav,
+                            boolean isDaytime) {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());

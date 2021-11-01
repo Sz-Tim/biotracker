@@ -22,7 +22,8 @@ public class RunProperties {
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
-            seasonalDensityPath; // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
+            seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
+            daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
@@ -93,6 +94,7 @@ public class RunProperties {
         datadir2Suffix = properties.getProperty("datadirSuffix", "_OLD");
 
         seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
+        daylightPath = properties.getProperty("daylightPath", "");
 
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
 

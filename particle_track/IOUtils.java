@@ -776,6 +776,65 @@ public class IOUtils {
     }
 
     /**
+     * Reads in sunrise and sunset times rounded to the nearest hour from the specified file. File should have the first
+     * column as a YYYYMMDD date, second column as the sunrise hour, and the third column as the sunset hour. Dates are
+     * trimmed based on the simulation start and end dates.
+     *
+     * @param filename full path to daylight data file
+     * @param startDate ISO_datestr starting date
+     * @param endDate ISO_datestr ending date
+     * @param numberOfDays number of simulation days
+     * @param sep text file delimiter
+     * @param note print messages?
+     *
+     */
+    public static int[][] readDaylightHours(String filename, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays, String sep, boolean note) {
+        int[][] daylightHours = new int[numberOfDays][2];
+        int dayCount = 0;
+        boolean failed = false;
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(filename));    //reading files in specified directory
+
+            String line;
+            boolean printWarning = true;
+
+            outer:
+            while ((line = in.readLine()) != null) {
+                int numEntries = countWords(line);
+                if (numEntries < 3 && printWarning) {
+                    System.out.println("WARNING: Number of entries on line = " + numEntries);
+                    printWarning = false;
+                }
+                String[] values = line.split(" ");
+                ISO_datestr rowDate = new ISO_datestr(values[0]);
+                if (rowDate.getDateNum() >= startDate.getDateNum() && rowDate.getDateNum() < endDate.getDateNum()) {
+                    if (note) {
+                        System.out.println("Adding sunrise & sunset for " + rowDate);
+                    }
+                    daylightHours[dayCount][0] = Integer.parseInt(values[1]);
+                    daylightHours[dayCount][1] = Integer.parseInt(values[2]);
+                    dayCount++;
+                }
+
+            }
+            in.close();
+
+        } catch (IOException ioException) {
+            throw new RuntimeException(ioException);
+            //System.err.println("******************* Cannot read from file "+filename+" ******************************");
+            //failed = true;
+        }
+        if (note && !failed) {
+            System.out.printf("Created %dx%d array from file: %s\n", daylightHours.length, daylightHours[0].length, filename);
+        } else if (failed) {
+            System.out.println("FAILED to read file " + filename);
+            System.exit(1);
+        }
+        return daylightHours;
+    }
+
+
+    /**
      * Print a predetermined string of characters to a file. Also ensures a new
      * file is started for a given day for particle locations
      *
