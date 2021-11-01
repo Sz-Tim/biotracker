@@ -353,6 +353,9 @@ public class Particle {
         if (depth > localDepth) {
             depth = localDepth;
         }
+        if (depth < 0) {
+            depth = 0;
+        }
         this.depth = depth;
     }
 
