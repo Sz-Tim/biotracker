@@ -68,26 +68,27 @@ public class HabitatSite {
 
         //System.out.println("Containing mesh = "+this.containingMesh+" insideMesh="+this.insideMesh);
         if (!this.insideMesh && exitIfNotInMesh) {
-            //System.err.println("Habitat site "+ID+" not within any provided mesh --- defaulting to first mesh --- check coordinates: "+x+" "+y);
-            System.out.println(ID + " " + x + " " + y + " Habitat site not within any provided mesh --- : Not creating site");
+            if(rp.verboseSetUp) {
+                System.out.println(ID + " " + x + " " + y + " Habitat site not within any provided mesh --- : Not creating site");
+            }
             this.containingMeshType = "NONE";
         } else {
             if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("FVCOM") || meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS_TRI")) {
-                //System.out.println(ID+" "+x+" "+y+" Habitat site within provided mesh --- : CREATING SITE");
                 this.containingMeshType = meshes.get(this.containingMesh).getType();
-                //System.out.println("habitat site in FVCOM mesh");
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
-                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.nearestFVCOMCentroid);
                 this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
-                //System.out.println("Habitat site: "+ID+" "+x+" "+y+" "+this.depth+" "+this.nearestFVCOMCentroid);
 
                 if (!this.insideMesh) {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
-                    System.out.println("Habitat site (" + xy[0] + "," + xy[1] + ") outside mesh. Nearest centroid: " + this.nearestFVCOMCentroid
-                            + " (" + meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid] + "," + meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid] + ")"
-                            + " distance = " + d1);
+                    if(rp.verboseSetUp) {
+                        System.out.println("Habitat site (" + xy[0] + "," + xy[1] + ") outside mesh. Nearest centroid: " + this.nearestFVCOMCentroid
+                                + " (" + meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid] + "," + meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid] + ")"
+                                + " distance = " + d1);
+                    }
                     if (d1 < 5000) {
-                        System.out.println("Within 5000m from mesh edge; moving to nearest element centroid");
+                        if(rp.verboseSetUp) {
+                            System.out.println("Within 5000m from mesh edge; moving to nearest element centroid");
+                        }
                         this.xy = new float[]{meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid]};
                         xy2 = new double[]{this.xy[0], this.xy[1]};
                     } else {
@@ -98,7 +99,9 @@ public class HabitatSite {
                         IntStream.rangeClosed(0, meshes.get(this.containingMesh).getUvnode()[0].length - 1).toArray(),
                         meshes.get(this.containingMesh).getNodexy(), meshes.get(this.containingMesh).getTrinodes());
                 int a = this.containingFVCOMElem;
-                System.out.println(ID + " " + x + " " + y + " " + a);
+                if(rp.verboseSetUp) {
+                    System.out.println(ID + " " + x + " " + y + " " + a);
+                }
             } else if (meshes.get(this.containingMesh).getType().equalsIgnoreCase("ROMS")) {
                 this.containingMeshType = "ROMS";
                 System.out.println("habitat site in ROMS mesh");
