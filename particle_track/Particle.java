@@ -61,6 +61,10 @@ public class Particle {
 
     private String lastArrival = "0";
 
+    private double xTotal = 0;
+    private double yTotal = 0;
+    private double zTotal = 0;
+
     // A list to store data on the arrivals made by each particle.
     // If rp.endOnArrival=true, this will contain a maximum of one element.
     // --- Not presently used ---
@@ -374,7 +378,6 @@ public class Particle {
 
     public void setDensity() {
         this.density = this.density * (1 - this.mortRate);
-        //System.out.println("density = "+this.density);
     }
 
     public double getDensity() {
@@ -393,6 +396,30 @@ public class Particle {
 
     public int getStatus() {
         return this.status;
+    }
+
+    public void addX(double xTravel) {
+        this.xTotal += xTravel;
+    }
+
+    public void addY(double yTravel) {
+        this.yTotal += yTravel;
+    }
+
+    public void addZ(double zTravel) {
+        this.zTotal += zTravel;
+    }
+
+    public double getxTotal() {
+        return this.xTotal;
+    }
+
+    public double getyTotal() {
+        return this.yTotal;
+    }
+
+    public double getzTotal() {
+        return this.zTotal;
     }
 
     /**
@@ -623,10 +650,34 @@ public class Particle {
         return this.degreeDays;
     }
 
-    public void verticalMovement(RunProperties rp, double D_hVertDz, double tt, double dt, double localDepth, double localSalinity, boolean isDaytime) {
-        // TODO: Add swimming values from literature
-        // TODO: Add salinity avoidance sinking rates from literature
-        // TODO: Add isDaytime parameter to set swimming behaviour
+    public double sink(RunProperties rp) {
+        int forceDownward = rp.sinkingRateMean < 0 ? -1 : 1;
+        return forceDownward * rp.sinkingRateMean + rp.sinkingRateStd * ThreadLocalRandom.current().nextGaussian();
+    }
+
+    public double swim(RunProperties rp) {
+        int forceUpward = rp.vertSwimSpeedMean > 0 ? -1 : 1;
+        return forceUpward * rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextGaussian();
+    }
+
+    public double verticalDiffusion(RunProperties rp, double D_hVertDz, double dt) {
+        double dZ = 0;
+        if (rp.variableDiff) {
+            double r = 1.0 / 3.0;
+            double mult = (2 * dt / r) * rp.D_hVert * (this.depth + (dt / 2) * D_hVertDz);
+            double rand = ThreadLocalRandom.current().nextGaussian();
+            if (rand < 0) {
+                dZ -= dt * D_hVertDz + Math.pow(mult * -rand, 0.5);
+            } else {
+                dZ += dt * D_hVertDz + Math.pow(mult * rand, 0.5);
+            }
+        } else {
+            dZ = dt * rp.D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+        }
+        return dZ;
+    }
+
+    public void verticalMovement(RunProperties rp, double D_hVertDz, double hour, double dt, double localDepth, double localSalinity, boolean isDaytime) {
         double depthNew = this.depth;
         double vertSwim_M = 0;
         double vertSwim_S = 0;
@@ -685,6 +736,8 @@ public class Particle {
         if (depthNew > localDepth) {
             depthNew = localDepth;
         }
+
+        this.addZ(Math.abs(this.depth - depthNew));
 
         this.depth = depthNew;
     }
@@ -1686,7 +1739,7 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
         }
-        double k1Depth = verticalDynamics ? this.getDepth() + k1[2] : this.getDepth();
+        double k1Depth = verticalDynamics ? this.getDepth() + k1[2] / 2.0 : this.getDepth();
         depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k2 = stepAhead(
                 new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0}, k1Depth,
@@ -1700,7 +1753,7 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
         }
-        double k2Depth = verticalDynamics ? this.getDepth() + k2[2] : this.getDepth();
+        double k2Depth = verticalDynamics ? this.getDepth() + k2[2] / 2.0 : this.getDepth();
         depLayer = findLayerFromDepth(k2Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k3 = stepAhead(
                 new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0}, k2Depth,

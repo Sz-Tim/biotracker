@@ -198,7 +198,7 @@ public class Particle_track {
 
         final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
 
-        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays";
+        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot zTot";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
 
         // Set up arrays to hold particle density*hour counts
@@ -253,6 +253,8 @@ public class Particle_track {
                 System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
 
 
+                IOUtils.writeMovementsHeader("hour st ID startDate age x y z layer status degreeDays dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+                        "movementFile.dat");
                 // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int currentHour = 0; currentHour < 24; currentHour++) {
@@ -381,10 +383,6 @@ public class Particle_track {
                     // Clean up "dead" (666) and "exited" (66) particles
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
 
-                    System.out.println("Number of particles = " + particles.size());
-
-                    printCount++;
-                    stepcount++;
                 }
                 System.out.println("");
 

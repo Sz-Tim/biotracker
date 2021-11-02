@@ -833,6 +833,55 @@ public class IOUtils {
         return daylightHours;
     }
 
+    public static void writeMovementsHeader(String header, String filename) {
+        try {
+            FileWriter fstream = new FileWriter(filename, false);
+            PrintWriter out = new PrintWriter(fstream);
+            out.println(header);
+            out.close();
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+    public static void writeMovements(Particle part, int currentHour, int st, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, String filename, boolean append) {
+        try {
+            // Create file
+            FileWriter fstream = new FileWriter(filename, append);
+            PrintWriter out = new PrintWriter(fstream);
+            out.printf("%d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f",
+                    currentHour,
+                    st,
+                    part.getID(),
+                    part.getStartDate().getDateStr(),
+                    part.getAge(),
+                    part.getLocation()[0],
+                    part.getLocation()[1],
+                    part.getDepth(),
+                    part.getDepthLayer(),
+                    part.getStatus(),
+                    part.getDegreeDays()
+                    );
+            for (double dim: displacement) {
+                out.printf(" %.4f", dim);
+            }
+            for (double dim: advectStep) {
+                out.printf(" %.4f", dim);
+            }
+            for (double dim: activeMovement) {
+                out.printf(" %.4f", dim);
+            }
+            for (double dim: diffusion) {
+                out.printf(" %.4f", dim);
+            }
+            out.print("\n");
+            //Close the output stream
+            out.close();
+        } catch (Exception e) {//Catch exception if any
+            System.err.println("Error: " + e.getMessage());
+        }
+
+    }
+
 
     /**
      * Print a predetermined string of characters to a file. Also ensures a new
@@ -1064,7 +1113,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
                 if (rp.coordRef.equalsIgnoreCase("WGS84")) {
-                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f\n",
+                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
                             currentHour,
                             p.getID(),
                             p.getStartDate().getDateStr(),
@@ -1078,10 +1127,13 @@ public class IOUtils {
                             p.getMesh(),
                             p.getDepth(),
                             p.getDepthLayer(),
-                            p.getDegreeDays()
+                            p.getDegreeDays(),
+                            p.getxTotal(),
+                            p.getyTotal(),
+                            p.getzTotal()
                     );
                 } else {
-                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f\n",
+                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
                             currentHour,
                             p.getID(),
                             p.getStartDate().getDateStr(),
@@ -1095,7 +1147,10 @@ public class IOUtils {
                             p.getMesh(),
                             p.getDepth(),
                             p.getDepthLayer(),
-                            p.getDegreeDays()
+                            p.getDegreeDays(),
+                            p.getxTotal(),
+                            p.getyTotal(),
+                            p.getzTotal()
                     );
                 }
             }

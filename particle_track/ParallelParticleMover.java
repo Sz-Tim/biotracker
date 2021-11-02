@@ -112,6 +112,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         }
         if (part.getFree() && !part.getArrived() && !part.getBoundaryExit()) {
 
+            // Three types of possible movement: advection, diffusion, and active swimming/sinking; [x,y,(z)]
+            double[] advectStep = new double[nDims];
+            double[] diffusion = new double[nDims];
+            double[] activeMovement = new double[nDims];
+            double[] displacement = new double[nDims];
+            for (int i=0; i < nDims; i++) {
+                advectStep[i] = 0;
+                diffusion[i] = 0;
+                activeMovement[i] = 0;
+                displacement[i] = 0;
+            }
+
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             if (!rp.readHydroVelocityOnly) {
@@ -120,11 +132,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Find particle depth layer
+            double D_hVertDz = 0;
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
-                double D_hVertDz = 0;
                 float localSalinity = 35; // TODO: Why is this set to 35? 35 is used in subsequent if statements...
                 // Calculate the gradient in vertical diffusion, if required
                 if (rp.variableDiff || rp.salinityThreshold < 35) {
@@ -132,7 +144,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     float dep = (float) part.getDepth();
                     float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
                     // Get the sigma depths at this location, and compare with particle depth
-                    // For particles on surface or sea bed, set layerAbove = layerBelow = [0 or sigDepths.length-1]
+                    // For particles on surface or sea bed, set layerAbove = layerBelow = [0 | sigDepths.length-1]
                     float[] sigDepths = m.getSiglay();
                     int layerBelow = sigDepths.length;
                     for (int i = 0; i < sigDepths.length; i++) {
@@ -173,8 +185,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         }
                     }
                 }
-                part.verticalMovement(rp, D_hVertDz, tt, subStepDt, m.getDepthUvnode()[elemPart], localSalinity);
-                part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
+                if (part.getStatus()==2) {
+                    if (localSalinity < rp.salinityThreshold) {
+                        activeMovement[2] = part.sink(rp);
+                    } else if (isDaytime) {
+                        activeMovement[2] = part.swim(rp);
+                    }
+                }
             }
 
             // Implement mortality once per hour
@@ -189,7 +206,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setDensity();
             }
 
-            double[] advectStep = new double[nDims];
             if (rp.rk4) {
                 advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
             } else {
@@ -203,35 +219,41 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }
             }
 
-            double diff_X = 0;
-            double diff_Y = 0;
             if (rp.diffusion) {
                 // Use in-built RNG that is intended for multithread concurrent use. Also saves importing anything.
-                diff_X = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
-                diff_Y = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);///(double)rp.stepsPerStep);
+                diffusion[0] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
+                diffusion[1] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
+                diffusion[2] = part.verticalDiffusion(rp, D_hVertDz, subStepDt);
             }
-            double[] behave_uv = part.behaveVelocity(rp.behaviour); // method does nothing; placeholder for more motile species?
+            // part.behaveVelocity was here for xy movement, but returned 0's with no plans to expand
 
-            double dx = advectStep[0] + subStepDt * behave_uv[0] + diff_X;
-            double dy = advectStep[1] + subStepDt * behave_uv[1] + diff_Y;
+            for (int i = 0; i < nDims; i++) {
+                displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
+            }
+
 
             if (rp.coordRef.equalsIgnoreCase("WGS84")) {
-                // These two methods always give the same first significant figure and generally the second, later sig. figs. differ in general
-                //double[] dXY1 = distanceMetresToDegrees1(new double[]{dx,dy}, part.getLocation());
-                double[] dXY2 = distanceMetresToDegrees2(new double[]{dx, dy}, part.getLocation());
-                dx = dXY2[0];
-                dy = dXY2[1];
+                double[] dXY2 = distanceMetresToDegrees2(new double[]{displacement[0], displacement[1]}, part.getLocation());
+                displacement[0] = dXY2[0];
+                displacement[1] = dXY2[1];
             }
 
             // Update particle location, changing mesh or exit status if necessary
-            //System.out.println("Particle movement: " + dx + dy + (rp.verticalDynamics ? advectStep[2] : ""));
-            double newlocx = part.getLocation()[0] + dx;
-            double newlocy = part.getLocation()[1] + dy;
+            double newlocx = part.getLocation()[0] + displacement[0];
+            double newlocy = part.getLocation()[1] + displacement[1];
+            part.addX(Math.abs(displacement[0]));
+            part.addY(Math.abs(displacement[1]));
+
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             if (rp.verticalDynamics) {
-                double newDepth = part.getDepth() + advectStep[2];
+                double newDepth = part.getDepth() + displacement[2];
+                part.addZ(Math.abs(displacement[2]));
                 part.setDepth(newDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
+            }
+
+            if (step == 0) {
+                IOUtils.writeMovements(part, hour, step, displacement, advectStep, activeMovement, diffusion, "movementFile.dat", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
