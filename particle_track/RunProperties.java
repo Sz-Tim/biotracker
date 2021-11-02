@@ -30,7 +30,7 @@ public class RunProperties {
             timeInterpolate, spatialInterpolate, // interpolate between hydro file data values?
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             parallel, // use multiple cores to speed up run?
-            diffusion, variableDiff, // include random walk, use diffusion parameter from hydro output?
+            diffusion, variableDiffusion, // include random walk, use diffusion parameter from hydro output?
             salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
@@ -145,7 +145,7 @@ public class RunProperties {
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
 
         diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
-        variableDiff = Boolean.parseBoolean(properties.getProperty("variableDiff", "false"));
+        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
         salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "false"));
         endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival", "false"));
         // DEPRECATED

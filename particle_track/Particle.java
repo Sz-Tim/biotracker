@@ -662,7 +662,7 @@ public class Particle {
 
     public double verticalDiffusion(RunProperties rp, double D_hVertDz, double dt) {
         double dZ = 0;
-        if (rp.variableDiff) {
+        if (rp.variableDiffusion) {
             double r = 1.0 / 3.0;
             double mult = (2 * dt / r) * rp.D_hVert * (this.depth + (dt / 2) * D_hVertDz);
             double rand = ThreadLocalRandom.current().nextGaussian();

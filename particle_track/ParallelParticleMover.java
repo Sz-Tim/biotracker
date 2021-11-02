@@ -139,7 +139,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
                 float localSalinity = 35; // TODO: Why is this set to 35? 35 is used in subsequent if statements...
                 // Calculate the gradient in vertical diffusion, if required
-                if (rp.variableDiff || rp.salinityThreshold < 35) {
+                if (rp.variableDiffusion || rp.salinityThreshold < 35) {
                     // Calculate the vertical diffusivity profile for the particle location
                     float dep = (float) part.getDepth();
                     float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
@@ -163,7 +163,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
                     float sigLayerHeight = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;  // height of sigma layer
 
-                    if (rp.variableDiff) {
+                    if (rp.variableDiffusion) {
                         float diffAbove = hf.getDiffVert()[hour][layerAbove][m.getTrinodes()[0][part.getElem()]];  // TODO: vertical diffusion coefficient is not currently read in
                         float diffBelow = hf.getDiffVert()[hour][layerBelow][m.getTrinodes()[0][part.getElem()]];
                         float diffusionDifference = Math.abs(diffAbove - diffBelow);
