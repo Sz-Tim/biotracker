@@ -22,12 +22,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
     private final List<Particle> particles;
     private final double time;
-    private final int tt;
-    private final int st;
+    private final int hour;
+    private final int step;
     private final double subStepDt;
     private final RunProperties rp;
 
-    private final int[] allelems;
+    private final int[] allElems;
 
     private final List<Mesh> meshes;
     private final List<HydroField> hydroFields;
@@ -37,24 +37,24 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final double[] minMaxDistTrav;
     private final boolean isDaytime;
 
-    public ParallelParticleMover(List<Particle> particles, double time, int tt, int st, double subStepDt,
+    public ParallelParticleMover(List<Particle> particles, double time, int hour, int step, double subStepDt,
                                  RunProperties rp,
                                  List<Mesh> meshes,
                                  List<HydroField> hydroFields,
                                  List<HabitatSite> habitatEnd,
-                                 int[] allelems,
+                                 int[] allElems,
                                  int[] searchCounts,
                                  double[] minMaxDistTrav,
                                  boolean isDaytime) {
         this.particles = particles;
         this.time = time;
-        this.tt = tt;
-        this.st = st;
+        this.hour = hour;
+        this.step = step;
         this.subStepDt = subStepDt;
         this.rp = rp;
         this.meshes = meshes;
         this.hydroFields = hydroFields;
-        this.allelems = allelems;
+        this.allElems = allElems;
         this.habitatEnd = habitatEnd;
         this.searchCounts = searchCounts;
         this.minMaxDistTrav = minMaxDistTrav;
@@ -64,7 +64,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
-            move(part, time, tt, st, subStepDt, rp, meshes, hydroFields, habitatEnd, allelems, searchCounts,
+            move(part, time, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
                     minMaxDistTrav, isDaytime);
         }
         return new ArrayList<Particle>();
@@ -77,23 +77,23 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      *
      * @param part
      * @param time
-     * @param tt
-     * @param st
+     * @param hour
+     * @param step
      * @param subStepDt
      * @param rp
      * @param meshes
      * @param hydroFields
      * @param habitatEnd
-     * @param allelems
+     * @param allElems
      * @param searchCounts
      * @param minMaxDistTrav
      */
-    public static void move(Particle part, double time, int tt, int st, double subStepDt,
+    public static void move(Particle part, double time, int hour, int step, double subStepDt,
                             RunProperties rp,
                             List<Mesh> meshes,
                             List<HydroField> hydroFields,
                             List<HabitatSite> habitatEnd,
-                            int[] allelems,
+                            int[] allElems,
                             int[] searchCounts,
                             double[] minMaxDistTrav,
                             boolean isDaytime) {
@@ -115,7 +115,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             if (!rp.readHydroVelocityOnly) {
-                double temperature = hf.getT()[tt][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
+                double temperature = hf.getT()[hour][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
                 part.incrementDegreeDays(temperature, rp);
             }
 
@@ -149,25 +149,25 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         layerBelow = layerAbove;
                     }
 
-                    float dZ = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;  // height of sigma layer
+                    float sigLayerHeight = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;  // height of sigma layer
 
                     if (rp.variableDiff) {
-                        float diffAbove = hf.getDiffVert()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];  // TODO: vertical diffusion coefficient is not currently read in
-                        float diffBelow = hf.getDiffVert()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
+                        float diffAbove = hf.getDiffVert()[hour][layerAbove][m.getTrinodes()[0][part.getElem()]];  // TODO: vertical diffusion coefficient is not currently read in
+                        float diffBelow = hf.getDiffVert()[hour][layerBelow][m.getTrinodes()[0][part.getElem()]];
                         float diffusionDifference = Math.abs(diffAbove - diffBelow);
                         // Calculate a gradient, as long as particle is not on the bed or the surface, else default = 0
-                        if (dZ != 0) {
-                            D_hVertDz = diffusionDifference / dZ;
+                        if (sigLayerHeight != 0) {
+                            D_hVertDz = diffusionDifference / sigLayerHeight;
                         }
                     }
                     if (rp.salinityThreshold < 35 && rp.species.equalsIgnoreCase("sealice")) {
                         // Check local salinity in order to induce lice sinking behaviour if too low
-                        float salAbove = hf.getS()[tt][layerAbove][m.getTrinodes()[0][part.getElem()]];
-                        float salBelow = hf.getS()[tt][layerBelow][m.getTrinodes()[0][part.getElem()]];
+                        float salAbove = hf.getS()[hour][layerAbove][m.getTrinodes()[0][part.getElem()]];
+                        float salBelow = hf.getS()[hour][layerBelow][m.getTrinodes()[0][part.getElem()]];
                         float salinityDifference = salBelow - salAbove;
                         float dzPosition = dep - localDepth * sigDepths[layerAbove];
-                        if (dZ != 0) {
-                            localSalinity = salAbove + dzPosition * salinityDifference / dZ;
+                        if (sigLayerHeight != 0) {
+                            localSalinity = salAbove + dzPosition * salinityDifference / sigLayerHeight;
                         } else {
                             localSalinity = salAbove;
                         }
@@ -179,7 +179,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Implement mortality once per hour
             // TODO: This code is old and outdated. Also, salinity is calculated above if rp.salinityThreshold < 35
-            if (st == 0) {
+            if (step == 0) {
                 double salinity = 0;
                 double mort = 0;
 //                if (rp.salinityMort == true) {
@@ -191,9 +191,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             double[] advectStep = new double[nDims];
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
+                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
             } else {
-                advectStep = part.eulerStep(hydroFields, meshes, tt, st, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
+                advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
             }
 
             // Reverse velocities if running backwards
