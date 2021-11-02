@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ParallelParticleMover implements Callable<List<Particle>> {
 
     private final List<Particle> particles;
-    private final double time;
+    private final double elapsedHours;
     private final int hour;
     private final int step;
     private final double subStepDt;
@@ -37,7 +37,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final double[] minMaxDistTrav;
     private final boolean isDaytime;
 
-    public ParallelParticleMover(List<Particle> particles, double time, int hour, int step, double subStepDt,
+    public ParallelParticleMover(List<Particle> particles, double elapsedHours, int hour, int step, double subStepDt,
                                  RunProperties rp,
                                  List<Mesh> meshes,
                                  List<HydroField> hydroFields,
@@ -47,7 +47,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  double[] minMaxDistTrav,
                                  boolean isDaytime) {
         this.particles = particles;
-        this.time = time;
+        this.elapsedHours = elapsedHours;
         this.hour = hour;
         this.step = step;
         this.subStepDt = subStepDt;
@@ -64,7 +64,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
-            move(part, time, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
+            move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
                     minMaxDistTrav, isDaytime);
         }
         return new ArrayList<Particle>();
@@ -76,7 +76,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * (i.e. when parallel==false)
      *
      * @param part
-     * @param time
+     * @param elapsedHours
      * @param hour
      * @param step
      * @param subStepDt
@@ -88,7 +88,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * @param searchCounts
      * @param minMaxDistTrav
      */
-    public static void move(Particle part, double time, int hour, int step, double subStepDt,
+    public static void move(Particle part, double elapsedHours, int hour, int step, double subStepDt,
                             RunProperties rp,
                             List<Mesh> meshes,
                             List<HydroField> hydroFields,
@@ -105,7 +105,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
         // Set particles free once they pass their defined release time (hours)
         if (!part.getFree()) {
-            if (time > part.getReleaseTime()) {
+            if (elapsedHours > part.getReleaseTime()) {
                 part.setFree(true);
                 part.setStatus(1);
             }
@@ -123,6 +123,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 activeMovement[i] = 0;
                 displacement[i] = 0;
             }
+            int sink = 0;
+            int swim = 0;
 
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
@@ -187,8 +189,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }
                 if (part.getStatus()==2) {
                     if (localSalinity < rp.salinityThreshold) {
+                        sink++;
                         activeMovement[2] = part.sink(rp);
                     } else if (isDaytime) {
+                        swim++;
                         activeMovement[2] = part.swim(rp);
                     }
                 }
@@ -252,8 +256,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
 
-            if (step == 0) {
-                IOUtils.writeMovements(part, hour, step, displacement, advectStep, activeMovement, diffusion, "movementFile.dat", true);
+            if (step == 0 && hour % 4 == 0) {
+                IOUtils.writeMovements(part, isDaytime, elapsedHours, hour, step, displacement, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************

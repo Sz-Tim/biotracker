@@ -172,6 +172,10 @@ public class Particle_track {
         boolean isDaytime = false;
         if (!rp.daylightPath.isEmpty()) {
             daylightHours = IOUtils.readDaylightHours(rp.daylightPath, currentIsoDate, endIsoDate, numberOfDays, " ", false);
+            System.out.println("Daylight hours dataset:");
+            for( int i = 0; i < daylightHours.length; i++) {
+                System.out.println(daylightHours[i][0] + " " + daylightHours[i][1]);
+            }
         }
 
         // --------------------------------------------------------------------------------------
@@ -253,7 +257,7 @@ public class Particle_track {
                 System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
 
 
-                IOUtils.writeMovementsHeader("hour st ID startDate age x y z layer status degreeDays dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+                IOUtils.writeMovementsHeader("daytime elapsedHours hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
                         "movementFile.dat");
                 // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
@@ -264,6 +268,7 @@ public class Particle_track {
                     if (!rp.daylightPath.isEmpty()) {
                         isDaytime = daylightHours[fnum][0] <= currentHour && daylightHours[fnum][1] >= currentHour;
                     }
+                    System.out.println("isDaytime: " + isDaytime + " based on " + daylightHours[fnum][0] + " " + daylightHours[fnum][1] + " with fnum = " + fnum);
 
                     // Read new hydrodynamic fields?
                     if (currentHour == 0) {

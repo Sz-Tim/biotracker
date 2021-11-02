@@ -807,9 +807,9 @@ public class IOUtils {
                 }
                 String[] values = line.split(" ");
                 ISO_datestr rowDate = new ISO_datestr(values[0]);
-                if (rowDate.getDateNum() >= startDate.getDateNum() && rowDate.getDateNum() < endDate.getDateNum()) {
+                if (rowDate.getDateNum() >= startDate.getDateNum() && rowDate.getDateNum() <= endDate.getDateNum()) {
                     if (note) {
-                        System.out.println("Adding sunrise & sunset for " + rowDate);
+                        System.out.println("Adding sunrise & sunset for " + rowDate + ": " + values[1] + " " + values[2]);
                     }
                     daylightHours[dayCount][0] = Integer.parseInt(values[1]);
                     daylightHours[dayCount][1] = Integer.parseInt(values[2]);
@@ -843,14 +843,16 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    public static void writeMovements(Particle part, int currentHour, int st, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, String filename, boolean append) {
+    public static void writeMovements(Particle part, boolean isDaytime, double elapsedHours, int currentHour, int step, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, int sink, int swim, String filename, boolean append) {
         try {
             // Create file
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f",
+            out.printf("%b %.1f %d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f %d %d",
+                    isDaytime,
+                    elapsedHours,
                     currentHour,
-                    st,
+                    step,
                     part.getID(),
                     part.getStartDate().getDateStr(),
                     part.getAge(),
@@ -859,19 +861,20 @@ public class IOUtils {
                     part.getDepth(),
                     part.getDepthLayer(),
                     part.getStatus(),
-                    part.getDegreeDays()
+                    part.getDegreeDays(),
+                    sink, swim
                     );
             for (double dim: displacement) {
-                out.printf(" %.4f", dim);
+                out.printf(" %.7f", dim);
             }
             for (double dim: advectStep) {
-                out.printf(" %.4f", dim);
+                out.printf(" %.7f", dim);
             }
             for (double dim: activeMovement) {
-                out.printf(" %.4f", dim);
+                out.printf(" %.7f", dim);
             }
             for (double dim: diffusion) {
-                out.printf(" %.4f", dim);
+                out.printf(" %.7f", dim);
             }
             out.print("\n");
             //Close the output stream
