@@ -157,4 +157,8 @@ public class ISO_datestr {
         return output;
     }
 
+    @Override
+    public String toString() {
+        return this.year + "-" + this.month + "-" + this.day;
+    }
 }
