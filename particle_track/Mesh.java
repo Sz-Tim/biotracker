@@ -241,6 +241,27 @@ public class Mesh {
         }
     }
 
+    public static int[] findNearestSigmas(double particleDepth, float[] sigmas, float localDepth) {
+        int[] sigmaInfo = new int[2];
+        int layerBelow = sigmas.length;
+        for (int i = 0; i < sigmas.length; i++) {
+            if (particleDepth < sigmas[i] * localDepth) {
+                layerBelow = i;
+                break;
+            }
+        }
+        int layerAbove = layerBelow - 1;
+        if (layerAbove < 0) {
+            layerAbove = 0;
+        }
+        if (layerBelow == sigmas.length) {
+            layerBelow = layerAbove;
+        }
+        sigmaInfo[0] = layerBelow;
+        sigmaInfo[1] = layerAbove;
+        return sigmaInfo;
+    }
+
     /**
      * Public getter methods for each internal field
      */
