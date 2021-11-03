@@ -383,7 +383,7 @@ public class HydroField {
         return el;
     }
 
-    public float[][][] getDiffVert() {
+    public float[][][] getDiffusion() {
         return diffVert;
     }
 
@@ -396,6 +396,35 @@ public class HydroField {
             }
         }
         return waterDepth;
+    }
+
+    public double getWaterDepthUvnode(Mesh mesh, Particle part, int hour, RunProperties rp) {
+        return getAvgFromTrinodes(mesh, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "el", rp) + mesh.getDepthUvnode()[part.getElem()];
+    }
+
+    public double getAvgFromTrinodes(Mesh mesh, double[] location, int depthLayer, int elem, int hour, String varName, RunProperties rp) {
+        double sum = 0;
+        double weightSum = 0;
+        int[] particleNodes = new int[3];
+        double[] dist = new double[3];
+        double[] weights = new double[3];
+        for (int i = 0; i < 3; i++) {
+            particleNodes[i] = mesh.getTrinodes()[i][elem];
+            dist[i] = Particle.distanceEuclid2(location[0], location[1], mesh.getNodexy()[0][particleNodes[i]], mesh.getNodexy()[1][particleNodes[i]], rp.coordRef);
+            weights[i] = 1.0 / (dist[i] * dist[i]);
+            weightSum += weights[i];
+            if (varName.equalsIgnoreCase("temp")) {
+                sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
+            } else if (varName.equalsIgnoreCase("salinity")) {
+                sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
+            } else if (varName.equalsIgnoreCase("diffVert")) {
+                sum += getDiffusion()[hour][depthLayer][particleNodes[i]] * weights[i];
+            } else if (varName.equalsIgnoreCase("el")) {
+                sum += getEl()[hour][particleNodes[i]] * weights[i];
+            }
+        }
+
+        return sum / weightSum;
     }
 
     // TODO: Maybe. No measure of sea surface height above geoid at Uvnode

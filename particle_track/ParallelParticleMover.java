@@ -126,10 +126,44 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int sink = 0;
             int swim = 0;
 
+            // sigma layers
+            float dep = (float) part.getDepth();
+            float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
+            // Get the sigma depths at this location, and compare with particle depth
+            // For particles on surface or sea bed, set layerAbove = layerBelow = [0 | sigDepths.length-1]
+            float[] sigDepths = m.getSiglay();
+            int layerBelow = sigDepths.length;
+            for (int i = 0; i < sigDepths.length; i++) {
+                if (dep < sigDepths[i] * localDepth) {
+                    layerBelow = i;
+                    break;
+                }
+            }
+            int layerAbove = layerBelow - 1;
+            if (layerAbove < 0) {
+                layerAbove = 0;
+            }
+            if (layerBelow == sigDepths.length) {
+                layerBelow = layerAbove;
+            }
+            float sigLayerHeight = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;
+
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             if (!rp.readHydroVelocityOnly) {
-                double temperature = hf.getT()[hour][part.getDepthLayer()][m.getTrinodes()[0][part.getElem()]];
+                double temperature = 0;
+                if (rp.fixDepth) {
+                    temperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
+                } else {
+                    double tempAbove = hf.getAvgFromTrinodes(m, part.getLocation(), layerAbove, elemPart, hour, "temp", rp);
+                    double tempBelow = hf.getAvgFromTrinodes(m, part.getLocation(), layerBelow, elemPart, hour, "temp", rp);
+                    double dzPosition = dep - localDepth * sigDepths[layerAbove];
+                    if (sigLayerHeight != 0) {
+                        temperature = tempAbove + dzPosition * (tempBelow - tempAbove) / sigLayerHeight;
+                    } else {
+                        temperature = tempAbove;
+                    }
+                }
                 part.incrementDegreeDays(temperature, rp);
             }
 
@@ -139,51 +173,28 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
-                float localSalinity = 35; // TODO: Why is this set to 35? 35 is used in subsequent if statements...
+                float localSalinity = 35; //
                 // Calculate the gradient in vertical diffusion, if required
                 if (rp.variableDiffusion || rp.salinityThreshold < 35) {
                     // Calculate the vertical diffusivity profile for the particle location
-                    float dep = (float) part.getDepth();
-                    float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
-                    // Get the sigma depths at this location, and compare with particle depth
-                    // For particles on surface or sea bed, set layerAbove = layerBelow = [0 | sigDepths.length-1]
-                    float[] sigDepths = m.getSiglay();
-                    int layerBelow = sigDepths.length;
-                    for (int i = 0; i < sigDepths.length; i++) {
-                        if (dep < sigDepths[i] * localDepth) {
-                            layerBelow = i;
-                            break;
-                        }
-                    }
-                    int layerAbove = layerBelow - 1;
-                    if (layerAbove < 0) {
-                        layerAbove = 0;
-                    }
-                    if (layerBelow == sigDepths.length) {
-                        layerBelow = layerAbove;
-                    }
-
-                    float sigLayerHeight = (sigDepths[layerBelow] - sigDepths[layerAbove]) * localDepth;  // height of sigma layer
-
                     if (rp.variableDiffusion) {
-                        float diffAbove = hf.getDiffVert()[hour][layerAbove][m.getTrinodes()[0][part.getElem()]];  // TODO: vertical diffusion coefficient is not currently read in
-                        float diffBelow = hf.getDiffVert()[hour][layerBelow][m.getTrinodes()[0][part.getElem()]];
-                        float diffusionDifference = Math.abs(diffAbove - diffBelow);
+                        // TODO: vertical diffusion coefficient is not currently read in
+                        double diffusionAbove = hf.getAvgFromTrinodes(m, part.getLocation(), layerAbove, elemPart, hour, "diffVert", rp);
+                        double diffusionBelow = hf.getAvgFromTrinodes(m, part.getLocation(), layerBelow, elemPart, hour, "diffVert", rp);
                         // Calculate a gradient, as long as particle is not on the bed or the surface, else default = 0
                         if (sigLayerHeight != 0) {
-                            D_hVertDz = diffusionDifference / sigLayerHeight;
+                            D_hVertDz = Math.abs(diffusionAbove - diffusionBelow) / sigLayerHeight;
                         }
                     }
                     if (rp.salinityThreshold < 35 && rp.species.equalsIgnoreCase("sealice")) {
                         // Check local salinity in order to induce lice sinking behaviour if too low
-                        float salAbove = hf.getS()[hour][layerAbove][m.getTrinodes()[0][part.getElem()]];
-                        float salBelow = hf.getS()[hour][layerBelow][m.getTrinodes()[0][part.getElem()]];
-                        float salinityDifference = salBelow - salAbove;
-                        float dzPosition = dep - localDepth * sigDepths[layerAbove];
+                        double salAbove = hf.getAvgFromTrinodes(m, part.getLocation(), layerAbove, elemPart, hour, "salinity", rp);
+                        double salBelow = hf.getAvgFromTrinodes(m, part.getLocation(), layerBelow, elemPart, hour, "salinity", rp);
+                        double dzPosition = dep - localDepth * sigDepths[layerAbove];
                         if (sigLayerHeight != 0) {
-                            localSalinity = salAbove + dzPosition * salinityDifference / sigLayerHeight;
+                            localSalinity = (float) (salAbove + dzPosition * (salBelow - salAbove) / sigLayerHeight);
                         } else {
-                            localSalinity = salAbove;
+                            localSalinity = (float) salAbove;
                         }
                     }
                 }
@@ -199,14 +210,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Implement mortality once per hour
-            // TODO: This code is old and outdated. Also, salinity is calculated above if rp.salinityThreshold < 35
             if (step == 0) {
-                double salinity = 0;
-                double mort = 0;
-//                if (rp.salinityMort == true) {
-//                    salinity = part.salinity(tt,sal,trinodes);
-//                    part.setMortRate(salinity);
-//                }
                 part.setDensity();
             }
 
@@ -256,7 +260,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
 
-            if (step == 0 && hour % 4 == 0) {
+            if (part.getID() % 200 == 0) {
                 IOUtils.writeMovements(part, isDaytime, elapsedHours, hour, step, displacement, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
