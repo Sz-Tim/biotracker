@@ -23,7 +23,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 public class HydroField {
     private float[][][] u;  // eastward velocity [time][sigLay][elem]
     private float[][][] v;  // northward velocity [time][sigLay][elem]
-    private float[][][] w;  // upward velocity [time][sigLay][elem]
+    private float[][][] w;  // upward velocity [time][sigLay][elem]  --  Note: depth is positive, with 0 = surface; w is multiplied by -1 in Particle.velocityFromNearestList() so that positive velocity = downward
     private float[][][] s;  // salinity [time][sigLay][node]
     private float[][][] t;  // temperature [time][sigLay][node]
     private float[][] el;  // zeta = temporally varying sea surface height above geoid [time][node]

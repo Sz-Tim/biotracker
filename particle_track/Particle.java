@@ -1316,7 +1316,7 @@ public class Particle {
             usum = usum + weights[i] * u[hour][depLayer][(int) nrList[i][0]];
             vsum = vsum + weights[i] * v[hour][depLayer][(int) nrList[i][0]];
             if (verticalDynamics) {
-                wsum = wsum + weights[i] * w[hour][depLayer][(int) nrList[i][0]];
+                wsum = wsum - weights[i] * w[hour][depLayer][(int) nrList[i][0]];  // upward velocity; ww * -1 so that positive values = increased depth
             }
             sum = sum + weights[i];
         }
