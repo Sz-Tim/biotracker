@@ -519,12 +519,6 @@ public class Particle {
         return dZmin;
     }
 
-    public double verticalDiffusion() {
-        double vertDiff = 0;
-        return vertDiff;
-    }
-
-
     public void setViable(boolean viable) {
         this.viable = viable;
     }
@@ -672,7 +666,7 @@ public class Particle {
                 dZ += dt * D_hVertDz + Math.pow(mult * rand, 0.5);
             }
         } else {
-            dZ = dt * rp.D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+            dZ = Math.sqrt(6 * dt * rp.D_hVert) * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
         }
         return dZ;
     }
