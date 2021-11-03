@@ -50,6 +50,7 @@ public class Mesh {
 
     // Variables used in all cases
     private float[] siglay;
+    private float[] siglev;
     private float[][] convexHull;
     //private float[][] concaveHull;
 
@@ -129,6 +130,12 @@ public class Mesh {
             for (int i = 0; i < siglay.length; i++) {
                 if (siglay[i] < 0) {
                     siglay[i] *= -1;
+                }
+            }
+            siglev = IOUtils.readNetcdfFloat1D(meshFilename, "siglev");
+            for (int i = 0; i < siglev.length; i++) {
+                if (siglev[i] < 0) {
+                    siglev[i] *= -1;
                 }
             }
 
@@ -291,6 +298,10 @@ public class Mesh {
 
     public float[] getSiglay() {
         return siglay;
+    }
+
+    public float[] getSiglev() {
+        return siglev;
     }
 
     public int[] getOpenBoundaryNodes() {
