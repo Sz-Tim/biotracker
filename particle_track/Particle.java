@@ -23,7 +23,7 @@ public class Particle {
     private String startSiteID = "0";
     private int startSiteIndex = 0;
 
-    private String coordRef;
+    private final String coordRef;
 
     private final ISO_datestr startDate;
     private double startTime = 0;
@@ -34,11 +34,9 @@ public class Particle {
     private int[] elemRomsV;
     private int[] nearestROMSGridPointU;
     private int[] nearestROMSGridPointV;
-    private double[][] nrListROMSU;
-    private double[][] nrListROMSV;
 
     private double[][] nrList = new double[5][2];
-    private double[][] cornerList = new double[3][2];
+    private final double[][] cornerList = new double[3][2];
     private int whichMesh;
     // release time
     private double releaseTime = 0;
@@ -70,23 +68,6 @@ public class Particle {
     // --- Not presently used ---
     private List<Arrival> arrivals;
 
-    // create a new particle at a defined location, at the water surface
-//    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int id, double mortalityRate, String coordRef, String species)
-//    {
-//        this.id = id;
-//        this.xy[0] = xstart;
-//        this.xy[1] = ystart;
-//        this.startSiteID = startSiteID;
-//        this.startLoc[0] = xstart;
-//        this.startLoc[1] = ystart;
-//        this.mortRate = mortalityRate;
-//        this.z = startDepth; 
-//        
-//        this.arrivals = new ArrayList<>();
-//        
-//        this.coordRef = coordRef;
-//        this.species = species;
-//    }
     public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate,
                     ISO_datestr startDate, double startTime, String coordRef, String species) {
         this.id = id;
@@ -100,13 +81,8 @@ public class Particle {
         this.startLoc[1] = ystart;
         this.mortRate = mortalityRate;
         this.depth = startDepth;
-
         this.coordRef = coordRef;
         this.species = species;
-
-        //System.out.println("creating particle, startDate = "+this.startDate.getDateStr());
-
-        //this.arrivals = new ArrayList<Arrival>();
     }
 
     public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate, double startDensity,
@@ -123,11 +99,8 @@ public class Particle {
         this.mortRate = mortalityRate;
         this.density = startDensity;
         this.depth = startDepth;
-
         this.coordRef = coordRef;
         this.species = species;
-
-        //System.out.println("creating particle, startDate = " + this.startDate.getDateStr() + ", start site = " + this.startSiteID + ", density = " + this.density);
     }
 
     /**
@@ -150,56 +123,9 @@ public class Particle {
         this.mesh = Integer.parseInt(values[10]);
         this.depth = Double.parseDouble(values[11]);
         this.degreeDays = Double.parseDouble(values[12]);
-        // Check the details of the particle created
-//        System.out.printf("%d %s %.1f %s %.5f %.5f %d %d %.4f\n",
-//                this.getID(),
-//                this.getStartDate().getDateStr(),
-//                this.getAge(),
-//                this.getStartID(),
-//                this.getLocation()[0],
-//                this.getLocation()[1],
-//                this.getElem(),
-//                this.getStatus(),
-//                this.getDensity()
-//        );
         this.species = species;
         this.coordRef = "OSGB1936";
     }
-
-//    public void setReleaseScenario(int releaseScenario, double[][] startlocs)
-//    {
-//        switch (releaseScenario) {
-//            // integer to switch release scenario
-//            // 0 all at time zero
-//            // 1 tidal release (evenly over first 24 hours)
-//            // 2 continuous release (1 per hour per site)
-//            // 3 continuous release (5 per hour per site)
-//            // 4 continuous release (10 per hour per site)
-//            // 5 continuous release (20 per hour per site)
-//            // 10 defined release times
-//            case 0:
-//                this.setReleaseTime(0);
-//                break;
-//            case 1:
-//                this.setReleaseTime((this.id / startlocs.length) % 25);
-//                break;
-//            case 2:
-//                this.setReleaseTime(Math.floor(this.id / startlocs.length));
-//                break;
-//            case 3:
-//                this.setReleaseTime(Math.floor(this.id / (5 * startlocs.length)));
-//                break;
-//            case 4:
-//                this.setReleaseTime(Math.floor(this.id / (10 * startlocs.length)));
-//                break;
-//            case 5:
-//                this.setReleaseTime(Math.floor(this.id / (20 * startlocs.length)));
-//                break;
-//            case 10:
-//                this.setReleaseTime(startlocs[this.id][3]);
-//                break;
-//        }
-//    }
 
     @Override
     public String toString() {
@@ -209,7 +135,6 @@ public class Particle {
     // Not presently used
     public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity) {
         arrivals.add(new Arrival(sourceLocation, arrivalLocation, arrivalTime, arrivalDensity));
-        //System.out.printf("Arrival (particle %d): %d %d %f %f\n", this.getID(),sourceLocation,arrivalLocation,arrivalTime,arrivalDensity);
     }
 
     public List<Arrival> getArrivals() {
@@ -306,17 +231,9 @@ public class Particle {
     }
 
     public String printLocation() {
-//        if (this.mesh == 0)
-//            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elem;
-//        else
-//            return "xy "+this.xy[0]+" "+this.xy[1]+" mesh "+this.mesh+" "+" elem "+this.elemRomsU[0]+" "+this.elemRomsU[1];
         return "xy " + this.xy[0] + " " + this.xy[1] + " mesh " + this.mesh + " " + " elem " + this.elem;
     }
 
-    //    public void setNrList(float[][] uvnode)
-//    {
-//        this.nrList = nearestCentroidList(this.xy[0], this.xy[1], uvnode);
-//    }
     public double[][] getNrList() {
         return this.nrList;
     }
@@ -336,15 +253,6 @@ public class Particle {
 
     public double getDepth() {
         return this.depth;
-    }
-
-    /**
-     * Set depth of particle
-     *
-     * @param depth
-     */
-    public void setZ(double depth) {
-        this.depth = depth;
     }
 
     /**
@@ -423,62 +331,6 @@ public class Particle {
     }
 
     /**
-     * Set particle depth in the water column based on its defined behaviour and
-     * the time
-     * 1 - passive, stay on surface
-     * 2 - passive, stay on bottom (layer 10)
-     * 3 - passive, stay in mid layer (layer 5)
-     * 4 - vertical swimming: surface for hours 19-6, mid layer (5) hours 7-18
-     * 5 - rapid drop (1->10) at hour 6, then gradually move back up
-     * 6 - top during flood tides, mid during ebb (local)
-     * 7 - mid during flood tides, bed during ebb (local)
-     * 8 - top during flood tides, bed during ebb (local)
-     * MORE...? "homing" ability
-     */
-    public void setDepthLayer(int behaviour, String tideState) {
-        boolean reducedFile = true;
-        switch (behaviour) {
-            case 1:
-                this.depLayer = 0;
-                break;
-            case 2:
-                this.depLayer = 9;
-                break;
-            case 3:
-                this.depLayer = 5;
-                break;
-            case 6:
-                if (tideState.equalsIgnoreCase("flood")) {
-                    this.depLayer = 0;
-                } else {
-                    this.depLayer = 5;
-                }
-                break;
-            case 7:
-                if (tideState.equalsIgnoreCase("flood")) {
-                    this.depLayer = 5;
-                } else {
-                    this.depLayer = 9;
-                }
-                break;
-            case 8:
-                if (tideState.equalsIgnoreCase("flood")) {
-                    this.depLayer = 0;
-                } else {
-                    this.depLayer = 9;
-                }
-                break;
-        }
-        // enable running file with two depth layers ("top"=0 and "bottom"=1)
-        if (reducedFile) {
-            if (this.depLayer > 0) {
-                this.depLayer = 1;
-            }
-        }
-        //return 0;
-    }
-
-    /**
      * put particle in the correct depth layer, based upon
      * its z position, and
      *
@@ -507,16 +359,6 @@ public class Particle {
             }
         }
         return depNearest;
-    }
-
-    public double distanceToNearestDepthLayer(double localDepth, float[] layers) {
-        double dZmin = 1000;
-        for (float layer : layers) {
-            if (Math.abs(this.depth - localDepth * layer) < dZmin) {
-                dZmin = Math.abs(this.depth - localDepth * layer);
-            }
-        }
-        return dZmin;
     }
 
     public void setViable(boolean viable) {
@@ -579,16 +421,6 @@ public class Particle {
         boolean byDegreeDays = getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0;
         boolean byPrevious = getStatus() == 666;
         return byAge || byDegreeDays || byPrevious;
-    }
-
-    public double[] behaveVelocity(int behaviour) {
-        double[] uv = new double[2];
-        return uv;
-    }
-
-    public double[] smagorinskyDiffusionVelocity(int node, int[] neighbours, double u, double v, double[][] uvnode) {
-        double[] uv = new double[2];
-        return uv;
     }
 
     /**
@@ -671,76 +503,6 @@ public class Particle {
         return dZ;
     }
 
-    public void verticalMovement(RunProperties rp, double D_hVertDz, double hour, double dt, double localDepth, double localSalinity, boolean isDaytime) {
-        double depthNew = this.depth;
-        double vertSwim_M = 0;
-        double vertSwim_S = 0;
-        double sinking_M = 0;
-        double sinking_S = 0;
-
-        if (rp.species.equalsIgnoreCase("sealice")) {
-            // Case of naupliar lice - no active surface behaviour
-            if (this.status == 1) {
-                //System.out.println("Juvenile: no phototaxis, neutrally buoyant");
-                vertSwim_M = 0;
-                vertSwim_S = 0;
-                sinking_M = 0;
-                sinking_S = 0;
-            }
-            // Case of low salinity - stop swimming to surface and just sink
-            else if (localSalinity < rp.salinityThreshold || !isDaytime) {
-                //System.out.println("Low salinity OR night time: sinking only (salinity=" + localSalinity + ", time=" + tt);
-                vertSwim_M = 0;
-                vertSwim_S = 0;
-                sinking_M = rp.sinkingRateMean;
-                sinking_S = rp.sinkingRateStd;
-            }
-            // Case for "normal" copepodids - no sinking, just swimming
-            else {
-                //System.out.println("Normal water (above salinity threshold) and daytime: phototaxis only");
-                vertSwim_M = rp.vertSwimSpeedMean;
-                vertSwim_S = rp.vertSwimSpeedStd;
-                sinking_M = 0;
-                sinking_S = 0;
-            }
-        }
-
-        // Do some stuff with the sinking and diffusion parameters here
-        // Simple example here PRESENTLY UNTESTED, and enforces a uniform distribution
-
-        depthNew += dt * (sinking_M + sinking_S * ThreadLocalRandom.current().nextDouble(-1.0, 1.0)
-                + vertSwim_M + vertSwim_S * ThreadLocalRandom.current().nextDouble(-1.0, 1.0));
-
-        // Naive vertical diffusion; use this for fixed diffusion parameter
-        //depthNew += dt * D_hVert * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
-
-        // Variable vertical diffusion, following Visser (1997) and Ross & Sharples (2004)
-        double r = 1.0 / 3.0;
-        double mult = (2 * dt / r) * rp.D_hVert * (this.depth + (dt / 2) * D_hVertDz);
-        double rand = ThreadLocalRandom.current().nextGaussian();
-        if (rand < 0) {
-            depthNew -= dt * D_hVertDz + Math.pow(mult * -rand, 0.5);
-        } else {
-            depthNew += dt * D_hVertDz + Math.pow(mult * rand, 0.5);
-        }
-
-        if (depthNew < 0) {
-            depthNew = 0;
-        }
-        if (depthNew > localDepth) {
-            depthNew = localDepth;
-        }
-
-        this.addZ(Math.abs(this.depth - depthNew));
-
-        this.depth = depthNew;
-    }
-
-
-    // --------------------------------------------------------------------------------------------------------------
-    // Everything to do with velocity calculation below here
-    // --------------------------------------------------------------------------------------------------------------
-
     /**
      * Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
      *
@@ -763,29 +525,16 @@ public class Particle {
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
 
         // Get current mesh and element
-        boolean report = false;
-        if (report) {
-            System.out.println("Particle.meshSelectOrExit");
-        }
         int move = 0;
         int meshID = this.getMesh();
         double[] oldLoc = this.getLocation();
         int[] el = new int[2];
         if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS")) {
             el = this.getROMSnearestPointU();
-            if (report) {
-                System.out.println("  in ROMS mesh, el = " + el[0] + " " + el[1]);
-            }
         } else if (meshes.get(meshID).getType().equalsIgnoreCase("ROMS_TRI")) {
             el[0] = this.getElem();
-            if (report) {
-                System.out.println("  in ROMS_TRI mesh, el = " + el[0]);
-            }
         } else {
             el[0] = this.getElem();
-            if (report) {
-                System.out.println("  in FVCOM mesh, el = " + el[0]);
-            }
         }
 
         // Only move the particle at the end of this method, IFF it is allocated to move
@@ -794,28 +543,16 @@ public class Particle {
         // i)
         Mesh m = meshes.get(meshID);
         if (m.isInMesh(newLoc, true, false, el)) {
-            if (report) {
-                System.out.println("  in same mesh as before");
-            }
             // i.i) in mesh > 0
             if (meshID > 0) {
-                if (report) {
-                    System.out.println("    but this isn't the lowest ID mesh, checking lower ID mesh");
-                }
                 m = meshes.get(0);
                 if (m.isInMesh(newLoc, true, true, null)) {
-                    if (report) {
-                        System.out.println("      in lower ID mesh");
-                    }
                     // switch to mesh 0
                     this.setLocation(newLoc[0], newLoc[1]);
                     this.placeInMesh(meshes, 0, true);
                     move = 1;
                 } else {
                     // stay in current mesh
-                    if (report) {
-                        System.out.println("      not in lower ID mesh, stay in same mesh");
-                    }
                     //System.out.println("In mesh "+meshID+", which is of type "+meshes.get(meshID).getType());
                     this.setLocation(newLoc[0], newLoc[1]);
                     this.placeInMesh(meshes, 1, false);
@@ -824,46 +561,27 @@ public class Particle {
             }
             // i.ii) in mesh 0
             else {
-                if (report) {
-                    System.out.println("    this is the lowest ID mesh, checking boundaries");
-                }
                 // boundary check
                 int bnode = -1;
                 if (rp.checkOpenBoundaries) {
                     bnode = ParallelParticleMover.openBoundaryCheck((float) newLoc[0], (float) newLoc[1], m, rp);
                 }
                 if (bnode != -1) {
-                    if (report) {
-                        System.out.println("      close to a mesh boundary node");
-                    }
                     // Close to boundary
                     if (meshes.size() == 2) {
                         m = meshes.get(1);
                         if (m.isInMesh(newLoc, true, true, null)) {
-                            if (report) {
-                                System.out.println("        in higher ID mesh, switch to that");
-                            }
                             // switch to other mesh
                             this.setLocation(newLoc[0], newLoc[1]);
                             this.placeInMesh(meshes, 1, true);
                             move = 1;
                         }
                     } else {
-                        if (report) {
-                            System.out.println("        not in higher ID mesh, boundary exit");
-                        }
-                        // boundary exit
-                        if (report) {
-                            System.out.println("Boundary exit: bNode " + bnode);
-                        }
                         this.setBoundaryExit(true);
                         this.setStatus(66);
                         move = 0;
                     }
                 } else {
-                    if (report) {
-                        System.out.println("      in same mesh as was before: keep going as was");
-                    }
                     this.setLocation(newLoc[0], newLoc[1]);
                     this.placeInMesh(meshes, 0, false);
                     move = 1;
@@ -872,9 +590,6 @@ public class Particle {
             }
         } else {
             if (meshes.size() == 2) {
-                if (report) {
-                    System.out.println("  not in same mesh as before (first one in list), check other mesh");
-                }
                 // Not in original mesh, so check the other one
                 int otherMesh = 1;
                 if (meshID == 1) {
@@ -883,49 +598,20 @@ public class Particle {
 
                 m = meshes.get(otherMesh);
                 if (m.isInMesh(newLoc, true, true, null)) {
-                    if (report) {
-                        System.out.println("    is in other mesh, switch to that");
-                    }
                     // switch to other mesh
                     this.setLocation(newLoc[0], newLoc[1]);
                     this.placeInMesh(meshes, otherMesh, true);
                     move = 1;
                 } else {
                     // boundary exit
-                    if (report) {
-                        System.out.println("    not in other mesh, boundary exit");
-                    }
                     this.setBoundaryExit(true);
                     this.setStatus(66);
                     move = 0;
                 }
             } else {
-                if (report) {
-                    System.out.println("  not in single available mesh, stay at present location");
-                }
                 move = 0;
             }
         }
-
-//        if (move == 1)
-//        {
-//            this.setLocation(newLoc[0],newLoc[1]);
-//        }
-
-        if (report) {
-            System.out.println("Particle location at end of meshSelectOrExit: " + this.printLocation());
-        }
-        //this.placeInMesh(m,false);
-//        if (this.getMesh() != meshID)
-//        {
-        if (report) {
-            System.out.println("Particle " + this.getID() + " original mesh: " + meshID + ", new mesh: " + this.getMesh());
-        }
-//        }
-//        if (this.getMesh() != meshID)
-//        {
-//            System.out.println("Particle "+this.getID()+" original mesh: "+meshID+", new mesh: "+this.getMesh());
-//        }
     }
 
 
@@ -1306,12 +992,13 @@ public class Particle {
             } else {
                 weights[i] = 1;
             }
-
-            usum = usum + weights[i] * u[hour][depLayer][(int) nrList[i][0]];
-            vsum = vsum + weights[i] * v[hour][depLayer][(int) nrList[i][0]];
             if (verticalDynamics) {
+                depLayer = (int) nrList[i][2];
                 wsum = wsum - weights[i] * w[hour][depLayer][(int) nrList[i][0]];  // upward velocity; ww * -1 so that positive values = increased depth
             }
+            usum = usum + weights[i] * u[hour][depLayer][(int) nrList[i][0]];
+            vsum = vsum + weights[i] * v[hour][depLayer][(int) nrList[i][0]];
+
             sum = sum + weights[i];
         }
         velocity[0] = usum / sum;
@@ -1524,62 +1211,6 @@ public class Particle {
         return c;
     }
 
-
-    public static int[] findContainingElement_OLD(double[] xy, int elemPart,
-                                                  float[][] nodexy, int[][] trinodes, int[][] neighbours) {
-        int[] c = new int[6];
-        int[] elems = new int[1];
-        elems[0] = elemPart;
-
-        //System.out.println("findContainingElement: elems[0]="+elems[0]);
-        int whereami = whichElement(xy, elems, nodexy, trinodes);
-        //System.out.println("findContainingElement: whereami="+whereami);
-        c[1] = 1;
-        if (whereami == -1) {
-            //int[] elems0 = neighbours[elemPart];
-            c[2] = 1;
-
-            int[] elems0 = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
-            whereami = whichElement(xy, elems0, nodexy, trinodes);
-
-            // if fails, look in nearest 10 (id numerical)
-            if (whereami == -1) {
-                //System.out.println("Looking in nearest 10");
-                c[3] = 1;
-                int[] elems1 = IntStream.rangeClosed(Math.max(elemPart - 5, 0), Math.min(elemPart + 5, trinodes[0].length - 1)).toArray();
-
-                whereami = whichElement(xy, elems1, nodexy, trinodes);
-                // if fails, look in nearest 500 (id numerical)
-                if (whereami == -1) {
-                    //System.out.println("Looking in nearest 500");
-                    c[4] = 1;
-                    int[] elems2 = IntStream.rangeClosed(Math.max(elemPart - 500, 0), Math.min(elemPart + 500, trinodes[0].length - 1)).toArray();
-                    whereami = whichElement(xy, elems2, nodexy, trinodes);
-
-                    // if this fails, look in all elements
-                    if (whereami == -1) {
-//                        System.out.printf("Looking in nearest 80000.... ");
-                        c[5] = 1;
-                        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length - 1).toArray();
-                        whereami = whichElement(xy, allelems, nodexy, trinodes);
-//                        if (whereami == -1)
-//                        {
-//                            System.out.printf("Movement placed particle outside mesh\n");
-//                        }
-                    }
-                }
-            }
-        }
-        c[0] = whereami;
-//        System.out.printf("%d %d %d %d %d %d %d\n",elemPart,c[0],c[1],c[2],c[3],c[4],c[5]);
-//        if (c[0] == 0 || c[0] == -1)
-//        {
-//            System.out.println("Element out of bounds, fixing location");
-//            System.out.printf("whereami=0 --- %.6e %.6e %d\n",newlocx,newlocy,elemPart);
-//        }
-        return c;
-    }
-
     /**
      * Find which element a particle resides within (edge checking)
      *
@@ -1636,8 +1267,6 @@ public class Particle {
      */
     public static double[][] neighbourCellsList(double[] xy, int elemPart0, int meshPart, List<Mesh> meshes, String coordRef) {
         double[][] nrList = new double[5][2];
-        // distance to elem
-        //int elem = nearestCentroid(this.xy[0],this.xy[1],uvnode);
 
         float[][] nodexy = meshes.get(meshPart).getNodexy();
         float[][] uvnode = meshes.get(meshPart).getUvnode();
@@ -1654,7 +1283,6 @@ public class Particle {
             return nrList;
         }
         int thisElem = elem[0];
-        //int elem = this.elem;
         nrList[0][0] = thisElem;
         nrList[0][1] = distanceEuclid2(xy[0], xy[1], uvnode[0][thisElem], uvnode[1][thisElem], coordRef);
         // distance to neighbouring elems
@@ -1670,6 +1298,51 @@ public class Particle {
 //        System.out.printf("NeighbourCells:\n"
 //                + "0: %d %f; 1: %d %f; 2: %d %f; 3: %d %f\n",
 //                (int)nrList[0][0],nrList[0][1],(int)nrList[1][0],nrList[1][1],(int)nrList[2][0],nrList[2][1],(int)nrList[3][0],nrList[3][1]);
+
+        return nrList;
+    }
+
+    // TODO: find weights with 3D distances, clean this shit into a loop
+    public static double[][] neighbourCellsList3D(double[] xy, int elemPart0, int meshPart, List<Mesh> meshes, double depth, String coordRef) {
+
+
+        float[][] nodexy = meshes.get(meshPart).getNodexy();
+        float[][] uvnode = meshes.get(meshPart).getUvnode();
+        float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
+        int[][] trinodes = meshes.get(meshPart).getTrinodes();
+        int[][] neighbours = meshes.get(meshPart).getNeighbours();
+        int[] nearestLayers = new int[2];
+        int nNeighbours = 3*2;  // 3 neighbors per layer * 2 layers
+        double[][] nrList = new double[nNeighbours+2][3];
+
+        int thisElem = findContainingElement(xy, elemPart0, nodexy, trinodes, neighbours, false)[0];
+        if (thisElem == -1) {
+            return nrList;
+        }
+        int nrRow = 0;
+        for (int nbr = 0; nbr < 3; nbr++) {
+            for (int layer = 0; layer < 2; layer++) {
+                if (nbr == 0) {
+                    // containing element
+                    nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[thisElem]);
+                    nrList[nrRow][0] = thisElem;
+                    nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], nearestLayers[layer], coordRef);
+                    nrList[nrRow][2] = nearestLayers[layer];
+                    nrRow++;
+                }
+                // neighboring elements
+                nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[neighbours[nbr][thisElem]]);
+                nrList[nrRow][0] = neighbours[nbr][thisElem];
+                nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][thisElem]], uvnode[1][neighbours[nbr][thisElem]], nearestLayers[layer], coordRef);
+                nrList[nrRow][2] = nearestLayers[layer];
+                nrRow++;
+            }
+        }
+       /* System.out.println("Neighborhood:");
+        for (int i = 0; i < nrRow; i++) {
+            System.out.printf("%d: %.1f, %d   ", (int) nrList[i][0], nrList[i][1], (int) nrList[i][2]);
+        }
+        System.out.println("");*/
 
         return nrList;
     }
@@ -1700,7 +1373,11 @@ public class Particle {
         double[] velplus1 = new double[nDims];
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
-            this.nrList = neighbourCellsList(this.getLocation(), elemPart, meshPart, meshes, coordRef);
+            if (verticalDynamics) {
+                this.nrList = neighbourCellsList3D(this.getLocation(), elemPart, meshPart, meshes, this.depth, coordRef);
+            } else {
+                this.nrList = neighbourCellsList(this.getLocation(), elemPart, meshPart, meshes, coordRef);
+            }
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of timestep
@@ -1713,10 +1390,10 @@ public class Particle {
                 System.out.println("Error: vertical dynamics not implemented for ROMS");
                 System.exit(0);
             }
-            this.nrListROMSU = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
-            this.nrListROMSV = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), null);
-            vel = velocityFromNearestListROMS(this.nrListROMSU, this.nrListROMSV, hour, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
-            velplus1 = velocityFromNearestListROMS(this.nrListROMSU, this.nrListROMSV, hour + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
+            double[][] nrListROMSU = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
+            double[][] nrListROMSV = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), null);
+            vel = velocityFromNearestListROMS(nrListROMSU, nrListROMSV, hour, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
+            velplus1 = velocityFromNearestListROMS(nrListROMSU, nrListROMSV, hour + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
         }
         double[] k1 = new double[nDims];
         for (int i = 0; i < nDims; i++) {
@@ -1816,7 +1493,12 @@ public class Particle {
         double[] velplus1 = new double[nDim];
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
-            double[][] xNrList = neighbourCellsList(xy, elemPart, meshPart, meshes, coordRef);
+            double[][] xNrList;
+            if (verticalDynamics) {
+                xNrList = neighbourCellsList3D(xy, elemPart, meshPart, meshes, depth, coordRef);
+            } else {
+                xNrList = neighbourCellsList(xy, elemPart, meshPart, meshes, coordRef);
+            }
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of timestep
