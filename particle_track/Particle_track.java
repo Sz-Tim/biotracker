@@ -172,10 +172,6 @@ public class Particle_track {
         boolean isDaytime = false;
         if (!rp.daylightPath.isEmpty()) {
             daylightHours = IOUtils.readDaylightHours(rp.daylightPath, currentIsoDate, endIsoDate, numberOfDays, " ", false);
-            System.out.println("Daylight hours dataset:");
-            for( int i = 0; i < daylightHours.length; i++) {
-                System.out.println(daylightHours[i][0] + " " + daylightHours[i][1]);
-            }
         }
 
         // --------------------------------------------------------------------------------------

@@ -424,29 +424,6 @@ public class Particle {
     }
 
     /**
-     * Compute salinity from an average of the corner nodes of the containing element.
-     *
-     * @param hour
-     * @param salinity
-     * @param trinodes
-     * @return
-     */
-    public double salinity(int hour, double[][] salinity, int[][] trinodes) {
-        double s = 0;
-        double dist1 = distanceEuclid(this.xy[0], this.xy[1], cornerList[0][0], cornerList[0][1]);
-        double dist2 = distanceEuclid(this.xy[0], this.xy[1], cornerList[1][0], cornerList[1][1]);
-        double dist3 = distanceEuclid(this.xy[0], this.xy[1], cornerList[2][0], cornerList[2][1]);
-        double weight1 = 1.0 / (dist1 * dist1);
-        double weight2 = 1.0 / (dist2 * dist2);
-        double weight3 = 1.0 / (dist3 * dist3);
-        double weightSum = weight1 + weight2 + weight3;
-
-        s = (1.0 / weightSum) * (weight1 * salinity[hour][trinodes[0][elem]] + weight2 * salinity[hour][trinodes[1][elem]] + weight3 * salinity[hour][trinodes[2][elem]]);
-
-        return s;
-    }
-
-    /**
      * Sets the mortality rate for the particle packet based upon local salinity
      *
      * @param salinity
