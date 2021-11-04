@@ -1273,9 +1273,6 @@ public class Particle {
         int[][] trinodes = meshes.get(meshPart).getTrinodes();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
 
-
-//        int elem[] = findContainingElement_OLD(xy, elemPart0,
-//            nodexy, trinodes, neighbours);
         int[] elem = findContainingElement(xy, elemPart0, nodexy, trinodes, neighbours, false);
         // If particle is not within the mesh (value returned by findContainingElement = -1)
         // exit this method returning array of zeros.
@@ -1295,42 +1292,44 @@ public class Particle {
         nrList[4][0] = 0;
         nrList[4][1] = 1000000;
 
-//        System.out.printf("NeighbourCells:\n"
-//                + "0: %d %f; 1: %d %f; 2: %d %f; 3: %d %f\n",
-//                (int)nrList[0][0],nrList[0][1],(int)nrList[1][0],nrList[1][1],(int)nrList[2][0],nrList[2][1],(int)nrList[3][0],nrList[3][1]);
-
         return nrList;
     }
 
-    // TODO: find weights with 3D distances, clean this shit into a loop
+    /**
+     * Find the containing element plus 3 neighbors for the depth layer above and below the particle and calculate the
+     * euclidean distances from the particle to the centroids
+     *
+     * @param xy particle location
+     * @param elemPart0 particle element
+     * @param meshPart particle mesh
+     * @param meshes meshes
+     * @param depth particle depth
+     * @param coordRef coordinate system
+     * @return double[8][3] with rows = elements and columns = [elementID, distance to particle (3D), depth layer]
+     */
     public static double[][] neighbourCellsList3D(double[] xy, int elemPart0, int meshPart, List<Mesh> meshes, double depth, String coordRef) {
 
-
-        float[][] nodexy = meshes.get(meshPart).getNodexy();
         float[][] uvnode = meshes.get(meshPart).getUvnode();
         float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
-        int[][] trinodes = meshes.get(meshPart).getTrinodes();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
-        int[] nearestLayers = new int[2];
-        int nNeighbours = 3*2;  // 3 neighbors per layer * 2 layers
-        double[][] nrList = new double[nNeighbours+2][3];
+        double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
+        int[] nearestLayers;
 
-        int thisElem = findContainingElement(xy, elemPart0, nodexy, trinodes, neighbours, false)[0];
+        int thisElem = findContainingElement(xy, elemPart0, meshes.get(meshPart).getNodexy(), meshes.get(meshPart).getTrinodes(), neighbours, false)[0];
         if (thisElem == -1) {
             return nrList;
         }
+
         int nrRow = 0;
-        for (int nbr = 0; nbr < 3; nbr++) {
-            for (int layer = 0; layer < 2; layer++) {
-                if (nbr == 0) {
-                    // containing element
-                    nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[thisElem]);
-                    nrList[nrRow][0] = thisElem;
-                    nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], nearestLayers[layer], coordRef);
-                    nrList[nrRow][2] = nearestLayers[layer];
-                    nrRow++;
-                }
-                // neighboring elements
+        for (int layer = 0; layer < 2; layer++) {
+            // containing element
+            nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[thisElem]);
+            nrList[nrRow][0] = thisElem;
+            nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], nearestLayers[layer], coordRef);
+            nrList[nrRow][2] = nearestLayers[layer];
+            nrRow++;
+            // neighboring elements
+            for (int nbr = 0; nbr < 3; nbr++) {
                 nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[neighbours[nbr][thisElem]]);
                 nrList[nrRow][0] = neighbours[nbr][thisElem];
                 nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][thisElem]], uvnode[1][neighbours[nbr][thisElem]], nearestLayers[layer], coordRef);
