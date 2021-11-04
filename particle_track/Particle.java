@@ -486,6 +486,20 @@ public class Particle {
         return forceUpward * rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
 
+    public double swim(RunProperties rp, Mesh mesh, HydroField hydroField, int hour) {
+        // following Johnsen et al 2014, 2016 for light attenuation and swimming thresholds
+        // short_wave units = W m-2 ≈ 2.1 μmole m-2 s-1 (according to Tom Adams handover files)
+        double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
+        double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
+
+        if ((this.getStatus() == 1 && lightAtDepth > 0.39) || (this.getStatus() == 2 && lightAtDepth > 2.06e-5)) {
+            int forceUpward = rp.vertSwimSpeedMean > 0 ? -1 : 1;
+            return forceUpward * rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextGaussian();
+        } else {
+            return 0.0;
+        }
+    }
+
     public double verticalDiffusion(RunProperties rp, double D_hVertDz, double dt) {
         double dZ = 0;
         if (rp.variableDiffusion) {

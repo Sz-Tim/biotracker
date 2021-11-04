@@ -268,7 +268,6 @@ public class Particle_track {
                     if (!rp.daylightPath.isEmpty()) {
                         isDaytime = daylightHours[fnum][0] <= currentHour && daylightHours[fnum][1] >= currentHour;
                     }
-                    System.out.println("isDaytime: " + isDaytime + " based on " + daylightHours[fnum][0] + " " + daylightHours[fnum][1] + " with fnum = " + fnum);
 
                     // Read new hydrodynamic fields?
                     if (currentHour == 0) {
@@ -493,8 +492,7 @@ public class Particle_track {
                     hydroFields.clear();
                     try {
                         System.out.println("Reading file " + currentHour); // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km"};
-                        //{"u", "v", "salinity", "temp", "zeta", "ww", "km"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
                         // Normal "forwards time"
                         if (!rp.backwards) {

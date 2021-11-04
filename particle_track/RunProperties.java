@@ -35,6 +35,7 @@ public class RunProperties {
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
             verticalDynamics, // should vertical dynamics be included? Turns on velocities, diffusion, and swimming behaviour; ONLY implemented for FVCOM
+            swimLightLevel,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
@@ -191,6 +192,7 @@ public class RunProperties {
         verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         thresh = Integer.parseInt(properties.getProperty("thresh", "500"));
         behaviour = Integer.parseInt(properties.getProperty("behaviour", "1"));
+        swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
 
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.005"));

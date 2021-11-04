@@ -135,8 +135,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float sigLayerHeight = (m.getSiglay()[nearestLayers[0]] - m.getSiglay()[nearestLayers[1]]) * m.getDepthUvnode()[elemPart];
             int[] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);  // returns [levelBelow, levelAbove]
             float sigLevelHeight = (m.getSiglev()[nearestLevels[0]] - m.getSiglev()[nearestLevels[1]]) * m.getDepthUvnode()[elemPart];
-            //System.out.printf("--Nearest layers: above = %d (%.2f), below = %d (%.2f) at depth %.2f\n", nearestLayers[1], m.getSiglay()[nearestLayers[1]]*localDepth, nearestLayers[0], m.getSiglay()[nearestLayers[0]]*localDepth, dep);
-            //System.out.printf("----Nearest levels: above = %d (%.2f), below = %d (%.2f) at depth %.2f\n", nearestLevels[1], m.getSiglev()[nearestLevels[1]]*localDepth, nearestLevels[0], m.getSiglev()[nearestLevels[0]]*localDepth, dep);
 
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
@@ -183,13 +181,18 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         }
                     }
                 }
-                if (part.getStatus()==2) {
+                if (part.getStatus()<3) { // TODO: only for status==2? Tom gives short_wave data for napulii (1) and copepodids (2)
                     if (localSalinity < rp.salinityThreshold) {
-                        sink++;
                         activeMovement[2] = part.sink(rp);
+                        sink++;
+                    } else if (rp.swimLightLevel) {
+                        activeMovement[2] = part.swim(rp, m, hf, hour);
+                        if (Math.abs(activeMovement[2]) > 1e-10) {
+                            swim++;
+                        }
                     } else if (isDaytime) {
-                        swim++;
                         activeMovement[2] = part.swim(rp);
+                        swim++;
                     }
                 }
             }
