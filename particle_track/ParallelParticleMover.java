@@ -162,23 +162,21 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
                 float localSalinity = 35;
-                if (rp.variableDiffusion || rp.salinityThreshold < 35) {
-                    if (rp.variableDiffusion) {
-                        double kmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[0], elemPart, hour, "km", rp);
-                        double kmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[1], elemPart, hour, "km", rp);
-                        if (sigLayerHeight != 0) {
-                            D_hVertDz = Math.abs(kmAbove - kmBelow) / sigLevelHeight;
-                        }
+                if (rp.variableDiffusion) {
+                    double kmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[0], elemPart, hour, "km", rp);
+                    double kmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[1], elemPart, hour, "km", rp);
+                    if (sigLayerHeight != 0) {
+                        D_hVertDz = Math.abs(kmAbove - kmBelow) / sigLevelHeight;
                     }
-                    if (rp.salinityThreshold < 35 && rp.species.equalsIgnoreCase("sealice")) {
-                        double salBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "salinity", rp);
-                        double salAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "salinity", rp);
-                        double dzPosition = dep - localDepth * m.getSiglay()[nearestLayers[1]];
-                        if (sigLayerHeight != 0) {
-                            localSalinity = (float) (salAbove + dzPosition * (salBelow - salAbove) / sigLayerHeight);
-                        } else {
-                            localSalinity = (float) salAbove;
-                        }
+                }
+                if (rp.salinityThreshold < 35) {
+                    double salBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "salinity", rp);
+                    double salAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "salinity", rp);
+                    double dzPosition = dep - localDepth * m.getSiglay()[nearestLayers[1]];
+                    if (sigLayerHeight != 0) {
+                        localSalinity = (float) (salAbove + dzPosition * (salBelow - salAbove) / sigLayerHeight);
+                    } else {
+                        localSalinity = (float) salAbove;
                     }
                 }
                 if (part.getStatus()<3) { // TODO: only for status==2? Tom gives short_wave data for napulii (1) and copepodids (2)
