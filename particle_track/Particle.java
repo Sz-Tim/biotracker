@@ -493,8 +493,7 @@ public class Particle {
         double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
 
         if ((this.getStatus() == 1 && lightAtDepth > 0.39) || (this.getStatus() == 2 && lightAtDepth > 2.06e-5)) {
-            int forceUpward = rp.vertSwimSpeedMean > 0 ? -1 : 1;
-            return forceUpward * rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextGaussian();
+            return swim(rp);
         } else {
             return 0.0;
         }
