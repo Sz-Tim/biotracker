@@ -259,7 +259,7 @@ public class Particle_track {
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int currentHour = 0; currentHour < 24; currentHour++) {
 
-                    System.out.printf("--------- HOUR %d ----------\n", currentHour);
+                    System.out.printf("--------- Day %d, %d:00 ----------\n", fnum+1, currentHour);
                     // Calculate current time of the day (complete hours elapsed since midnight)
                     if (!rp.daylightPath.isEmpty()) {
                         isDaytime = daylightHours[fnum][0] <= currentHour && daylightHours[fnum][1] >= currentHour;
