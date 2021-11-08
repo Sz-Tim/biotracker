@@ -259,7 +259,7 @@ public class Particle_track {
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int currentHour = 0; currentHour < 24; currentHour++) {
 
-                    System.out.printf("--------- Day %d, %d:00 ----------\n", fnum+1, currentHour);
+                    System.out.printf("--------- Day %d, %dh ----------\n", fnum+1, currentHour);
                     // Calculate current time of the day (complete hours elapsed since midnight)
                     if (!rp.daylightPath.isEmpty()) {
                         isDaytime = daylightHours[fnum][0] <= currentHour && daylightHours[fnum][1] >= currentHour;
@@ -353,8 +353,8 @@ public class Particle_track {
                         IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
                     }
 
-                    // If
-                    if ((stepcount + 1) % rp.pstepsInterval == 0) {
+                    // Write Psteps
+                    if (stepcount % rp.pstepsInterval == 0) {
                         // Trim arrays to non-zero rows and write to file
                         float[][] psImmTrim = null;
                         try {
@@ -367,16 +367,16 @@ public class Particle_track {
                         } catch (Exception ignored) {
                         }
                         System.out.println("Writing psteps");
-                        IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + (stepcount + 1) + ".dat", false, true);
-                        IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + (stepcount + 1) + ".dat", false, true);
+                        IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
+                        IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
 
                         pstepsImmature = new float[meshes.get(0).getNElems()][habitat.size()];
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
                     }
 
-                    if ((stepcount + 1) % rp.connectivityInterval == 0) {
-                        System.out.println("Writing connectivity");
-                        IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + (stepcount + 1) + ".dat", false, false);
+                    // Write connectivity
+                    if (stepcount % rp.connectivityInterval == 0) {
+                        IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
                         connectivity = new float[habitat.size()][habitat.size()];
                     }
 
