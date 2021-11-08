@@ -476,21 +476,41 @@ public class Particle {
         }
     }
 
-    public double verticalDiffusion(RunProperties rp, double D_hVertDz, double dt) {
-        double dZ = 0;
-        if (rp.variableDiffusion) {
-            double r = 1.0 / 3.0;
-            double mult = (2 * dt / r) * rp.D_hVert * (this.depth + (dt / 2) * D_hVertDz);
-            double rand = ThreadLocalRandom.current().nextGaussian();
-            if (rand < 0) {
-                dZ -= dt * D_hVertDz + Math.pow(mult * -rand, 0.5);
-            } else {
-                dZ += dt * D_hVertDz + Math.pow(mult * rand, 0.5);
+    public double[] diffuse(RunProperties rp, double D_hVertDz, double dt, String distribution) {
+        int nDims = rp.verticalDynamics ? 3 : 2;
+        double[] diffusion = new double[nDims];
+        double[] randoms = new double[nDims];
+        double r = 0.0;
+
+        if (distribution.equalsIgnoreCase("uniform")) {
+            for (int i = 0; i < nDims; i++) {
+                randoms[i] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0);
             }
+            r = 1.0 / 3.0;
+        } else if (distribution.equalsIgnoreCase("gaussian")) {
+            for (int i = 0; i < nDims; i++) {
+                randoms[i] = ThreadLocalRandom.current().nextGaussian();
+            }
+            r = 1.414;
         } else {
-            dZ = Math.sqrt(6 * dt * rp.D_hVert) * ThreadLocalRandom.current().nextDouble(-1.0,1.0);
+            System.out.println("Diffusion distribution must be uniform or gaussian.");
+            System.exit(0);
         }
-        return dZ;
+        diffusion[0] = randoms[0] * Math.sqrt(2 / r * rp.D_h * dt);
+        diffusion[1] = randoms[1] * Math.sqrt(2 / r * rp.D_h * dt);
+
+        if (rp.verticalDynamics) {
+            if (rp.variableDiffusion) {
+                // folowing Visser 1997 (eq. 6):
+                // dZ = K_grad * dt + Rand * sqrt(2 * 1/r * K * (z_n + 1/2 * K_grad * dt) * dt)
+                // dZ = D_hVertDz * dt + Rand * Math.pow(2 * dt/r * D_hVert * (this.depth + dt/2 * D_hVertDz) , 0.5)
+                diffusion[2] = D_hVertDz * dt +
+                        randoms[2] * Math.pow(2 * dt/r * rp.D_hVert * (this.depth + dt/2 * D_hVertDz) , 0.5);
+            } else {
+                diffusion[2] = randoms[2] * Math.sqrt(2 / r * rp.D_hVert * dt);
+            }
+        }
+        return diffusion;
     }
 
     /**

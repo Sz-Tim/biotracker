@@ -135,6 +135,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float sigLayerHeight = (m.getSiglay()[nearestLayers[0]] - m.getSiglay()[nearestLayers[1]]) * m.getDepthUvnode()[elemPart];
             int[] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);  // returns [levelBelow, levelAbove]
             float sigLevelHeight = (m.getSiglev()[nearestLevels[0]] - m.getSiglev()[nearestLevels[1]]) * m.getDepthUvnode()[elemPart];
+            double dzPositionLayers = dep - localDepth * m.getSiglay()[nearestLayers[1]];
+            double dzPositionLevels = dep - localDepth * m.getSiglev()[nearestLevels[1]];
 
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
@@ -145,9 +147,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 } else {
                     double tempBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "temp", rp);
                     double tempAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "temp", rp);
-                    double dzPosition = dep - localDepth * m.getSiglay()[nearestLayers[1]];
                     if (sigLayerHeight != 0) {
-                        temperature = tempAbove + dzPosition * (tempBelow - tempAbove) / sigLayerHeight;
+                        temperature = tempAbove + dzPositionLayers * (tempBelow - tempAbove) / sigLayerHeight;
                     } else {
                         temperature = tempAbove;
                     }
@@ -157,6 +158,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Vertical diffusion and salinity
             double D_hVertDz = 0;
+            double localKm = 0;
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
@@ -167,20 +169,20 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     double kmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[1], elemPart, hour, "km", rp);
                     if (sigLayerHeight != 0) {
                         D_hVertDz = Math.abs(kmAbove - kmBelow) / sigLevelHeight;
+                        localKm = (float) (kmAbove + dzPositionLevels * (kmBelow - kmAbove) / sigLayerHeight);
                     }
                 }
                 if (rp.salinityThreshold < 35) {
                     double salBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "salinity", rp);
                     double salAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "salinity", rp);
-                    double dzPosition = dep - localDepth * m.getSiglay()[nearestLayers[1]];
                     if (sigLayerHeight != 0) {
-                        localSalinity = (float) (salAbove + dzPosition * (salBelow - salAbove) / sigLayerHeight);
+                        localSalinity = (float) (salAbove + dzPositionLayers * (salBelow - salAbove) / sigLayerHeight);
                     } else {
                         localSalinity = (float) salAbove;
                     }
                 }
                 if (part.getStatus()<3) { // TODO: only for status==2? Tom gives short_wave data for napulii (1) and copepodids (2)
-                    if (localSalinity < rp.salinityThreshold) {
+                    if (localSalinity < rp.salinityThreshold || localKm > Math.abs(rp.vertSwimSpeedMean)) {
                         activeMovement[2] = part.sink(rp);
                         sink++;
                     } else if (rp.swimLightLevel) {
@@ -213,14 +215,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             if (rp.diffusion) {
-                // Use in-built RNG that is intended for multithread concurrent use. Also saves importing anything.
-                diffusion[0] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
-                diffusion[1] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
-                if (rp.verticalDynamics) {
-                    diffusion[2] = part.verticalDiffusion(rp, D_hVertDz, subStepDt);
-                }
+                diffusion = part.diffuse(rp, D_hVertDz, subStepDt, "uniform");
             }
-            // part.behaveVelocity was here for xy movement, but returned 0's with no plans to expand
 
             for (int i = 0; i < nDims; i++) {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
