@@ -354,7 +354,7 @@ public class Particle_track {
                     }
 
                     // Write Psteps
-                    if (stepcount % rp.pstepsInterval == 0) {
+                    if (stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
                         // Trim arrays to non-zero rows and write to file
                         float[][] psImmTrim = null;
                         try {
@@ -374,8 +374,7 @@ public class Particle_track {
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
                     }
 
-                    // Write connectivity
-                    if (stepcount % rp.connectivityInterval == 0) {
+                    if (stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
                         IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
                         connectivity = new float[habitat.size()][habitat.size()];
                     }
