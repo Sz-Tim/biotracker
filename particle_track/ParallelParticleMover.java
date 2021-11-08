@@ -216,7 +216,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 // Use in-built RNG that is intended for multithread concurrent use. Also saves importing anything.
                 diffusion[0] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
                 diffusion[1] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0) * Math.sqrt(6 * rp.D_h * subStepDt);
-                diffusion[2] = part.verticalDiffusion(rp, D_hVertDz, subStepDt);
+                if (rp.verticalDynamics) {
+                    diffusion[2] = part.verticalDiffusion(rp, D_hVertDz, subStepDt);
+                }
             }
             // part.behaveVelocity was here for xy movement, but returned 0's with no plans to expand
 
