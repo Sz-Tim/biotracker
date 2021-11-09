@@ -478,8 +478,8 @@ public class Particle {
 
     public double[] diffuse(RunProperties rp, double D_hVertDz, double dt, String distribution) {
         int nDims = rp.verticalDynamics ? 3 : 2;
-        double[] diffusion = new double[nDims];
-        double[] randoms = new double[nDims];
+        double[] diffusion = {0,0,0};
+        double[] randoms = {0,0,0};
         double r = 0.0;
 
         if (distribution.equalsIgnoreCase("uniform")) {
@@ -993,7 +993,7 @@ public class Particle {
      */
     public static double[] velocityFromNearestList(double[][] nrList, int hour, float u[][][], float v[][][], float w[][][], int depLayer, boolean verticalDynamics) {
         int nDims = verticalDynamics ? 3 : 2;
-        double[] velocity = new double[nDims];
+        double[] velocity = {0,0,0};
         double[] weights = new double[nrList.length];
         double usum = 0, vsum = 0, wsum = 0, sum = 0;
         for (int i = 0; i < nrList.length; i++) {
@@ -1378,9 +1378,9 @@ public class Particle {
         int nDims = verticalDynamics ? 3 : 2;
         int depLayer = this.getDepthLayer();
 
-        double[] advectStep = new double[nDims];
-        double[] vel = new double[nDims];
-        double[] velplus1 = new double[nDims];
+        double[] advectStep = {0,0,0};
+        double[] vel = {0,0,0};
+        double[] velplus1 = {0,0,0};
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
             if (verticalDynamics) {
@@ -1405,7 +1405,7 @@ public class Particle {
             vel = velocityFromNearestListROMS(nrListROMSU, nrListROMSV, hour, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
             velplus1 = velocityFromNearestListROMS(nrListROMSU, nrListROMSV, hour + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV());
         }
-        double[] k1 = new double[nDims];
+        double[] k1 = {0,0,0};
         for (int i = 0; i < nDims; i++) {
             k1[i]  = dt * (vel[i] + ((double) step / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
@@ -1420,7 +1420,7 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
         }
-        double k1Depth = verticalDynamics ? this.getDepth() + k1[2] / 2.0 : this.getDepth();
+        double k1Depth = this.getDepth() + k1[2] / 2.0;  // k1[2] = 0 if verticalDynamics = false
         depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k2 = stepAhead(
                 new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0}, k1Depth,
@@ -1434,7 +1434,7 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
         }
-        double k2Depth = verticalDynamics ? this.getDepth() + k2[2] / 2.0 : this.getDepth();
+        double k2Depth = this.getDepth() + k2[2] / 2.0;  // k2[2] = 0 if verticalDynamics = false
         depLayer = findLayerFromDepth(k2Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k3 = stepAhead(
                 new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0}, k2Depth,
@@ -1448,7 +1448,7 @@ public class Particle {
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
         }
-        double k3Depth = verticalDynamics ? this.getDepth() + k3[2] : this.getDepth();
+        double k3Depth = this.getDepth() + k3[2];  // k3[2] = 0 if verticalDynamics = false
         depLayer = findLayerFromDepth(k3Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k4 = stepAhead(
                 new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]}, k3Depth,
@@ -1497,10 +1497,10 @@ public class Particle {
                                      List<HydroField> hydroFields,
                                      int hour, int step, double dt,
                                      int stepsPerStep, String coordRef, boolean verticalDynamics) {
-        int nDim = verticalDynamics ? 3 : 2;
-        double[] xyz_step = new double[nDim];
-        double[] vel = new double[nDim];
-        double[] velplus1 = new double[nDim];
+        int nDims = verticalDynamics ? 3 : 2;
+        double[] xyz_step = {0,0,0};
+        double[] vel = {0,0,0};
+        double[] velplus1 = {0,0,0};
 
         if (meshes.get(meshPart).getType().equalsIgnoreCase("FVCOM") || meshes.get(meshPart).getType().equalsIgnoreCase("ROMS_TRI")) {
             double[][] xNrList;
@@ -1537,7 +1537,7 @@ public class Particle {
         }
 
         // Do the relevant temporal interpolation for this part of the step
-        for (int i = 0; i < xyz_step.length; i++) {
+        for (int i = 0; i < nDims; i++) {
             xyz_step[i] = dt * (vel[i] + ((double) (step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
 
@@ -1560,6 +1560,10 @@ public class Particle {
                               List<Mesh> meshes,     // other mesh info
                               int hour, int step, double dt,                                  // locate particle in space and time
                               int stepsPerStep, String coordRef, boolean verticalDynamics) {
+        if(verticalDynamics) {
+            System.out.println("Error: vertical dynamics not implemented with Particle.eulerStep()");
+            System.exit(0);
+        }
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
         int dep = this.getDepthLayer();

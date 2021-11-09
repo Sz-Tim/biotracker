@@ -115,16 +115,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         if (part.getFree() && !part.getArrived() && !part.getBoundaryExit()) {
 
             // Three types of possible movement: advection, diffusion, and active swimming/sinking; [x,y,(z)]
-            double[] advectStep = new double[nDims];
-            double[] diffusion = new double[nDims];
-            double[] activeMovement = new double[nDims];
-            double[] displacement = new double[nDims];
-            for (int i=0; i < nDims; i++) {
-                advectStep[i] = 0;
-                diffusion[i] = 0;
-                activeMovement[i] = 0;
-                displacement[i] = 0;
-            }
+            // Note: (z) stays 0 unless rp.verticalDynamics == true
+            double[] advectStep = {0,0,0};
+            double[] diffusion = {0,0,0};
+            double[] activeMovement = {0,0,0};
+            double[] displacement = {0,0,0};
             int sink = 0;
             int swim = 0;
 
