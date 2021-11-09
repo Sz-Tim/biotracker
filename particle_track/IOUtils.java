@@ -843,14 +843,15 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    public static void writeMovements(Particle part, boolean isDaytime, double elapsedHours, int currentHour, int step, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, int sink, int swim, String filename, boolean append) {
+    public static void writeMovements(Particle part, boolean isDaytime, double elapsedHours, String currentDate, int currentHour, int step, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, int sink, int swim, String filename, boolean append) {
         try {
             // Create file
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%b %.1f %d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f %d %d",
+            out.printf("%b %.5f %s %d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f %d %d",
                     isDaytime,
                     elapsedHours,
+                    currentDate,
                     currentHour,
                     step,
                     part.getID(),
