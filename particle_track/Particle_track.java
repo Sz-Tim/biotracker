@@ -212,6 +212,9 @@ public class Particle_track {
         // Set up array to hold connectivity counts
         float[][] connectivity = new float[habitat.size()][habitat.size()];
 
+        IOUtils.writeMovementsHeader("daytime elapsedHours date hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+                "movementFile.dat");
+
         try {
             // --------------------------------------------------------------------------------------
             // Start time loop
@@ -253,9 +256,7 @@ public class Particle_track {
                 System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
 
 
-                IOUtils.writeMovementsHeader("daytime elapsedHours hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
-                        "movementFile.dat");
-                // default, run loop forwards
+                  // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int currentHour = 0; currentHour < 24; currentHour++) {
 
@@ -306,7 +307,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime));
+                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime, today));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -318,7 +319,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime);
+                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime, today);
                             }
                         }
 

@@ -36,6 +36,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final int[] searchCounts;
     private final double[] minMaxDistTrav;
     private final boolean isDaytime;
+    private final String currentDate;
 
     public ParallelParticleMover(List<Particle> particles, double elapsedHours, int hour, int step, double subStepDt,
                                  RunProperties rp,
@@ -45,7 +46,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  int[] allElems,
                                  int[] searchCounts,
                                  double[] minMaxDistTrav,
-                                 boolean isDaytime) {
+                                 boolean isDaytime, String currentDate) {
         this.particles = particles;
         this.elapsedHours = elapsedHours;
         this.hour = hour;
@@ -59,13 +60,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.searchCounts = searchCounts;
         this.minMaxDistTrav = minMaxDistTrav;
         this.isDaytime = isDaytime;
+        this.currentDate = currentDate;
     }
 
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
-                    minMaxDistTrav, isDaytime);
+                    minMaxDistTrav, isDaytime, currentDate);
         }
         return new ArrayList<Particle>();
     }
@@ -96,7 +98,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             int[] allElems,
                             int[] searchCounts,
                             double[] minMaxDistTrav,
-                            boolean isDaytime) {
+                            boolean isDaytime, String currentDate) {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
@@ -243,8 +245,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
 
-            if (part.getID() % 200 == 0) {
-                IOUtils.writeMovements(part, isDaytime, elapsedHours, hour, step, displacement, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
+            if (part.getID() % 2000 == 0) {
+                IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, displacement, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
