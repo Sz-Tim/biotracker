@@ -1324,7 +1324,7 @@ public class Particle {
         float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
         double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
-        int[] nearestLayers;
+        float[][] nearestLayers = new float[2][2];
 
         int thisElem = findContainingElement(xy, elemPart0, meshes.get(meshPart).getNodexy(), meshes.get(meshPart).getTrinodes(), neighbours, false)[0];
         if (thisElem == -1) {
@@ -1336,15 +1336,15 @@ public class Particle {
             // containing element
             nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[thisElem]);
             nrList[nrRow][0] = thisElem;
-            nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], nearestLayers[layer], coordRef);
-            nrList[nrRow][2] = nearestLayers[layer];
+            nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], (int) nearestLayers[layer][0], coordRef);
+            nrList[nrRow][2] = (int) nearestLayers[layer][0];
             nrRow++;
             // neighboring elements
             for (int nbr = 0; nbr < 3; nbr++) {
                 nearestLayers = Mesh.findNearestSigmas(depth, meshes.get(meshPart).getSiglay(), depthUvnode[neighbours[nbr][thisElem]]);
                 nrList[nrRow][0] = neighbours[nbr][thisElem];
-                nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][thisElem]], uvnode[1][neighbours[nbr][thisElem]], nearestLayers[layer], coordRef);
-                nrList[nrRow][2] = nearestLayers[layer];
+                nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][thisElem]], uvnode[1][neighbours[nbr][thisElem]], (int) nearestLayers[layer][0], coordRef);
+                nrList[nrRow][2] = (int) nearestLayers[layer][0];
                 nrRow++;
             }
         }

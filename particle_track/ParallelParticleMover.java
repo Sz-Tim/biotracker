@@ -128,12 +128,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
             // Get the sigma depths at this location, and compare with particle depth
             // For particles on surface or sea bed, set surroundingLayers[0 = layerBelow = [0 | sigDepths.length-1]
-            int[] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[elemPart]);  // returns [layerBelow, layerAbove]
-            float sigLayerHeight = (m.getSiglay()[nearestLayers[0]] - m.getSiglay()[nearestLayers[1]]) * m.getDepthUvnode()[elemPart];
-            int[] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);  // returns [levelBelow, levelAbove]
-            float sigLevelHeight = (m.getSiglev()[nearestLevels[0]] - m.getSiglev()[nearestLevels[1]]) * m.getDepthUvnode()[elemPart];
-            double dzPositionLayers = dep - localDepth * m.getSiglay()[nearestLayers[1]];
-            double dzPositionLevels = dep - localDepth * m.getSiglev()[nearestLevels[1]];
+            // returns [layerBelow, layerAbove][depthBelow, depthAbove]
+            float[][] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[elemPart]);
+            float[][] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);
 
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
@@ -142,41 +139,43 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 if (rp.fixDepth) {
                     temperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
                 } else {
-                    double tempBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "temp", rp);
-                    double tempAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "temp", rp);
-                    if (sigLayerHeight != 0) {
-                        temperature = tempAbove + dzPositionLayers * (tempBelow - tempAbove) / sigLayerHeight;
-                    } else {
-                        temperature = tempAbove;
-                    }
+                    temperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
                 }
                 part.incrementDegreeDays(temperature, rp);
             }
 
             // Vertical diffusion and salinity
-            double D_hVertDz = 0;
-            double localKm = 0;
+            double KmBelow;
+            double KmAbove;
+            double KmGradient = 0; // positive gradient = more turbulent below = particle gets pushed deeper
+            double Km_z = rp.D_hVert;
+            float[][] nearestLevelsAdj;
+            double Km_zAdj = rp.D_hVert;
+            double depthAdj;
+
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
                 float localSalinity = 35;
                 if (rp.variableDiffusion) {
-                    double kmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[0], elemPart, hour, "km", rp);
-                    double kmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLevels[1], elemPart, hour, "km", rp);
-                    if (sigLayerHeight != 0) {
-                        D_hVertDz = Math.abs(kmAbove - kmBelow) / sigLevelHeight;
-                        localKm = (float) (kmAbove + dzPositionLevels * (kmBelow - kmAbove) / sigLayerHeight);
+                    KmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], elemPart, hour, "km", rp);
+                    KmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], elemPart, hour, "km", rp);
+                    if (nearestLevels[0][1] == nearestLevels[1][1]) {
+                        KmGradient = 0;
+                    } else {
+                        KmGradient = (KmBelow - KmAbove) / (nearestLevels[0][1] - nearestLevels[1][1]); // positive gradient = more turbulent below = particle gets pushed deeper
+                    }
+                    Km_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "km", rp, nearestLevels);
+                    depthAdj = part.getDepth() + subStepDt * KmGradient / 2; // = (z + D_hVertDz/2 * dt) following Visser 1997
+                    nearestLevelsAdj = Mesh.findNearestSigmas(depthAdj, m.getSiglev(), m.getDepthUvnode()[elemPart]);
+                    Km_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "km", rp, nearestLevelsAdj);
+                    if (Km_z > 0.1) { // following Johnsen et al 2016
+                        Km_z = 0.1;
                     }
                 }
                 if (rp.salinityThreshold < 35) {
-                    double salBelow = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[0], elemPart, hour, "salinity", rp);
-                    double salAbove = hf.getAvgFromTrinodes(m, part.getLocation(), nearestLayers[1], elemPart, hour, "salinity", rp);
-                    if (sigLayerHeight != 0) {
-                        localSalinity = (float) (salAbove + dzPositionLayers * (salBelow - salAbove) / sigLayerHeight);
-                    } else {
-                        localSalinity = (float) salAbove;
-                    }
+                    localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                 }
                 if (part.getStatus()<3) { // TODO: only for status==2? Tom gives short_wave data for napulii (1) and copepodids (2)
                     if (localSalinity < rp.salinityThreshold || localKm > Math.abs(rp.vertSwimSpeedMean)) {

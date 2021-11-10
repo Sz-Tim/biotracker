@@ -241,8 +241,16 @@ public class Mesh {
         }
     }
 
-    public static int[] findNearestSigmas(double particleDepth, float[] sigmas, float localDepth) {
-        int[] sigmaInfo = new int[2];
+    /**
+     * Find sigma layers or levels above and below particle
+     *
+     * @param particleDepth depth of particle: Particle.getDepth()
+     * @param sigmas sigma layers or levels: Mesh.getSigLay() or Mesh.getSigLev()
+     * @param localDepth water depth at particle location: Mesh.getDepthUvnode(element)
+     * @return double[] of sigma depths with key int[] of sigma layer/levels in the order: [below, above]
+     */
+    public static float[][] findNearestSigmas(double particleDepth, float[] sigmas, float localDepth) {
+        float[][] sigmaInfo = new float[2][2];
         int layerBelow = sigmas.length;
         for (int i = 0; i < sigmas.length; i++) {
             if (particleDepth < sigmas[i] * localDepth) {
@@ -257,8 +265,10 @@ public class Mesh {
         if (layerBelow == sigmas.length) {
             layerBelow = layerAbove;
         }
-        sigmaInfo[0] = layerBelow;
-        sigmaInfo[1] = layerAbove;
+        sigmaInfo[0][0] = layerBelow;
+        sigmaInfo[0][1] = sigmas[layerBelow]*localDepth;
+        sigmaInfo[1][0] = layerAbove;
+        sigmaInfo[1][1] = sigmas[layerAbove]*localDepth;
         return sigmaInfo;
     }
 
