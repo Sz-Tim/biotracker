@@ -5,10 +5,9 @@
  */
 package particle_track;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Properties;
-
-import static particle_track.ISO_datestr.dateIntParse;
 
 /**
  * @author sa01ta
@@ -39,7 +38,7 @@ public class RunProperties {
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
-            duplicateLastDay, // Should hydro file for last day be duplicated for interpolation puproses during last hour of simulation (false except when in operational mode)    
+            duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp;
 
@@ -56,11 +55,11 @@ public class RunProperties {
             pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
-            dt, // Timestep (s) per record
-            D_h, // Horizontal diffuision parameter
-            D_hVert, // Vertical diffuision parameter
+            dt, // Time step (s) per record
+            D_h, // Horizontal diffusion parameter
+            D_hVert, // Vertical diffusion parameter
             mortalityRate, // Hourly mortality rate of particles
-            maxParticleAge, // Maximum age for particles. Set to <=0 and it will be ignored.
+            maxParticleAge, // Maximum age for particles. Set to <=0 to ignore.
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             vertSwimSpeedMean, vertSwimSpeedStd,
@@ -69,7 +68,6 @@ public class RunProperties {
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
     /**
-     * @param filename
      */
     public RunProperties(String filename) {
         System.out.println("GETTING PROPERTIES FROM " + filename);

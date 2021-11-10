@@ -10,25 +10,19 @@
  */
 package particle_track;
 
-import java.io.*;
-import java.util.*;
-import java.util.stream.IntStream;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutorCompletionService;
-
-import java.util.concurrent.ExecutionException;
-import java.io.IOException;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 
-//import java.awt.geom.Path2D;
-
-import extUtils.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 /**
  * @author tomdude
@@ -43,7 +37,7 @@ public class Particle_track {
 
         System.out.println("Starting particle tracking program\n");
         Date date = new Date();
-        System.out.println(date.toString());
+        System.out.println(date);
 
         long heapMaxSize = Runtime.getRuntime().maxMemory();
         System.out.println("Max heap " + heapMaxSize);
@@ -384,7 +378,7 @@ public class Particle_track {
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
 
                 }
-                System.out.println("");
+                System.out.println();
 
                 if (rp.backwards) {
                     currentIsoDate.takeDay();

@@ -5,14 +5,9 @@
  */
 package particle_track;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.lang.InterruptedException;
-import java.util.concurrent.ThreadLocalRandom;
 //import static particle_track.Particle_track.move;
 
 /**
@@ -116,7 +111,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Three types of possible movement: advection, diffusion, and active swimming/sinking; [x,y,(z)]
             // Note: (z) stays 0 unless rp.verticalDynamics == true
-            double[] advectStep = {0,0,0};
+            double[] advectStep;
             double[] diffusion = {0,0,0};
             double[] activeMovement = {0,0,0};
             double[] displacement = {0,0,0};
@@ -124,7 +119,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int swim = 0;
 
             // sigma layers
-            float dep = (float) part.getDepth();
             float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
             // Get the sigma depths at this location, and compare with particle depth
             // For particles on surface or sea bed, set surroundingLayers[0 = layerBelow = [0 | sigDepths.length-1]
@@ -135,7 +129,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             if (!rp.readHydroVelocityOnly) {
-                double temperature = 0;
+                double temperature;
                 if (rp.fixDepth) {
                     temperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
                 } else {
@@ -157,7 +151,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
-                float localSalinity = 35;
                 if (rp.variableDiffusion) {
                     KmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], elemPart, hour, "km", rp);
                     KmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], elemPart, hour, "km", rp);

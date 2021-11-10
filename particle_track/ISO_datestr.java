@@ -146,7 +146,7 @@ public class ISO_datestr {
      * @return
      */
     public static int[] dateIntParse(int ymd) {
-        double start_ymd_mod = (double) (ymd);
+        double start_ymd_mod = ymd;
         int startYear = (int) Math.floor(start_ymd_mod / 10000);
         start_ymd_mod = start_ymd_mod - startYear * 10000;
         int startMonth = (int) Math.floor(start_ymd_mod / 100);

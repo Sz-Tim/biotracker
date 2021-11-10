@@ -18,7 +18,7 @@ public class Particle {
 
     final private int id;
     // horizontal position
-    private double[] xy = new double[2];
+    private final double[] xy = new double[2];
     final private double[] startLoc = new double[2];
     private String startSiteID = "0";
     private int startSiteIndex = 0;
@@ -989,7 +989,7 @@ public class Particle {
      * @param depLayer
      * @return
      */
-    public static double[] velocityFromNearestList(double[][] nrList, int hour, float u[][][], float v[][][], float w[][][], int depLayer, boolean verticalDynamics) {
+    public static double[] velocityFromNearestList(double[][] nrList, int hour, float[][][] u, float[][][] v, float[][][] w, int depLayer, boolean verticalDynamics) {
         int nDims = verticalDynamics ? 3 : 2;
         double[] velocity = {0,0,0};
         double[] weights = new double[nrList.length];
@@ -1036,7 +1036,7 @@ public class Particle {
      * @param v
      * @return
      */
-    public static double[] velocityFromNearestListROMS(double[][] nrListU, double[][] nrListV, int hour, float u[][][], float v[][][]) {
+    public static double[] velocityFromNearestListROMS(double[][] nrListU, double[][] nrListV, int hour, float[][][] u, float[][][] v) {
         double[] velocity = new double[2];
         double[] weightsU = new double[nrListU.length];
         double[] weightsV = new double[nrListV.length];
@@ -1536,7 +1536,7 @@ public class Particle {
 
         // Do the relevant temporal interpolation for this part of the step
         for (int i = 0; i < nDims; i++) {
-            xyz_step[i] = dt * (vel[i] + ((double) (step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
+            xyz_step[i] = dt * (vel[i] + ((step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
 
         return xyz_step;

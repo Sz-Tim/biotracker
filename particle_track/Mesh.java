@@ -5,13 +5,7 @@
  */
 package particle_track;
 
-import ucar.nc2.NetcdfFile;
-import ucar.nc2.Variable;
-import ucar.ma2.*;
-
 import java.awt.geom.Path2D;
-
-import java.io.IOException;
 
 //import extUtils.ConcaveHull;
 
@@ -21,7 +15,7 @@ import java.io.IOException;
 public class Mesh {
 
     // Define the mesh type
-    private String meshType;
+    private final String meshType;
 
     // Variables which are used in case of FVCOM triangular mesh
     private float[][] uvnode; // element centroid locations
@@ -46,7 +40,7 @@ public class Mesh {
     private float[][] uXy;
     private float[][] vXy;
 
-    private int[][] rangeUV = new int[2][2];
+    private final int[][] rangeUV = new int[2][2];
 
     // Variables used in all cases
     private float[] siglay;

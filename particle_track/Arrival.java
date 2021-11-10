@@ -16,10 +16,10 @@ package particle_track;
  * @author sa01ta
  */
 public class Arrival {
-    private int sourceLocation;
-    private int arrivalLocation;
-    private double arrivalTime;
-    private double arrivalDensity;
+    private final int sourceLocation;
+    private final int arrivalLocation;
+    private final double arrivalTime;
+    private final double arrivalDensity;
 
     public Arrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity) {
         this.sourceLocation = sourceLocation;

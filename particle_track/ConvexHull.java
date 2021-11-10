@@ -27,7 +27,8 @@ import static java.util.Collections.emptyList;
 
 public class ConvexHull {
     private static class MyPoint {
-        private float x, y;
+        private final float x;
+        private final float y;
 
         public MyPoint(float x, float y) {
             this.x = x;

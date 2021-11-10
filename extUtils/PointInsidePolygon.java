@@ -36,11 +36,8 @@ public class PointInsidePolygon {
 
     private static boolean onSegment(Point p, Point q, Point r)
     {
-        if (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x)
-                && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y))
-            return true;
-        
-        return false;
+        return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x)
+                && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
     }
 
     private static int orientation(Point p, Point q, Point r)
@@ -73,14 +70,11 @@ public class PointInsidePolygon {
         if (o3 == 0 && onSegment(p2, p1, q2))
             return true;
 
-        if (o4 == 0 && onSegment(p2, q1, q2))
-            return true;
-
-        return false;
+        return o4 == 0 && onSegment(p2, q1, q2);
 
     }
 
-    public static boolean isInside(Point polygon[], int n, Point p)
+    public static boolean isInside(Point[] polygon, int n, Point p)
     {
         int INF = 10000;
         if (n < 3)
@@ -102,14 +96,14 @@ public class PointInsidePolygon {
             i = next;
         } while (i != 0);
 
-        return (count & 1) == 1 ? true : false;
+        return (count & 1) == 1;
     }
 
  
 
-    public static void main(String args[])
+    public static void main(String[] args)
     {
-        Point polygon1[] = { new Point(0, 0), new Point(10, 0),
+        Point[] polygon1 = { new Point(0, 0), new Point(10, 0),
                 new Point(10, 10), new Point(0, 10) };
 
         int n = 4;
@@ -122,7 +116,7 @@ public class PointInsidePolygon {
         System.out.println("Point P(" + p.x + ", " + p.y
                 + ") lies inside polygon1: " + isInside(polygon1, n, p));
 
-        Point polygon2[] = { new Point(0, 0), new Point(5, 5), new Point(5, 0) };
+        Point[] polygon2 = { new Point(0, 0), new Point(5, 5), new Point(5, 0) };
         n = 3;
 
         p = new Point(3, 3);
@@ -138,7 +132,7 @@ public class PointInsidePolygon {
         System.out.println("Point P(" + p.x + ", " + p.y
                 + ") lies inside polygon2: " + isInside(polygon2, n, p));
 
-        Point polygon3[] = { new Point(0, 0), new Point(10, 0),
+        Point[] polygon3 = { new Point(0, 0), new Point(10, 0),
                 new Point(10, 10), new Point(0, 10), new Point(5, 5) };
 
         n = 5;
@@ -154,7 +148,7 @@ public class PointInsidePolygon {
         
         System.out.println("Length of bnodes: "+bnode.length);
         
-        Point meshOutline[] = new Point[bnode.length];
+        Point[] meshOutline = new Point[bnode.length];
         for (int i = 0; i < bnode.length; i++)
         {
             meshOutline[i] = new Point(nodexy[0][bnode[i]-1],nodexy[1][bnode[i]-1]);

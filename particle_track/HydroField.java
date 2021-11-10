@@ -5,17 +5,7 @@
  */
 package particle_track;
 
-import java.io.IOException;
-
-import ucar.ma2.InvalidRangeException;
-
-import java.io.File;
-import java.util.List;
 import java.util.stream.IntStream;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 /**
  * @author SA01TA
@@ -104,7 +94,7 @@ public class HydroField {
      * @param origin
      * @param shape
      */
-    public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape, int shapeST[], String type, boolean readHydroVelocityOnly) {
+    public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, boolean readHydroVelocityOnly) {
 
         // Create additional shape matrices for the 2D variables (elevation)
         // Check whether the requested dimensions are non-null and remove the

@@ -14,11 +14,11 @@ import static particle_track.Particle.distanceEuclid2;
  * @author SA01TA
  */
 public class HabitatSite {
-    private String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
+    private final String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
     private float[] xy; // Coordinate for site
     private float depth;
-    private float releaseDepth;
-    private float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
+    private final float releaseDepth;
+    private final float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
     private boolean insideMesh;
     private String containingMeshType;
