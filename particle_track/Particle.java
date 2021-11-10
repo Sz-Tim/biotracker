@@ -476,7 +476,7 @@ public class Particle {
         }
     }
 
-    public double[] diffuse(RunProperties rp, double D_hVertDz, double dt, String distribution) {
+    public double[] diffuse(RunProperties rp, double KmGradient, double Km_zAdj, double dt, String distribution) {
         int nDims = rp.verticalDynamics ? 3 : 2;
         double[] diffusion = {0,0,0};
         double[] randoms = {0,0,0};
@@ -502,10 +502,8 @@ public class Particle {
         if (rp.verticalDynamics) {
             if (rp.variableDiffusion) {
                 // folowing Visser 1997 (eq. 6):
-                // dZ = K_grad * dt + Rand * sqrt(2 * 1/r * K * (z_n + 1/2 * K_grad * dt) * dt)
-                // dZ = D_hVertDz * dt + Rand * Math.pow(2 * dt/r * D_hVert * (this.depth + dt/2 * D_hVertDz) , 0.5)
-                diffusion[2] = D_hVertDz * dt +
-                        randoms[2] * Math.pow(2 * dt/r * rp.D_hVert * (this.depth + dt/2 * D_hVertDz) , 0.5);
+                // dZ = KmGradient * dt + Rand * sqrt(2 * dt/r * Km_zAdj), where Km_zAdj = Km(z + KmGradient/2 * dt)
+                diffusion[2] = KmGradient * dt + randoms[2] * Math.pow(2 / r * Km_zAdj * dt, 0.5);
             } else {
                 diffusion[2] = randoms[2] * Math.sqrt(2 / r * rp.D_hVert * dt);
             }

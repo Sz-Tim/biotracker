@@ -173,12 +173,17 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     if (Km_z > 0.1) { // following Johnsen et al 2016
                         Km_z = 0.1;
                     }
+                    if (Km_zAdj > 0.1) {
+                        Km_zAdj = 0.1;
+                    }
                 }
+
+                double localSalinity = 35;
                 if (rp.salinityThreshold < 35) {
                     localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                 }
-                if (part.getStatus()<3) { // TODO: only for status==2? Tom gives short_wave data for napulii (1) and copepodids (2)
-                    if (localSalinity < rp.salinityThreshold || localKm > Math.abs(rp.vertSwimSpeedMean)) {
+                if (part.getStatus()<3) {
+                    if (localSalinity < rp.salinityThreshold || Km_z > Math.abs(rp.vertSwimSpeedMean)) { // TODO: Is localKm the correct measure of turbulence?
                         activeMovement[2] = part.sink(rp);
                         sink++;
                     } else if (rp.swimLightLevel) {
@@ -211,7 +216,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             if (rp.diffusion) {
-                diffusion = part.diffuse(rp, D_hVertDz, subStepDt, "uniform");
+                diffusion = part.diffuse(rp, KmGradient, Km_zAdj, subStepDt, "uniform");
             }
 
             for (int i = 0; i < nDims; i++) {
