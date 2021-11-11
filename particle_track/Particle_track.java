@@ -32,7 +32,7 @@ public class Particle_track {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+    public static void main(String[] args) throws Exception {
         // TODO code application logic here
 
         System.out.println("Starting particle tracking program\n");
@@ -177,6 +177,12 @@ public class Particle_track {
         minMaxDistTrav[0] = 10_000_000;
         minMaxDistTrav[1] = 0;
 
+        double startDensity = 1.0;
+        double[] dailyDensities = new double[0];
+        if (!rp.seasonalDensityPath.isEmpty()) {
+            dailyDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
+        }
+
         int stepcount = 0;
         double elapsedHours = 0; // updated in HOURS as the simulation progresses
 
@@ -235,6 +241,10 @@ public class Particle_track {
                     IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".dat");
                 }
 
+                if (!rp.seasonalDensityPath.isEmpty()) {
+                    startDensity = dailyDensities[fnum];
+                }
+
                 long splitTime = System.currentTimeMillis();
                 System.out.printf("\n------ Day %d (%s) - Stepcount %d (%.1f hrs) ------ \n",
                         fnum + 1, currentIsoDate.getDateStr(), stepcount, elapsedHours);
@@ -275,7 +285,7 @@ public class Particle_track {
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
                         System.out.printf("  Release attempt: Scenario %d, Time %.1f, Allowed=%s, Total particles: %d \n",
                                 rp.releaseScenario, elapsedHours, allowRelease, numParticlesCreated);
-                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, numParticlesCreated);
+                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
                         System.out.printf("  %d new particles with starting density %4.3f (total particles: %d)\n", newParts.size(), newParts.get(0).getDensity(), particles.size());
@@ -421,13 +431,8 @@ public class Particle_track {
      * @param numParticlesCreated
      * @return List of the new particles to be appended to existing list
      */
-    public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes,
-                                                    RunProperties rp, ISO_datestr currentDate, int currentTime, int numParticlesCreated) throws Exception {
-        double startDensity = 1.0;
-        if (!rp.seasonalDensityPath.isEmpty()) {
-            double[] monthDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
-            startDensity = monthDensities[currentDate.getMonth() - 1];
-        }
+    public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
+                                                    ISO_datestr currentDate, int currentTime, double startDensity, int numParticlesCreated) throws Exception {
 
         List<Particle> newParts = new ArrayList<>(rp.nparts * habitat.size());
         for (int i = 0; i < rp.nparts * habitat.size(); i++) {
