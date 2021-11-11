@@ -224,6 +224,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Update particle location, changing mesh or exit status if necessary
+            double[] posInit = {part.getLocation()[0], part.getLocation()[1], part.getDepth()};
+            double[] dActual = new double[3];
             double newlocx = part.getLocation()[0] + displacement[0];
             double newlocy = part.getLocation()[1] + displacement[1];
             part.addX(Math.abs(displacement[0]));
@@ -237,8 +239,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
 
+            dActual[0] = part.getLocation()[0] - posInit[0];
+            dActual[1] = part.getLocation()[1] - posInit[1];
+            dActual[2] = part.getDepth() - posInit[2];
+
             if (part.getID() % 2000 == 0) {
-                IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, displacement, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
+                IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, dActual, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
