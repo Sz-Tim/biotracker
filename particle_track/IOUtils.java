@@ -576,7 +576,7 @@ public class IOUtils {
             System.out.printf("Created %dx%d array from file: %s\n", myDouble.length, myDouble[0].length, filename);
             System.out.println("Array sum at read time = " + sum);
         } else if (failed) {
-            System.out.println("FAILED to read file " + filename);
+            System.err.println("FAILED to read file " + filename);
             System.exit(1);
         }
         return myDouble;

@@ -39,8 +39,8 @@ public class Particle_track {
         RunProperties rp = new RunProperties(args[0]); // first (and only?) cmd line arg is properties filename e.g. model_setup.properties
 
         if (rp.verticalDynamics && !rp.mesh1Type.equals("FVCOM")) {
-            System.out.println("Error: Vertical dynamics are only implemented for FVCOM grids.");
-            System.exit(0);
+            System.err.println("Error: Vertical dynamics are only implemented for FVCOM grids.");
+            System.exit(1);
         }
 
         int[] startDate = ISO_datestr.dateIntParse(rp.start_ymd);
@@ -134,11 +134,11 @@ public class Particle_track {
         List<HydroField> hydroFields = new ArrayList<>();
         ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
         if(!missingHydroFiles.isEmpty()) {
-            System.out.println("\nError! Cannot find the following hydrodynamic files:");
+            System.err.println("\nError! Cannot find the following hydrodynamic files:");
             for (String missing: missingHydroFiles) {
-                System.out.println(missing);
+                System.err.println(missing);
             }
-            System.exit(0);
+            System.exit(1);
         }
 
         // --------------------------------------------------------------------------------------

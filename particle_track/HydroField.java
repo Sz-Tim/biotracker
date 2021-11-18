@@ -66,9 +66,7 @@ public class HydroField {
                 System.out.println("elTmp (" + elTmp.length + "," + elTmp[0].length + "," + elTmp[0][0].length + ")");
                 zeta = new float[elTmp[0].length][elTmp[0][0].length];
                 for (int xInd = 0; xInd < elTmp[0].length; xInd++) {
-                    for (int yInd = 0; yInd < elTmp[0][0].length; yInd++) {
-                        zeta[xInd][yInd] = elTmp[0][xInd][yInd];
-                    }
+                    System.arraycopy(elTmp[0][xInd], 0, zeta[xInd], 0, elTmp[0][0].length);
                 }
             }
         }
@@ -151,6 +149,7 @@ public class HydroField {
         }
 
         // These two are recorded at element centroids in FVCOM
+        assert u1 != null;
         u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
         v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
         w = new float[u1.length + 1][u1[0].length][u1[0][0].length];
@@ -166,6 +165,7 @@ public class HydroField {
                 km = new float[km1.length + 1][km1[0].length][km1[0][0].length];
             }
             zeta = new float[zeta1.length + 1][zeta1[0].length];
+            assert light1 != null;
             light = new float[light1.length + 1][light1[0].length];
         }
 
@@ -176,6 +176,7 @@ public class HydroField {
         float testU = 0;
         float testV = (float) 0.1;
         float testW = (float) 0.1;
+        //noinspection ConstantConditions
         if (createTest) {
             for (int hour = 0; hour < u.length; hour++) {
                 for (int dep = 0; dep < u[0].length; dep++) {
@@ -215,6 +216,7 @@ public class HydroField {
                     for (int elem = 0; elem < u1[0][0].length; elem++) {
                         u[hour][dep][elem] = u1[hour][dep][elem];
                         v[hour][dep][elem] = v1[hour][dep][elem];
+                        assert w1 != null;
                         w[hour][dep][elem] = w1[hour][dep][elem];
                         sumU += u[hour][dep][elem];
                     }

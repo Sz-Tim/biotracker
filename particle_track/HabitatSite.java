@@ -56,6 +56,7 @@ public class HabitatSite {
         this.nearestFVCOMCentroid = -1;
         this.containingFVCOMElem = -1;
 
+        //noinspection ConstantConditions
         if (!insideMesh && exitIfNotInMesh) {
             if(rp.verboseSetUp) {
                 System.out.println(ID + " " + x + " " + y + " Habitat site not within any provided mesh --- : Not creating site");
@@ -67,6 +68,7 @@ public class HabitatSite {
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
                 this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
 
+                //noinspection ConstantConditions
                 if (!insideMesh) {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
                     if(rp.verboseSetUp) {

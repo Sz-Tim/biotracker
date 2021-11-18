@@ -485,8 +485,8 @@ public class Particle {
             }
             r = 1.414;
         } else {
-            System.out.println("Diffusion distribution must be uniform or gaussian.");
-            System.exit(0);
+            System.err.println("Diffusion distribution must be uniform or gaussian.");
+            System.exit(1);
         }
         diffusion[0] = randoms[0] * Math.sqrt(2 / r * rp.D_h * dt);
         diffusion[1] = randoms[1] * Math.sqrt(2 / r * rp.D_h * dt);
@@ -1151,7 +1151,7 @@ public class Particle {
         float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
         double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
-        float[][] nearestLayers = new float[2][2];
+        float[][] nearestLayers;
 
         int thisElem = findContainingElement(xy, elemPart0, meshes.get(meshPart).getNodexy(), meshes.get(meshPart).getTrinodes(), neighbours, false)[0];
         if (thisElem == -1) {
@@ -1209,8 +1209,8 @@ public class Particle {
 
         } else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
             if (verticalDynamics) {
-                System.out.println("Error: vertical dynamics not implemented for ROMS");
-                System.exit(0);
+                System.err.println("Error: vertical dynamics not implemented for ROMS");
+                System.exit(1);
             }
             double[][] nrListROMSU = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
             double[][] nrListROMSV = nearestListROMS(this.getLocation(), meshes.get(meshPart).getLonV(), meshes.get(meshPart).getLatV(), null);
@@ -1266,8 +1266,7 @@ public class Particle {
                 hour, step, dt, stepsPerStep, coordRef, verticalDynamics);
 
         // 6. Add it all together
-        if (k1[0] == 0 || k2[0] == 0 || k3[0] == 0 || k4[0] == 0) {
-        } else {
+        if(k1[0] != 0 && k2[0] != 0 && k3[0] != 0 && k4[0] != 0) {
             for (int i = 0; i < nDims; i++) {
                 advectStep[i] = (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6.0;
             }
@@ -1312,8 +1311,8 @@ public class Particle {
 
         } else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
             if (verticalDynamics) {
-                System.out.println("Error in rk4Step: vertical dynamics not implemented for ROMS");
-                System.exit(0);
+                System.err.println("Error in rk4Step: vertical dynamics not implemented for ROMS");
+                System.exit(1);
             }
             // nearestROMSGridPoint ---> whichROMSelement --->
             double[][] nrListU = nearestListROMS(xy, meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), null);
@@ -1341,8 +1340,8 @@ public class Particle {
                               int hour, int step, double dt,                                  // locate particle in space and time
                               int stepsPerStep, String coordRef, boolean verticalDynamics) {
         if(verticalDynamics) {
-            System.out.println("Error: vertical dynamics not implemented with Particle.eulerStep()");
-            System.exit(0);
+            System.err.println("Error: vertical dynamics not implemented with Particle.eulerStep()");
+            System.exit(1);
         }
         int elemPart = this.getElem();
         int meshPart = this.getMesh();

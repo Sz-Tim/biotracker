@@ -38,7 +38,7 @@ public class ISO_datestr {
     public int getDateNum() {
         // date integer with ref point year 1992, well why ever not?
         int yearDaysTot = (this.year - 1992) * 365;
-        int leapYearDaysTot = (int) Math.floor((this.year - 1992) / 4) + 1;
+        int leapYearDaysTot = (int) Math.floor((float) (this.year - 1992) / 4) + 1;
         int monthDaysTot = 0;
         if (this.month > 1) {
             for (int i = 0; i <= month - 2; i++) {
