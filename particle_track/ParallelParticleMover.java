@@ -8,7 +8,6 @@ package particle_track;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-//import static particle_track.Particle_track.move;
 
 /**
  * @author sa01ta
@@ -21,12 +20,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final int step;
     private final double subStepDt;
     private final RunProperties rp;
-
     private final int[] allElems;
-
     private final List<Mesh> meshes;
     private final List<HydroField> hydroFields;
-
     private final List<HabitatSite> habitatEnd;
     private final int[] searchCounts;
     private final double[] minMaxDistTrav;
@@ -71,19 +67,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      * Method to do all the actual particle movement stuff. This can be used either by "call" above to
      * do particle movements split over the cores, or can just be used directly in a serial loop
      * (i.e. when parallel==false)
-     *
-     * @param part
-     * @param elapsedHours
-     * @param hour
-     * @param step
-     * @param subStepDt
-     * @param rp
-     * @param meshes
-     * @param hydroFields
-     * @param habitatEnd
-     * @param allElems
-     * @param searchCounts
-     * @param minMaxDistTrav
      */
     public static void move(Particle part, double elapsedHours, int hour, int step, double subStepDt,
                             RunProperties rp,
@@ -101,13 +84,13 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         int nDims = rp.verticalDynamics ? 3 : 2;
 
         // Set particles free once they pass their defined release time (hours)
-        if (!part.getFree()) {
+        if (!part.isFree()) {
             if (elapsedHours > part.getReleaseTime()) {
                 part.setFree(true);
                 part.setStatus(1);
             }
         }
-        if (part.getFree() && !part.getArrived() && !part.getBoundaryExit()) {
+        if (part.isFree() && !part.hasArrived() && !part.hasExited()) {
 
             // Three types of possible movement: advection, diffusion, and active swimming/sinking; [x,y,(z)]
             // Note: (z) stays 0 unless rp.verticalDynamics == true
@@ -249,7 +232,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             // set particle to become able to settle after a predefined time
-            if (!part.getViable()) {
+            if (!part.isViable()) {
                 if (part.canBecomeViable(rp)) {
                     part.setViable(true);
                     part.setStatus(2);
@@ -262,11 +245,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // **************** if able to settle, is it close to a possible settlement location? ******************************
-            if (part.getViable()) {
+            if (part.isViable()) {
                 for (HabitatSite site : habitatEnd) {
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
                             site.getLocation()[0], site.getLocation()[1], rp.coordRef);
-                    if (dist < rp.thresh && !part.getSettledThisHour()) {
+                    if (dist < rp.thresh && !part.hasSettledThisHour()) {
                         if (rp.endOnArrival) {
                             part.setArrived(true);
                             part.setStatus(3);
@@ -337,10 +320,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     /**
      * Convert a difference in lat/longs to a distance in metres.
      * Essentially the inverse function of distanceMetresToDegrees2.
-     *
-     * @param distanceDegrees
-     * @param location
-     * @return
      */
     public static double[] distanceDegreesToMetres(double[] distanceDegrees, double[] location) {
         double[] distanceMetres = new double[2];
@@ -368,13 +347,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         return distanceMetres;
     }
 
-    /**
-     * @param x
-     * @param y
-     * @param m
-     * @param rp
-     * @return
-     */
+
     public static int openBoundaryCheck(float x, float y, Mesh m, RunProperties rp) {
         // check whether the particle has gone within a certain range of one of the boundary nodes
         // (make it settle there, even if it is inviable)

@@ -1,13 +1,3 @@
-/*
- * TODO LIST:
- * - Vertical migration/behaviour
- * - Parallelisation?
- *      + Threads using fork/join
- *        http://www.oracle.com/technetwork/articles/java/fork-join-422606.html
- *        http://tutorials.jenkov.com/java-util-concurrent/java-fork-and-join-forkjoinpool.html
- *        (16 cores per cluster node)
- *      + MPI e.g. MPJ?
- */
 package particle_track;
 
 import org.apache.commons.io.FileUtils;
@@ -33,7 +23,6 @@ public class Particle_track {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception {
-        // TODO code application logic here
 
         System.out.println("Starting particle tracking program\n");
         Date date = new Date();
@@ -74,7 +63,6 @@ public class Particle_track {
         System.out.printf("Simulated dur. (d) = %f\n", (double) numberOfDays);
         System.out.printf("Simulated dur. (s) = %f\n", (double) numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
-        System.out.printf("Vertical behaviour = %d\n", rp.behaviour);
         System.out.printf("Vertical dynamics  = %b\n", rp.verticalDynamics);
         System.out.printf("Viable time (h)    = %f\n", rp.viabletime);
         System.out.printf("Viable time (d)    = %f\n", rp.viabletime / 24.0);
@@ -189,9 +177,6 @@ public class Particle_track {
         int[] freeViableSettleExit = new int[4];
 
         int numberOfExecutorThreads = rp.parallelThreads;
-        if (!rp.parallel) {
-            numberOfExecutorThreads = 1;
-        }
         System.out.println("Number of executor threads = " + numberOfExecutorThreads);
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfExecutorThreads);
         CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<List<Particle>>(executorService);
@@ -276,7 +261,6 @@ public class Particle_track {
                         hydroFields.clear();
                         hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
                     }
-//                    float[][] waterDepth = hydroFields.get(0).getWaterDepthNodexy(meshes.get(0));
 
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
                     // exact hour
@@ -299,7 +283,7 @@ public class Particle_track {
                     for (int step = 0; step < rp.stepsPerStep; step++) {
 
                         // MOVE the particles
-                        if (rp.parallel) {
+                        if (rp.parallelThreads > 1) {
                             int particlesSize = particles.size();
                             int listStep = particlesSize / numberOfExecutorThreads;
                             for (int i = 0; i < numberOfExecutorThreads; i++) {
@@ -337,7 +321,7 @@ public class Particle_track {
 
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                     for (Particle part : particles) {
-                        if (part.getSettledThisHour()) {
+                        if (part.hasSettledThisHour()) {
                             // Save arrival
                             if (rp.recordArrivals) {
                                 IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
@@ -423,12 +407,6 @@ public class Particle_track {
     /**
      * Method to create new particles. These must be appended to the existing list
      *
-     * @param habitat
-     * @param meshes
-     * @param rp
-     * @param currentDate
-     * @param currentTime
-     * @param numParticlesCreated
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
@@ -470,12 +448,6 @@ public class Particle_track {
      * For a ROMS mesh, this is two separate files.
      * iii) More than one mesh, hour 23 of the day. In this case, as single hour (23) is read from
      * the first file, and then record 0 from tomorrow's file is read.
-     *
-     * @param meshes
-     * @param currentIsoDate
-     * @param currentHour
-     * @param rp
-     * @return
      */
     public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) throws IOException {
         List<HydroField> hydroFields = new ArrayList<>();
@@ -550,96 +522,6 @@ public class Particle_track {
             }
 
         }
-//        // Reading two hours at a time from all the different models
-//        else
-//        { 
-//            // i) The case where it is NOT the last hour of the day
-//            if ((currentHour-23)%24 != 0)
-//            {
-//                hydroFields.clear();
-//                for (int i = 0; i < meshes.size(); i++)
-//                {
-//                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-//                    {
-//                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
-//                        List<File> f = (List<File>) FileUtils.listFiles(
-//                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-//                            null); 
-//                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
-//                        int[] origin = new int[]{currentHour,0,0};
-//                        int[] shape = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length}; // U/V are stored on element centroids in FVCOM
-//                        int[] shapeST = new int[]{2,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length}; // S/T are stored on element corners in FVCOM
-//                        hydroFields.add(new HydroField(f.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
-//                    }
-//                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
-//                    {
-//                        // ROMS files DO have a guaranteed name format, so just use a string for the name
-//                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",currentHour)+".nc";
-//                        String filename2 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+String.format("%02d",currentHour+1)+".nc";
-//
-//                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
-//
-//                        int[][] r = meshes.get(i).getRange();
-//                        int[] origin = new int[]{0,r[0][0],r[1][0]};
-//                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
-//                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid (lon_psi, lat_psi)
-//                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
-//                    }
-//                }
-//            } 
-//            // The case that it IS the last hour of the day
-//            else
-//            {
-//                hydroFields.clear();
-//                for (int i = 0; i < meshes.size(); i++)
-//                {
-//                    if (meshes.get(i).getType().equalsIgnoreCase("FVCOM"))
-//                    {
-//                        // FVCOM files don't have a guaranteed ending, so need to use the Wildcard file filter
-//                        List<File> f1 = (List<File>) FileUtils.listFiles(
-//                            new File(rp.datadir+rp.datadirPrefix+currentIsoDate.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"*.nc"), 
-//                            null);
-//
-//                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-//
-//                        List<File> f2 = (List<File>) FileUtils.listFiles(
-//                            new File(rp.datadir+rp.datadirPrefix+tomorrow.getYear()+rp.datadirSuffix+System.getProperty("file.separator")),
-//                            new WildcardFileFilter(rp.location+rp.minchVersion+"_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"*.nc"), 
-//                            null);
-//
-//                        String[] varNames = new String[]{"u","v","salinity","temp","zeta"};
-//                        int[] origin = new int[]{currentHour,0,0};
-//                        int[] shape = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getUvnode()[1].length};
-//                        int[] shapeST = new int[]{1,meshes.get(i).getSiglay().length,meshes.get(i).getNodexy()[1].length};
-//                        hydroFields.add(new HydroField(f1.get(0).getCanonicalPath(),f2.get(0).getCanonicalPath(),varNames,origin,shape,shapeST,"FVCOM",rp.readHydroVelocityOnly));
-//                    }
-//                    else if (meshes.get(i).getType().equalsIgnoreCase("ROMS"))
-//                    {
-//                        // ROMS files DO have a guaranteed name format, so just use a string for the name
-//                        String filename1 = rp.datadir2+rp.datadir2Prefix+currentIsoDate.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-//                            +"NEATL_"+currentIsoDate.getYear()+String.format("%02d",currentIsoDate.getMonth())+String.format("%02d",currentIsoDate.getDay())+"23.nc";
-//
-//                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-//
-//                        String filename2 = rp.datadir2+rp.datadir2Prefix+tomorrow.getYear()+rp.datadir2Suffix+System.getProperty("file.separator")
-//                            +"NEATL_"+tomorrow.getYear()+String.format("%02d",tomorrow.getMonth())+String.format("%02d",tomorrow.getDay())+"00.nc";
-//
-//                        String[] varNames = new String[]{"ubar","vbar","","","zeta"};
-//
-//                        int[][] r = meshes.get(i).getRange();
-//                        int[] origin = new int[]{0,r[0][0],r[1][0]};
-//                        int[] shape = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]};
-//                        int[] shapeST = new int[]{1,r[0][1]-r[0][0],r[1][1]-r[1][0]}; // S/T are same SHAPE as U/V in ROMS, just on a different grid
-//                        hydroFields.add(new HydroField(filename1,filename2,varNames,origin,shape,shapeST,"ROMS",rp.readHydroVelocityOnly));
-//                    }
-//
-//                }
-//            }
-//        }
 
         return hydroFields;
     }
@@ -648,22 +530,14 @@ public class Particle_track {
     /**
      * Count the number of particles in different states (free, viable, settled,
      * exited domain)
-     *
-     * @param parts
-     * @return
      */
     public static int[] particleCounts(List<Particle> parts) {
         int[] freeViableSettleExit = new int[4];
-        // Add count 1 for each particle that satisfies this list of conditions
-        // Lines below are equivalent to:
-        //if (p.getFree()) {
-        //    freeViableSettleExit[0] += 1;
-        //} 
         for (Particle p : parts) {
-            freeViableSettleExit[0] += p.getFree() ? 1 : 0;
-            freeViableSettleExit[1] += p.getViable() ? 1 : 0;
-            freeViableSettleExit[2] += p.getArrived() ? 1 : 0;
-            freeViableSettleExit[3] += p.getBoundaryExit() ? 1 : 0;
+            freeViableSettleExit[0] += p.isFree() ? 1 : 0;
+            freeViableSettleExit[1] += p.isViable() ? 1 : 0;
+            freeViableSettleExit[2] += p.hasArrived() ? 1 : 0;
+            freeViableSettleExit[3] += p.hasExited() ? 1 : 0;
         }
         return freeViableSettleExit;
     }

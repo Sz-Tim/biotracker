@@ -17,10 +17,8 @@ public class HabitatSite {
     private final String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
     private float[] xy; // Coordinate for site
     private float depth;
-    private final float releaseDepth;
     private final float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
-    private boolean insideMesh;
     private String containingMeshType;
     private int nearestFVCOMCentroid; // the mesh u,v point that is closest to this location
     private int containingFVCOMElem; // the element containing the habitat (possibly multiple in case of polygon?)
@@ -32,42 +30,33 @@ public class HabitatSite {
     public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes, RunProperties rp) {
         this.ID = ID;
         this.xy = new float[]{x, y};
-        this.releaseDepth = depth;
         this.scale = scale;
 
         double[] xy2 = new double[]{this.xy[0], this.xy[1]};
-
-        //System.out.println("### HABITAT SITE: "+ID+" ("+this.xy[0]+","+this.xy[1]+") ###");
 
         // Find out which mesh the particle is in, based on bounding box.
         // We make the assumption that meshes appear in the list in their
         // order of precedence, and allocate particles to the first mesh that
         // contains their location
-        //this.containingMesh = -1;
         // Assume as a default that the habitat site is in the first mesh, if not change it to something else
         this.containingMesh = 0;
-        this.insideMesh = false;
+        boolean insideMesh = false;
         // Use this to force checking of FVCOM mesh (single mesh scenario)
         boolean exitIfNotInMesh = true;
 
-        //System.out.println("number of meshes "+meshes.size());
         for (int m = 0; m < meshes.size(); m++) {
-            //System.out.println("Mesh "+m+" "+meshes.get(m).isInMesh(xy2,true,new int[]{1}));
             if (meshes.get(m).isInMesh(xy2, true, true, null)) {
                 this.containingMesh = m;
-                this.insideMesh = true;
+                insideMesh = true;
                 break;
             }
         }
 
-
-//        this.containingMeshType = "NONE";        
         this.containingMeshType = "FVCOM";
         this.nearestFVCOMCentroid = -1;
         this.containingFVCOMElem = -1;
 
-        //System.out.println("Containing mesh = "+this.containingMesh+" insideMesh="+this.insideMesh);
-        if (!this.insideMesh && exitIfNotInMesh) {
+        if (!insideMesh && exitIfNotInMesh) {
             if(rp.verboseSetUp) {
                 System.out.println(ID + " " + x + " " + y + " Habitat site not within any provided mesh --- : Not creating site");
             }
@@ -78,7 +67,7 @@ public class HabitatSite {
                 this.nearestFVCOMCentroid = Particle.nearestCentroid(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode());
                 this.depth = meshes.get(this.containingMesh).getDepthUvnode()[this.nearestFVCOMCentroid];
 
-                if (!this.insideMesh) {
+                if (!insideMesh) {
                     double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
                     if(rp.verboseSetUp) {
                         System.out.println("Habitat site (" + xy[0] + "," + xy[1] + ") outside mesh. Nearest centroid: " + this.nearestFVCOMCentroid
@@ -136,7 +125,6 @@ public class HabitatSite {
 
     @Override
     public String toString() {
-        //String details = this.ID+" "+Arrays.toString(this.xy)+" "+this.containingMesh;
         String details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI")) {
             details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.depth + "\t"

@@ -24,9 +24,7 @@ public class RunProperties {
             seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
             daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
-
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
-            timeInterpolate, spatialInterpolate, // interpolate between hydro file data values?
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             parallel, // use multiple cores to speed up run?
             diffusion, variableDiffusion, // include random walk, use diffusion parameter from hydro output?
@@ -47,9 +45,7 @@ public class RunProperties {
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
-            //depthLayers, // Number of depth layers in hydro output - IDEALLY DEPRECATE
             thresh, // Threshold distance for "settlement" (m)
-            behaviour, // Particle behaviour - see Particle.java
             parallelThreads, // Number of threads to use in parallel execution
             minchVersion, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
@@ -67,22 +63,20 @@ public class RunProperties {
             startDepth, // Particle initiation depth
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
-    /**
-     */
     public RunProperties(String filename) {
-        System.out.println("GETTING PROPERTIES FROM " + filename);
+        System.out.println("Getting properties from " + filename);
         Properties properties = new Properties();
         try {
             properties.load(new FileInputStream(filename));
         } catch (IOException e) {
-            System.err.println("!!!Could not find properties file!!!");
+            System.err.println("--- Could not find properties file - check filename and working directory ---");
         }
-
         for (String key : properties.stringPropertyNames()) {
             String value = properties.getProperty(key);
             System.out.println(key + " => " + value);
         }
 
+        // Directories
         basedir = properties.getProperty("basedir", "/home/sa01ta/particle_track/");
         sitedir = properties.getProperty("sitedir", "/home/sa01ta/particle_track/minch_sites/");
         datadir = properties.getProperty("datadir", "/home/sa01da/work/minch2/Archive/");
@@ -92,32 +86,25 @@ public class RunProperties {
         datadir2Prefix = properties.getProperty("datadirPrefix", "");
         datadir2Suffix = properties.getProperty("datadirSuffix", "_OLD");
 
-        seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
-        daylightPath = properties.getProperty("daylightPath", "");
-
+        // Geography, hydrodynamic files, & mesh files
+        coordRef = properties.getProperty("coordRef", "WGS84");
+        location = properties.getProperty("location", "minch");
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
-
+        recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
         mesh1 = properties.getProperty("mesh1", "/home/sa01ta/particle_track/WestCOMS_mesh.nc");
         mesh2 = properties.getProperty("mesh2", "");
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
-
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
 
-        restartParticles = properties.getProperty("restartParticles", "");
-        restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
-
+        // Sites
         sitefile = properties.getProperty("sitefile", "startlocations.dat");
         sitefileEnd = properties.getProperty("sitefileEnd", sitefile);
-
-        location = properties.getProperty("location", "minch");
         habitat = properties.getProperty("habitat", "");
         suffix = properties.getProperty("suffix", "");
-
         verboseSetUp = Boolean.parseBoolean(properties.getProperty("verboseSetUp", "true"));
 
-        coordRef = properties.getProperty("coordRef", "WGS84");
-
+        // Dates
         start_ymd = Integer.parseInt(properties.getProperty("start_ymd", "20180101"));
         numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays", "0"));
         if (numberOfDays > 0) {
@@ -135,32 +122,68 @@ public class RunProperties {
             System.exit(1);
         }
 
-        // Set variable values based on contents of the properties object
+        // Run parameters
         backwards = Boolean.parseBoolean(properties.getProperty("backwards", "false"));
-        // DEPRECATED
-        //timeInterpolate = Boolean.parseBoolean(properties.getProperty("timeInterpolate","true"));
-        //spatialInterpolate = Boolean.parseBoolean(properties.getProperty("spatialInterpolate","true"));
+        parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads", "4"));
+        readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly", "false"));
+        duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
+        dt = Double.parseDouble(properties.getProperty("dt", "3600"));
+        verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
 
-        rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
-
-        diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
-        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
-        salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "false"));
-        endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival", "false"));
-        // DEPRECATED
-        //tidalRelease = Boolean.parseBoolean(properties.getProperty("tidalRelease","false"));
+        // Release
+        restartParticles = properties.getProperty("restartParticles", "");
+        restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
+        seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
         fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
+        releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
+        nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
+        releaseTime = Double.parseDouble(properties.getProperty("releaseTime", "0"));
+        releaseTimeEnd = Double.parseDouble(properties.getProperty("releaseTimeEnd", "24"));
 
-        readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly", "false"));
-        duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
+        // Arrival
+        endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival", "false"));
+        thresh = Integer.parseInt(properties.getProperty("thresh", "500"));
 
-        parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads", "4"));
-        parallel = parallelThreads > 1;
-        // DEPRECATED
-        //oldOutput = Boolean.parseBoolean(properties.getProperty("oldOutput"));
+        // Advection & diffusion
+        rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
+        stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep", "25"));
+        diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
+        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
+        D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
+        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.005"));
 
+        // Behaviour
+        species = properties.getProperty("species", "none");
+        daylightPath = properties.getProperty("daylightPath", "");
+        swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
+        vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean", "0"));
+        vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd", "0"));
+        sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean", "0"));
+        sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd", "0"));
+        salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
+
+        // Demographics
+        salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "false"));
+        mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate", "0.01"));
+        viabletime = Double.parseDouble(properties.getProperty("viabletime", "86"));
+        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge", "336"));
+        viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays", "-1"));
+        maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays", "-1"));
+        if (viableDegreeDays != -1) {
+            viabletime = -1;
+            System.out.println("viableDegreeDays entered; set viabletime=" + viabletime + " so won't be used at 56N!");
+        }
+        if (maxDegreeDays != -1) {
+            maxParticleAge = -1;
+            System.out.println("maxDegreeDays entered; set maxParticleAge=" + maxParticleAge + " so won't be used at 56N!");
+        }
+        if ((viableDegreeDays != -1 || maxParticleAge != -1) && readHydroVelocityOnly) {
+            System.err.println("readHydroVelocityOnly==true AND trying to use degree-days for development => won't develop or die!");
+        }
+
+        // Output
         recordPsteps = Boolean.parseBoolean(properties.getProperty("recordPsteps", "true"));
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps", "true"));
         pstepsInterval = Integer.parseInt(properties.getProperty("pstepsInterval", "24"));
@@ -169,65 +192,8 @@ public class RunProperties {
         recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations", "true"));
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
 
-        releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
-        nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
-        releaseTime = Double.parseDouble(properties.getProperty("releaseTime", "0"));
-        releaseTimeEnd = Double.parseDouble(properties.getProperty("releaseTimeEnd", "24"));
-
-        dt = Double.parseDouble(properties.getProperty("dt", "3600"));
-
-        // 21/11/2018 --- Ideally want to remove this. If using two models for hydro 
-        // would ideally sense from the hydro file
-        recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
-        //recordsPerFile2 = Integer.parseInt(properties.getProperty("recordsPerFile2","4"));
-
-        stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep", "25"));
-
-        // 21/11/2018 --- possible to remove? If using two models for hydro 
-        // would ideally sense from the hydro file
-        //depthLayers = Integer.parseInt(properties.getProperty("depthLayers","10"));       
-
-        verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
-        thresh = Integer.parseInt(properties.getProperty("thresh", "500"));
-        behaviour = Integer.parseInt(properties.getProperty("behaviour", "1"));
-        swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
-
-        D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
-        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.005"));
-        mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate", "0.01"));
-
-        species = properties.getProperty("species", "none");
-        viabletime = Double.parseDouble(properties.getProperty("viabletime", "86"));
-        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge", "336"));
-
-        viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays", "-1"));
-        maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays", "-1"));
-        if (viableDegreeDays != -1) {
-            //viabletime = viableDegreeDays*20;
-            viabletime = -1;
-            System.out.println("viableDegreeDays entered; set viabletime=" + viabletime + " so won't be used at 56N!");
-        }
-        if (maxDegreeDays != -1) {
-            //maxParticleAge = maxDegreeDays*20;
-            maxParticleAge = -1;
-            System.out.println("maxDegreeDays entered; set maxParticleAge=" + maxParticleAge + " so won't be used at 56N!");
-        }
-        if ((viableDegreeDays != -1 || maxParticleAge != -1) && readHydroVelocityOnly) {
-            System.err.println("readHydroVelocityOnly==true AND trying to use degree-days for development => won't develop or die!");
-        }
-
-        vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean", "0"));
-        vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd", "0"));
-
-        sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean", "0"));
-        sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd", "0"));
-
-        salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
-
         properties.list(System.out);
-
     }
-
 }
 
 

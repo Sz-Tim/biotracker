@@ -6,8 +6,6 @@
 
 package particle_track;
 
-import java.util.Arrays;
-
 /**
  * Only works for years 1993 - 2023 // updated SA04TS: leap years fixed; works until 2100
  *
@@ -102,7 +100,6 @@ public class ISO_datestr {
         return yesterday;
     }
 
-
     public void takeDay() {
         if (this.day == 1) {
             if (this.month == 1) {
@@ -131,9 +128,6 @@ public class ISO_datestr {
         return day;
     }
 
-    /**
-     * Added 2021-10-19 Tim Szewczyk
-     **/
     public boolean isLeapYear() {
         return this.year % 4 == 0;
     }
@@ -141,9 +135,6 @@ public class ISO_datestr {
     /**
      * work out the date from an integer in format YYYYMMDD - Mike Bedington
      * method
-     *
-     * @param ymd
-     * @return
      */
     public static int[] dateIntParse(int ymd) {
         double start_ymd_mod = ymd;
@@ -153,8 +144,7 @@ public class ISO_datestr {
         start_ymd_mod = start_ymd_mod - startMonth * 100;
         int startDay = (int) start_ymd_mod;
 
-        int[] output = new int[]{startDay, startMonth, startYear};
-        return output;
+        return new int[]{startDay, startMonth, startYear};
     }
 
     @Override

@@ -24,8 +24,6 @@ public class HydroField {
     /**
      * Default constructor for a single day's data
      *
-     * @param filename
-     * @param varNames
      * @param origin   the first element indices contained in a vector
      * @param shape    shape vector for U/V arrays
      * @param shapeST  an additional array shape vector for T/S arrays
@@ -42,19 +40,12 @@ public class HydroField {
             origin2[0] = origin[0];
             origin2[1] = origin[2];
         }
-        int[] shape2 = null;
         int[] shapeST2 = null;
-        if (shape != null) {
-            shape2 = new int[shape.length - 1];
-            shape2[0] = shape[0];
-            shape2[1] = shape[2];
-        }
         if (shapeST != null) {
             shapeST2 = new int[shapeST.length - 1];
             shapeST2[0] = shapeST[0];
             shapeST2[1] = shapeST[2];
         }
-
 
         if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
@@ -67,7 +58,6 @@ public class HydroField {
                 km = IOUtils.readNetcdfFloat3D(filename,varNames[6],origin2,shapeST2);
                 light = IOUtils.readNetcdfFloat2D(filename, varNames[7], origin2, shapeST2);
             }
-
         } else if (type.equalsIgnoreCase("ROMS")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
             v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
@@ -87,12 +77,6 @@ public class HydroField {
 
     /**
      * Second constructor to read two files at once and combine into a single field
-     *
-     * @param filename1
-     * @param filename2
-     * @param varNames
-     * @param origin
-     * @param shape
      */
     public HydroField(String filename1, String filename2, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, boolean readHydroVelocityOnly) {
 
@@ -105,13 +89,7 @@ public class HydroField {
             origin2[0] = origin[0];
             origin2[1] = origin[2];
         }
-        int[] shape2 = null;
         int[] shapeST2 = null;
-        if (shape != null) {
-            shape2 = new int[shape.length - 1];
-            shape2[0] = shape[0];
-            shape2[1] = shape[2];
-        }
         if (shapeST != null) {
             shapeST2 = new int[shapeST.length - 1];
             shapeST2[0] = shapeST[0];
@@ -134,7 +112,6 @@ public class HydroField {
                 km1 = IOUtils.readNetcdfFloat3D(filename1,varNames[6],origin,shapeST);
                 light1 = IOUtils.readNetcdfFloat2D(filename1, varNames[7], origin2, shapeST2);
             }
-
 
             // When reading two files, we ALWAYS want to start from t=0 for the second one
             if (origin != null) {
@@ -159,9 +136,7 @@ public class HydroField {
             float[][][] elTmp1 = IOUtils.readNetcdfFloat3D(filename1, varNames[5], origin, shape);
             zeta1 = new float[elTmp1[0].length][elTmp1[0][0].length];
             for (int xInd = 0; xInd < elTmp1[0].length; xInd++) {
-                for (int yInd = 0; yInd < elTmp1[0][0].length; yInd++) {
-                    zeta1[xInd][yInd] = elTmp1[0][xInd][yInd];
-                }
+                System.arraycopy(elTmp1[0][xInd], 0, zeta1[xInd], 0, elTmp1[0][0].length);
             }
             System.out.println("Reading hydro file: " + filename2);
             u2 = IOUtils.readNetcdfFloat3D(filename2, varNames[0], origin, shape);
@@ -169,15 +144,11 @@ public class HydroField {
             float[][][] elTmp2 = IOUtils.readNetcdfFloat3D(filename2, varNames[4], origin, shape);
             zeta2 = new float[elTmp2[0].length][elTmp2[0][0].length];
             for (int xInd = 0; xInd < elTmp2[0].length; xInd++) {
-                for (int yInd = 0; yInd < elTmp2[0][0].length; yInd++) {
-                    zeta2[xInd][yInd] = elTmp2[0][xInd][yInd];
-                }
+                System.arraycopy(elTmp2[0][xInd], 0, zeta2[xInd], 0, elTmp2[0][0].length);
             }
         } else {
             System.err.println("Could not read hydro file data - incorrect type");
         }
-
-        //System.out.println("u1 length ("+u1.length+","+u1[0].length+","+u1[0][0].length+")");
 
         // These two are recorded at element centroids in FVCOM
         u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
@@ -239,8 +210,6 @@ public class HydroField {
                 }
             }
         } else {
-
-            float[] sumUDep = new float[u1[0].length];
             for (int hour = 0; hour < u1.length; hour++) {
                 for (int dep = 0; dep < u1[0].length; dep++) {
                     for (int elem = 0; elem < u1[0][0].length; elem++) {
@@ -248,7 +217,6 @@ public class HydroField {
                         v[hour][dep][elem] = v1[hour][dep][elem];
                         w[hour][dep][elem] = w1[hour][dep][elem];
                         sumU += u[hour][dep][elem];
-                        sumUDep[dep] += u[hour][dep][elem];
                     }
                     if (!readHydroVelocityOnly) {
                         for (int node = 0; node < zeta1[0].length; node++) {
@@ -305,21 +273,8 @@ public class HydroField {
         }
 
         System.out.println("Combined files to single arrays (e.g. velocity dimensions " + u.length + " " + u[1].length + " " + u[0][1].length + "; sum = " + sumU + ")");
-//            sumIndex(u,0,0,true);
-//            sumIndex(u,0,3,true);
-//            sumIndex(u,0,6,true);
-//            sumIndex(u,0,9,true);
-//            sumIndex(u,0,12,true);
-//            sumIndex(u,1,0,true);
-//            sumIndex(u,1,5,true);
-//            sumIndex(u,1,9,true);
-//            sumIndex(u,2,0,true);
-//            sumIndex(u,2,79243,true);
     }
 
-    /**
-     * Public getter methods for each internal field
-     */
     public float[][][] getU() {
         return u;
     }
@@ -412,12 +367,6 @@ public class HydroField {
     /**
      * Compute a sum of an array over a particular dimension, for a particular
      * index of that dimension - to assist in validation of data read in
-     *
-     * @param var
-     * @param dimension
-     * @param index
-     * @param print
-     * @return
      */
     public float sumIndex(float[][][] var, int dimension, int index, boolean print) {
         float s = 0;
@@ -444,10 +393,10 @@ public class HydroField {
             d2Range = IntStream.rangeClosed(0, var[0][1].length - 1).toArray();
         }
 
-        for (int d0 = 0; d0 < d0Range.length; d0++) {
-            for (int d1 = 0; d1 < d1Range.length; d1++) {
-                for (int d2 = 0; d2 < d2Range.length; d2++) {
-                    s += var[d0Range[d0]][d1Range[d1]][d2Range[d2]];
+        for (int i : d0Range) {
+            for (int j : d1Range) {
+                for (int k : d2Range) {
+                    s += var[i][j][k];
                 }
             }
         }
