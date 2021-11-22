@@ -451,8 +451,10 @@ public class Particle {
     }
 
     public double swim(RunProperties rp) {
-        int forceUpward = rp.vertSwimSpeedMean > 0 ? -1 : 1;
-        return forceUpward * rp.vertSwimSpeedMean + rp.vertSwimSpeedStd * ThreadLocalRandom.current().nextGaussian();
+        double swimSpeedMean = this.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean;
+        double swimSpeedStd = this.isViable() ? rp.vertSwimSpeedCopepodidStd : rp.vertSwimSpeedNaupliusStd;
+        int forceUpward = swimSpeedMean > 0 ? -1 : 1;
+        return forceUpward * swimSpeedMean + swimSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
 
     public double swim(RunProperties rp, Mesh mesh, HydroField hydroField, int hour) {
@@ -461,14 +463,15 @@ public class Particle {
         double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
         double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
 
-        if ((this.getStatus() == 1 && lightAtDepth > 2.06e-5) || (this.getStatus() == 2 && lightAtDepth > 0.392)) {
+        if ((!this.isViable() && lightAtDepth > 2.06e-5) ||
+                (this.isViable() && lightAtDepth > 0.392)) {
             return swim(rp);
         } else {
             return 0.0;
         }
     }
 
-    public double[] diffuse(RunProperties rp, double KmGradient, double Km_zAdj, double dt, String distribution) {
+    public double[] diffuse(RunProperties rp, double K_gradient, double K_zAdj, double dt, String distribution) {
         int nDims = rp.verticalDynamics ? 3 : 2;
         double[] diffusion = {0,0,0};
         double[] randoms = {0,0,0};
@@ -493,9 +496,9 @@ public class Particle {
 
         if (rp.verticalDynamics) {
             if (rp.variableDiffusion) {
-                // folowing Visser 1997 (eq. 6):
-                // dZ = KmGradient * dt + Rand * sqrt(2 * dt/r * Km_zAdj), where Km_zAdj = Km(z + KmGradient/2 * dt)
-                diffusion[2] = KmGradient * dt + randoms[2] * Math.pow(2 / r * Km_zAdj * dt, 0.5);
+                // following Visser 1997 (eq. 6):
+                // dZ = K_gradient * dt + Rand * sqrt(2 * dt/r * K_zAdj), where K_zAdj = K(z + K_gradient/2 * dt)
+                diffusion[2] = K_gradient * dt + randoms[2] * Math.pow(2 / r * K_zAdj * dt, 0.5);
             } else {
                 diffusion[2] = randoms[2] * Math.sqrt(2 / r * rp.D_hVert * dt);
             }
@@ -505,10 +508,6 @@ public class Particle {
 
     /**
      * Is the particle still in the present mesh, should it change mesh, and has it exited the overall domain?
-     *
-     * @param newLoc
-     * @param meshes
-     * @param rp
      */
     public void meshSelectOrExit(double[] newLoc, List<Mesh> meshes, RunProperties rp) {
         //  i) Is particle in present mesh?
