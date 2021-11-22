@@ -32,14 +32,15 @@ import extUtils.*;
 /**
  * @author sa01ta
  */
+@SuppressWarnings("ConstantConditions")
 public class IOUtils {
 
     /**
      * Count the lines in a file, in order to read files of unknown length
      */
-    public static int countLines(File aFile) throws Exception {
+    public static int countLines(File aFile) {
         try (LineNumberReader reader = new LineNumberReader(new FileReader(aFile))) {
-            while ((reader.readLine()) != null) ;
+            //while ((reader.readLine()) != null) ;
             return reader.getLineNumber();
         } catch (Exception ex) {
             return -1;
@@ -65,7 +66,7 @@ public class IOUtils {
             file = new File(filename);
         }
 
-        int nLines = 0;
+        int nLines;
         try {
             nLines = countLines(file);
             System.out.println("FILE " + file + " NLINES " + nLines);
@@ -129,7 +130,7 @@ public class IOUtils {
      * @param limit     // the maximum index of "startlocs" to allow as an endlocation
      */
     public static double[][] setupEndLocs(String habitat, String sitedir, double[][] startlocs, int limit) {
-        double[][] endlocs = new double[10][3];
+        double[][] endlocs;
 
         if (habitat.equalsIgnoreCase("fishfarm3_new")) {
             double[][] extraEndLocs = IOUtils.readFileDoubleArray(sitedir + "160119_fishfarms_jun15.dat", 205, 5, " ", true);
@@ -156,10 +157,10 @@ public class IOUtils {
     }
 
     public static List<Particle> readRestartParticles(RunProperties rp) {
-        List<Particle> parts = new ArrayList<Particle>();
+        List<Particle> parts = new ArrayList<>();
         System.out.println("Particles to restart defined in file: " + rp.restartParticles);
         File file = new File(rp.restartParticles);
-        int nLines = 0;
+        int nLines;
         try {
             nLines = countLines(file);
             System.out.println("FILE " + file + " NLINES " + nLines);
@@ -205,7 +206,7 @@ public class IOUtils {
         return parts;
     }
 
-    public static int[] readFileInt1D(String fullFileName) throws Exception {
+    public static int[] readFileInt1D(String fullFileName) {
         int nLines = countLines(new File(fullFileName));
         int[][] vals = IOUtils.readFileIntArray(fullFileName, nLines, 1, " ", true);
         int[] valsOut = new int[nLines];
@@ -216,7 +217,7 @@ public class IOUtils {
     }
 
 
-    public static double[] readFileDouble1D(String fullFileName) throws Exception {
+    public static double[] readFileDouble1D(String fullFileName) {
         int nLines = countLines(new File(fullFileName));
         double[][] vals = IOUtils.readFileDoubleArray(fullFileName, nLines, 1, " ", false);
         double[] valsOut = new double[nLines];
@@ -374,13 +375,13 @@ public class IOUtils {
     }
 
     /**
-     * Reshape a two dimensional array of floating point numbers
+     * Reshape a two-dimensional array of floating point numbers
      */
     public static float[][] reshapeFloat(float[][] A, int m, int n) {
         int origM = A.length;
         int origN = A[0].length;
         if (origM * origN != m * n) {
-            throw new IllegalArgumentException("New matrix must be of same area as matix A");
+            throw new IllegalArgumentException("New matrix must be of same area as matrix A");
         }
         float[][] B = new float[m][n];
         float[] A1D = new float[A.length * A[0].length];
@@ -530,7 +531,7 @@ public class IOUtils {
 
     public static double[][] readFileDoubleArray(String filename, int rows, int cols, String sep, boolean note) {
         double[][] myDouble = new double[rows][cols];
-        int x = 0, y = 0;
+        int x = 0, y;
         boolean failed = false;
         double sum = 0;
         try {
@@ -584,7 +585,7 @@ public class IOUtils {
 
     public static int[][] readFileIntArray(String filename, int rows, int cols, String sep, boolean note) {
         int[][] myInt = new int[rows][cols];
-        int x = 0, y = 0;
+        int x = 0, y;
         boolean failed = false;
         try {
             BufferedReader in = new BufferedReader(new FileReader(filename));    //reading files in specified directory
@@ -750,12 +751,12 @@ public class IOUtils {
             // Create file 
             FileWriter fstream = new FileWriter(filename);
             PrintWriter out = new PrintWriter(fstream);
-            for (int i = 0; i < variable.length; i++) {
+            for (float[] floats : variable) {
                 for (int j = 0; j < variable[0].length; j++) {
                     if (asInt || (firstColInt && j == 0)) {
-                        out.printf("%d", (int) variable[i][j]);
+                        out.printf("%d", (int) floats[j]);
                     } else {
-                        out.printf("%.4e", variable[i][j]);
+                        out.printf("%.4e", floats[j]);
                     }
                     if (j < variable[0].length - 1) {
                         out.printf(" ");
@@ -776,9 +777,9 @@ public class IOUtils {
             // Create file 
             FileWriter fstream = new FileWriter(filename);
             PrintWriter out = new PrintWriter(fstream);
-            for (int i = 0; i < variable.length; i++) {
+            for (int[] ints : variable) {
                 for (int j = 0; j < variable[0].length; j++) {
-                    out.printf("%d ", variable[i][j]);
+                    out.printf("%d ", ints[j]);
                 }
                 out.printf("\n");
             }

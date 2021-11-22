@@ -5,7 +5,6 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,7 +87,7 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
-        List<HabitatSite> habitat = new ArrayList<>();
+        List<HabitatSite> habitat;
         System.out.println("Creating start sites");
         habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
 
@@ -106,7 +105,7 @@ public class Particle_track {
         }
 
         // Need a list of end sites - have just used the same list for now
-        List<HabitatSite> habitatEnd = new ArrayList<>();
+        List<HabitatSite> habitatEnd;
         System.out.println("Creating end sites");
         habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, false, meshes, rp);
 
@@ -174,14 +173,14 @@ public class Particle_track {
         int stepcount = 0;
         double elapsedHours = 0; // updated in HOURS as the simulation progresses
 
-        int[] freeViableSettleExit = new int[4];
+        int[] freeViableSettleExit;
 
         int numberOfExecutorThreads = rp.parallelThreads;
         System.out.println("Number of executor threads = " + numberOfExecutorThreads);
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfExecutorThreads);
-        CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<List<Particle>>(executorService);
+        CompletionService<List<Particle>> executorCompletionService = new ExecutorCompletionService<>(executorService);
 
-        final Collection<Callable<List<Particle>>> callables = new ArrayList<Callable<List<Particle>>>();
+        final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
 
         String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot zTot";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
@@ -289,7 +288,7 @@ public class Particle_track {
                             for (int i = 0; i < numberOfExecutorThreads; i++) {
                                 List<Particle> subList;
                                 if (i == numberOfExecutorThreads - 1) {
-                                    // Note: ArrayList.subList(a,b) is inclusive of a but exclusive of b => 
+                                    // Note: ArrayList.subList(a,b) is inclusive of a, but exclusive of b =>
                                     subList = particles.subList(i * listStep, particlesSize);
                                 } else {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
@@ -410,7 +409,7 @@ public class Particle_track {
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
-                                                    ISO_datestr currentDate, int currentTime, double startDensity, int numParticlesCreated) throws Exception {
+                                                    ISO_datestr currentDate, int currentTime, double startDensity, int numParticlesCreated) {
 
         List<Particle> newParts = new ArrayList<>(rp.nparts * habitat.size());
         for (int i = 0; i < rp.nparts * habitat.size(); i++) {
@@ -449,7 +448,7 @@ public class Particle_track {
      * iii) More than one mesh, hour 23 of the day. In this case, as single hour (23) is read from
      * the first file, and then record 0 from tomorrow's file is read.
      */
-    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) throws IOException {
+    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) {
         List<HydroField> hydroFields = new ArrayList<>();
 
         // 24 hr files only case - read once a day
@@ -574,7 +573,7 @@ public class Particle_track {
 
     public static float[][] nonZeroRows(float[][] A) {
         int count = 0;
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
 
         for (int i = 0; i < A.length; i++) {
             // Check whether ANY of the elements on this row !=0

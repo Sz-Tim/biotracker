@@ -297,7 +297,7 @@ public class Mesh {
         return openBoundaryNodes;
     }
 
-    public int[] getboundaryNodes() {
+    public int[] getBoundaryNodes() {
         return boundaryNodes;
     }
 
@@ -350,7 +350,7 @@ public class Mesh {
         Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
         boolean inMesh = cHull.contains(xy[0], xy[1]);
         // Do the element check, if required. This will identify when a point is NOT in the mesh
-        // when it has fallen inside the convex hull but is outside of any element
+        // when it has fallen inside the convex hull but is outside any element
         if (checkElements && inMesh) {
             int[] c = new int[5];
             if (this.getType().equalsIgnoreCase("FVCOM") || this.getType().equalsIgnoreCase("ROMS_TRI")) {
@@ -364,7 +364,7 @@ public class Mesh {
                 // Use the U grid to determine whether within the mesh or not.
                 // This leads to some particles that are outside the V grid being identified as in the mesh.
                 // The same would happen with rho
-                // If can make it fast, check U and V grids, and chuck out if not in one of them?
+                // If we can make it fast, check U and V grids, and chuck out if not in one of them?
                 // Change isInMesh references in ParallelParticleMover, too
                 int[] nearestPointU = Particle.nearestROMSGridPoint((float) xy[0], (float) xy[1], this.getLonU(), this.getLatU(), elemLoc);
                 int[] cRomsU = Particle.whichROMSElement((float) xy[0], (float) xy[1], this.getLonU(), this.getLatU(), nearestPointU);

@@ -20,7 +20,7 @@ public class Particle {
     // horizontal position
     private final double[] xy = new double[2];
     final private double[] startLoc = new double[2];
-    private String startSiteID = "0";
+    private final String startSiteID;
     private int startSiteIndex = 0;
 
     private final String coordRef;
@@ -41,7 +41,7 @@ public class Particle {
     // release time
     private double releaseTime = 0;
     // vertical position
-    private double depth = 0;
+    private double depth;
     private int depLayer = 0;
     // settlement details
     private double age = 0;
@@ -55,7 +55,7 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
 
-    private String species = "none";
+    private final String species;
 
     private String lastArrival = "0";
 
@@ -127,7 +127,7 @@ public class Particle {
 
     @Override
     public String toString() {
-        return this.getID() + " " + this.xy.toString();
+        return this.getID() + " " + Arrays.toString(this.xy);
     }
 
     // Not presently used
@@ -455,7 +455,7 @@ public class Particle {
     }
 
     public double swim(RunProperties rp, Mesh mesh, HydroField hydroField, int hour) {
-        // following Johnsen et al 2014, 2016, Myksvoll et al 2018, Sandvik et al 2020 for light attenuation and swimming thresholds
+        // following Johnsen et al. 2014, 2016, Myksvoll et al. 2018, Sandvik et al. 2020 for light attenuation and swimming thresholds
         // short_wave units = W m-2 ≈ 2.1 μmole m-2 s-1 (according to Tom Adams handover files)
         double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
         double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
@@ -637,7 +637,7 @@ public class Particle {
                     m.getLonV(), m.getLatV(),
                     nearV);
 
-            // Need to save nearest point, in order to read into
+            // Need to save the nearest point, in order to read into
             this.setROMSnearestPointU(nearU);
             this.setROMSnearestPointV(nearV);
             this.setROMSElemU(containingROMSElemU);
@@ -665,7 +665,7 @@ public class Particle {
     }
 
     /**
-     * Make a list of nearest mesh element centroids
+     * Make a list of the nearest mesh element centroids
      */
     public static double[][] nearestCentroidList(double x, double y, float[][] uvnode) {
         double[][] nearestList = new double[5][2];
@@ -676,7 +676,6 @@ public class Particle {
             double distnew = Math.sqrt((x - uvnode[0][i]) * (x - uvnode[0][i]) + (y - uvnode[1][i]) * (y - uvnode[1][i]));
             if (distnew < dist) {
                 dist = distnew;
-                nearest = i;
                 // Shift everything along one element
                 nearestList[4][0] = nearestList[3][0];
                 nearestList[4][1] = nearestList[3][1];
@@ -734,9 +733,10 @@ public class Particle {
 
     /**
      * This makes a list of the nearest ROMS grid points - 4 of them.
-     * Note that this might no actually be what we want, due to the form of the grid.
+     * Note that this might not actually be what we want, due to the form of the grid.
      * Instead, we probably want the 4 corners of the containing element - see nearestListROMS2.
      */
+    @SuppressWarnings("Convert2Lambda")
     public static double[][] nearestListROMS(double[] xy, float[][] xGrid, float[][] yGrid, int[] nearestPoint) {
         double[][] allDists = new double[9][3];
         double[][] nearList = new double[5][3];
@@ -758,6 +758,7 @@ public class Particle {
             }
         }
 
+        // noinspection Convert2Diamond,Convert2Lambda
         Arrays.sort(allDists, new Comparator<double[]>() {
             @Override
             public int compare(double[] o1, double[] o2) {
@@ -912,8 +913,8 @@ public class Particle {
 
     /**
      * A method to use the nearest grid point indexes and distances to interpolate a velocity.
-     * This is done between the four nearest values.
-     * In the ROMS output, U and V are stored on different grids (Arakawa-C). Therefore
+     * This is done between the four the nearest values.
+     * In the ROMS output, U and V are stored on different grids (Arakawa-C). Therefore,
      * two nrLists are read in, one for each grid.
      * <p>
      * This method of calculating velocity DOES NOT match the methods used in e.g. TRACMASS, LTRANS.
@@ -1044,7 +1045,7 @@ public class Particle {
                     }
                     whereami = whichElement(xy, elems2, nodexy, trinodes);
 
-                    // if this fails, look in all elements (desperation) - unless movement is attempting to place particle outside mesh)
+                    // if this fails, look in all elements (desperation) - unless movement is attempting to place particle outside mesh
                     if (whereami == -1 && checkAll) {
                         c[5] = 1;
                         int[] allelems = IntStream.rangeClosed(0, trinodes[0].length - 1).toArray();
@@ -1198,7 +1199,7 @@ public class Particle {
             }
 
             // 2. Compute k_1 (spatial interpolation at start of step)
-            // Velocity from start of timestep
+            // Velocity from start of time step
             vel = velocityFromNearestList(this.getNrList(), hour, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
             velplus1 = velocityFromNearestList(this.getNrList(), hour + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
@@ -1218,7 +1219,7 @@ public class Particle {
             k1[i]  = dt * (vel[i] + ((double) step / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
 
-        // 3. Compute k_2 (spatial interpolation at half step, temporal interp at half step)
+        // 3. Compute k_2 (spatial interpolation at half step, temporal interpolation at half step)
         // Estimated half-step location using Euler
         // NOTE that here, for the purposes of identifying the elements containing the part-step locations,
         // the steps in degrees are calculated. These are separate of the actual half-step values in metres
@@ -1235,7 +1236,7 @@ public class Particle {
                 meshes, meshPart, hydroFields,
                 hour, step, dt, stepsPerStep, coordRef, verticalDynamics);
 
-        // 4. Compute k_3 (spatial interpolation at half step, temporal interp at half step)
+        // 4. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
         double[] k2Deg = new double[]{k2[0], k2[1]};
         if (this.coordRef.equalsIgnoreCase("WGS84")) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
@@ -1295,7 +1296,7 @@ public class Particle {
             }
 
             // 2. Compute k_1 (spatial interpolation at start of step)
-            // Velocity from start of timestep
+            // Velocity from start of time step
             vel = velocityFromNearestList(xNrList, hour, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
             velplus1 = velocityFromNearestList(xNrList, hour + 1, hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), depLayer, verticalDynamics);
@@ -1331,6 +1332,7 @@ public class Particle {
     /**
      * Compute an Euler integration step for particle movement
      */
+    @SuppressWarnings("ConstantConditions")
     public double[] eulerStep(List<HydroField> hydroFields, // velocities
                               List<Mesh> meshes,     // other mesh info
                               int hour, int step, double dt,                                  // locate particle in space and time
@@ -1354,7 +1356,7 @@ public class Particle {
             double[][] xNrList = neighbourCellsList(thisLoc, elemPart, meshPart, meshes, coordRef);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
-            // Velocity from start of timestep
+            // Velocity from start of time step
             vel = velocityFromNearestList(xNrList, hour,
                     hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), dep, verticalDynamics);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
@@ -1366,7 +1368,7 @@ public class Particle {
                 return advectStep;
             }
         }
-        // Find nearest nodes for interpolation
+        // Find the nearest nodes for interpolation
         else if (meshes.get(meshPart).getType().equalsIgnoreCase("ROMS")) {
             // Populate the list of points for interpolation
             double[][] nrListU = nearestListROMS2(thisLoc, meshes.get(meshPart).getLonU(), meshes.get(meshPart).getLatU(), this.nearestROMSGridPointU);

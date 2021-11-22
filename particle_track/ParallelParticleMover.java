@@ -60,7 +60,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
                     minMaxDistTrav, isDaytime, currentDate);
         }
-        return new ArrayList<Particle>();
+        return new ArrayList<>();
     }
 
     /**
@@ -272,7 +272,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      *
      * @param distanceMetres calculated transport distance [dx,dy]
      * @param location       particle location in degrees [lon,lat]
-     * @return
      */
     public static double[] distanceMetresToDegrees1(double[] distanceMetres, double[] location) {
         double[] distanceDegrees = new double[2];
@@ -291,7 +290,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
      *
      * @param distanceMetres calculated transport distance [dx,dy]
      * @param location       particle location in degrees [lon,lat]
-     * @return
      */
     public static double[] distanceMetresToDegrees2(double[] distanceMetres, double[] location) {
         double[] distanceDegrees = new double[2];
