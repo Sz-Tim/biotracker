@@ -254,14 +254,11 @@ public class Particle {
     }
 
     /**
-     * Set depth of particle with check against local depth
-     *
-     * @param depth          (this is a negative value)
-     * @param localDepth (this is a positive value)
+     * Set depth of particle with check against maximum allowed depth
      */
-    public void setDepth(double depth, double localDepth) {
-        if (depth > localDepth) {
-            depth = localDepth;
+    public void setDepth(double depth, double maxDepth) {
+        if (depth > maxDepth) {
+            depth = maxDepth;
         }
         if (depth < 0) {
             depth = 0;

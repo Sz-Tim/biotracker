@@ -63,6 +63,7 @@ public class RunProperties {
             vertSwimSpeedNaupliusMean, vertSwimSpeedNaupliusStd,
             salinityThreshold,
             startDepth, // Particle initiation depth
+            maxDepth, // maximum particle depth
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
     public RunProperties(String filename) {
@@ -131,13 +132,14 @@ public class RunProperties {
         duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
         dt = Double.parseDouble(properties.getProperty("dt", "3600"));
         verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
+        fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
+        maxDepth = Double.parseDouble(properties.getProperty("maxDepth", "10000"));
 
         // Release
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
         seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
-        fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
         nparts = Integer.parseInt(properties.getProperty("nparts", "5"));

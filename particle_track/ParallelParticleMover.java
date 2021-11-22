@@ -218,8 +218,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             if (rp.verticalDynamics) {
                 double newDepth = part.getDepth() + displacement[2];
+                double maxAllowedDepth = m.getDepthUvnode()[elemPart] < rp.maxDepth ? m.getDepthUvnode()[elemPart] : rp.maxDepth;
                 part.addZ(Math.abs(displacement[2]));
-                part.setDepth(newDepth, m.getDepthUvnode()[elemPart]);
+                part.setDepth(newDepth, maxAllowedDepth);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
 
