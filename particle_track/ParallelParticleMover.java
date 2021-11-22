@@ -122,12 +122,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Vertical diffusion and salinity
-            double KmBelow;
-            double KmAbove;
-            double KmGradient = 0; // positive gradient = more turbulent below = particle gets pushed deeper
-            double Km_z = rp.D_hVert;
+            double K_below;
+            double K_above;
+            double K_gradient = 0; // positive gradient = more turbulent below = particle gets pushed deeper
+            double K_z = rp.D_hVert;
             float[][] nearestLevelsAdj;
-            double Km_zAdj = rp.D_hVert;
+            double K_zAdj = rp.D_hVert;
             double depthAdj;
 
             if (rp.fixDepth) {
@@ -135,22 +135,22 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
                 if (rp.variableDiffusion) {
-                    KmBelow = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], elemPart, hour, "km", rp);
-                    KmAbove = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], elemPart, hour, "km", rp);
+                    K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], elemPart, hour, "k", rp);
+                    K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], elemPart, hour, "k", rp);
                     if (nearestLevels[0][1] == nearestLevels[1][1]) {
-                        KmGradient = 0;
+                        K_gradient = 0;
                     } else {
-                        KmGradient = (KmBelow - KmAbove) / (nearestLevels[0][1] - nearestLevels[1][1]); // positive gradient = more turbulent below = particle gets pushed deeper
+                        K_gradient = (K_below - K_above) / (nearestLevels[0][1] - nearestLevels[1][1]); // positive gradient = more turbulent below = particle gets pushed deeper
                     }
-                    Km_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "km", rp, nearestLevels);
-                    depthAdj = part.getDepth() + subStepDt * KmGradient / 2; // = (z + D_hVertDz/2 * dt) following Visser 1997
+                    K_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "k", rp, nearestLevels);
+                    depthAdj = part.getDepth() + subStepDt * K_gradient / 2; // = (z + K_gradient/2 * dt) following Visser 1997
                     nearestLevelsAdj = Mesh.findNearestSigmas(depthAdj, m.getSiglev(), m.getDepthUvnode()[elemPart]);
-                    Km_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "km", rp, nearestLevelsAdj);
-                    if (Km_z > 0.1) { // following Johnsen et al 2016
-                        Km_z = 0.1;
+                    K_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "k", rp, nearestLevelsAdj);
+                    if (K_z > 0.1) { // following Johnsen et al 2016
+                        K_z = 0.1;
                     }
-                    if (Km_zAdj > 0.1) {
-                        Km_zAdj = 0.1;
+                    if (K_zAdj > 0.1) {
+                        K_zAdj = 0.1;
                     }
                 }
 
@@ -159,7 +159,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                 }
                 if (part.getStatus()<3) {
-                    if (localSalinity < rp.salinityThreshold || Km_z > Math.abs(rp.vertSwimSpeedMean)) { // TODO: Is localKm the correct measure of turbulence?
+                    if (localSalinity < rp.salinityThreshold ||
+                            K_z > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) { // TODO: Is localKm the correct measure of turbulence?
                         activeMovement[2] = part.sink(rp);
                         sink++;
                     } else if (rp.swimLightLevel) {
@@ -192,7 +193,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             if (rp.diffusion) {
-                diffusion = part.diffuse(rp, KmGradient, Km_zAdj, subStepDt, "uniform");
+                diffusion = part.diffuse(rp, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
             for (int i = 0; i < nDims; i++) {

@@ -59,6 +59,8 @@ public class RunProperties {
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             vertSwimSpeedMean, vertSwimSpeedStd,
+            vertSwimSpeedCopepodidMean, vertSwimSpeedCopepodidStd,
+            vertSwimSpeedNaupliusMean, vertSwimSpeedNaupliusStd,
             salinityThreshold,
             startDepth, // Particle initiation depth
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
@@ -160,6 +162,10 @@ public class RunProperties {
         swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
         vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean", "0"));
         vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd", "0"));
+        vertSwimSpeedCopepodidMean = Double.parseDouble(properties.getProperty("vertSwimSpeedCopepodidMean", "" + vertSwimSpeedMean));
+        vertSwimSpeedCopepodidStd = Double.parseDouble(properties.getProperty("vertSwimSpeedCopepodidStd", "" + vertSwimSpeedStd));
+        vertSwimSpeedNaupliusMean = Double.parseDouble(properties.getProperty("vertSwimSpeedNaupliusMean", "" + vertSwimSpeedMean));
+        vertSwimSpeedNaupliusStd = Double.parseDouble(properties.getProperty("vertSwimSpeedNaupliusStd", "" + vertSwimSpeedStd));
         sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean", "0"));
         sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd", "0"));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
