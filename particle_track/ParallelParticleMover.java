@@ -160,7 +160,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }
                 if (part.getStatus()<3) {
                     if (localSalinity < rp.salinityThreshold ||
-                            K_z > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) { // TODO: Is localKm the correct measure of turbulence?
+                            K_z > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
                         activeMovement[2] = part.sink(rp);
                         sink++;
                     } else if (rp.swimLightLevel) {

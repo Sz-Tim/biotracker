@@ -18,7 +18,7 @@ public class HydroField {
     private float[][][] s;  // salinity [time][sigLay][node]
     private float[][][] t;  // temperature [time][sigLay][node]
     private float[][] zeta;  // zeta = temporally varying sea surface height above geoid [time][node]
-    private float[][][] k;  // turbulent eddy viscosity for scalars [time][sigLev][node] -- kh, following Phil Gillibrand's unptrack
+    private float[][][] k;  // turbulent eddy viscosity for momentum [time][sigLev][node] -- Km in FVCOM
     private float[][] light;  // shortwave radiation at surface [time][node]
 
     /**

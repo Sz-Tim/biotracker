@@ -459,7 +459,7 @@ public class Particle_track {
                     hydroFields.clear();
                     try {
                         System.out.println("Reading file " + currentHour); // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "short_wave"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
                         // Normal "forwards time"
                         if (!rp.backwards) {
