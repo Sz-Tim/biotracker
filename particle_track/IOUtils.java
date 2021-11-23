@@ -38,9 +38,10 @@ public class IOUtils {
     /**
      * Count the lines in a file, in order to read files of unknown length
      */
+    @SuppressWarnings("StatementWithEmptyBody")
     public static int countLines(File aFile) {
         try (LineNumberReader reader = new LineNumberReader(new FileReader(aFile))) {
-            //while ((reader.readLine()) != null) ;
+            while ((reader.readLine()) != null) ;
             return reader.getLineNumber();
         } catch (Exception ex) {
             return -1;
