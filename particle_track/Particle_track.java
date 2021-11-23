@@ -157,10 +157,6 @@ public class Particle_track {
         // Final setup bits
         // --------------------------------------------------------------------------------------
         System.out.println("Starting time loop");
-        int[] searchCounts = new int[5];
-        double[] minMaxDistTrav = new double[2];
-        minMaxDistTrav[0] = 10_000_000;
-        minMaxDistTrav[1] = 0;
 
         double startDensity = 1.0;
         double[] dailyDensities = new double[0];
@@ -292,7 +288,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime, today));
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -304,7 +300,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, searchCounts, minMaxDistTrav, isDaytime, today);
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today);
                             }
                         }
 
@@ -385,10 +381,6 @@ public class Particle_track {
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
             IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp);
-
-
-            System.out.printf("\nelement search counts: %d %d %d %d %d\n", searchCounts[0], searchCounts[1], searchCounts[2], searchCounts[3], searchCounts[4]);
-            System.out.printf("transport distances: min = %.4e, max = %.4e\n", minMaxDistTrav[0], minMaxDistTrav[1]);
 
             executorService.shutdownNow();
         } catch (Exception e) {

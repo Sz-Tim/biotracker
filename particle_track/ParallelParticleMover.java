@@ -24,8 +24,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final List<Mesh> meshes;
     private final List<HydroField> hydroFields;
     private final List<HabitatSite> habitatEnd;
-    private final int[] searchCounts;
-    private final double[] minMaxDistTrav;
     private final boolean isDaytime;
     private final String currentDate;
 
@@ -35,8 +33,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  List<HydroField> hydroFields,
                                  List<HabitatSite> habitatEnd,
                                  int[] allElems,
-                                 int[] searchCounts,
-                                 double[] minMaxDistTrav,
                                  boolean isDaytime, String currentDate) {
         this.particles = particles;
         this.elapsedHours = elapsedHours;
@@ -48,8 +44,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.hydroFields = hydroFields;
         this.allElems = allElems;
         this.habitatEnd = habitatEnd;
-        this.searchCounts = searchCounts;
-        this.minMaxDistTrav = minMaxDistTrav;
         this.isDaytime = isDaytime;
         this.currentDate = currentDate;
     }
@@ -57,8 +51,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
-            move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems, searchCounts,
-                    minMaxDistTrav, isDaytime, currentDate);
+            move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems,
+                    isDaytime, currentDate);
         }
         return new ArrayList<>();
     }
@@ -74,8 +68,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             List<HydroField> hydroFields,
                             List<HabitatSite> habitatEnd,
                             int[] allElems,
-                            int[] searchCounts,
-                            double[] minMaxDistTrav,
                             boolean isDaytime, String currentDate) {
 
         Mesh m = meshes.get(part.getMesh());
