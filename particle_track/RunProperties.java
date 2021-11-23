@@ -40,7 +40,9 @@ public class RunProperties {
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp;
 
-    int start_ymd, end_ymd, numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
+    ISO_datestr start_ymd, end_ymd;
+
+    int numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
             releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
@@ -108,19 +110,19 @@ public class RunProperties {
         verboseSetUp = Boolean.parseBoolean(properties.getProperty("verboseSetUp", "true"));
 
         // Dates
-        start_ymd = Integer.parseInt(properties.getProperty("start_ymd", "20180101"));
+        start_ymd = new ISO_datestr(properties.getProperty("start_ymd", "20180101"));
         numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays", "0"));
         if (numberOfDays > 0) {
-            int[] startDate = ISO_datestr.dateIntParse(start_ymd);
-            ISO_datestr tempIsoDate = new ISO_datestr(startDate[0], startDate[1], startDate[2]);
+            ISO_datestr tempIsoDate = new ISO_datestr(properties.getProperty("start_ymd", "20180101"));
             for (int i = 1; i < numberOfDays; i++) {
                 tempIsoDate.addDay();
             }
-            end_ymd = Integer.parseInt(tempIsoDate.getDateStr());
+            end_ymd = new ISO_datestr(tempIsoDate);
         } else {
-            end_ymd = Integer.parseInt(properties.getProperty("end_ymd", "20180102"));
+            end_ymd = new ISO_datestr(properties.getProperty("end_ymd", "20180102"));
+            numberOfDays = end_ymd.getDateNum() - start_ymd.getDateNum() + 1;
         }
-        if (end_ymd < start_ymd) {
+        if (start_ymd.isLaterThan(end_ymd)) {
             System.err.println("***** End date before start date! *****");
             System.exit(1);
         }

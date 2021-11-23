@@ -31,6 +31,13 @@ public class ISO_datestr {
         monthDays[1][1] = this.isLeapYear() ? 29 : 28;
     }
 
+    public ISO_datestr(ISO_datestr datestr) {
+        this.year = datestr.getYear();
+        this.month = datestr.getMonth();
+        this.day = datestr.getDay();
+        monthDays[1][1] = this.isLeapYear() ? 29 : 28;
+    }
+
     public String getDateStr() {
         return String.format("%04d", this.year) + String.format("%02d", this.month) + String.format("%02d", this.day);
     }
@@ -132,6 +139,10 @@ public class ISO_datestr {
         return this.year % 4 == 0;
     }
 
+    public boolean isLaterThan(ISO_datestr dateCompare) {
+        return this.getDateNum() > dateCompare.getDateNum();
+    }
+
     /**
      * work out the date from an integer in format YYYYMMDD - Mike Bedington
      * method
@@ -145,6 +156,9 @@ public class ISO_datestr {
         int startDay = (int) start_ymd_mod;
 
         return new int[]{startDay, startMonth, startYear};
+    }
+    public static int[] dateIntParse(ISO_datestr datestr) {
+        return new int[]{datestr.getDay(), datestr.getMonth(), datestr.getYear()};
     }
 
     @Override

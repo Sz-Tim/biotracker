@@ -42,10 +42,8 @@ public class Particle_track {
             System.exit(1);
         }
 
-        int[] startDate = ISO_datestr.dateIntParse(rp.start_ymd);
-        ISO_datestr currentIsoDate = new ISO_datestr(startDate[0], startDate[1], startDate[2]);
-        int[] endDate = ISO_datestr.dateIntParse(rp.end_ymd);
-        ISO_datestr endIsoDate = new ISO_datestr(endDate[0], endDate[1], endDate[2]);
+        ISO_datestr currentIsoDate = new ISO_datestr(rp.start_ymd);
+        ISO_datestr endIsoDate = new ISO_datestr(rp.end_ymd);
 
         int numberOfDays = endIsoDate.getDateNum() - currentIsoDate.getDateNum() + 1;
 
@@ -57,8 +55,8 @@ public class Particle_track {
         System.out.printf("hydromod dt (s)    = %f\n", rp.dt);
         System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile1);
         System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
-        System.out.printf("firstfile          = %d\n", rp.start_ymd);
-        System.out.printf("lastfile           = %d\n", rp.end_ymd);
+        System.out.printf("firstfile          = %s\n", rp.start_ymd.getDateStr());
+        System.out.printf("lastfile           = %s\n", rp.end_ymd.getDateStr());
         System.out.printf("Simulated dur. (d) = %f\n", (double) numberOfDays);
         System.out.printf("Simulated dur. (s) = %f\n", (double) numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
