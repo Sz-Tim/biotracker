@@ -137,13 +137,9 @@ public class Particle_track {
                 System.err.println(missing);
             }
             System.exit(1);
+        } else {
+            System.out.println(": All found");
         }
-
-        // --------------------------------------------------------------------------------------
-        // Set up times at which to print particle locations to file 
-        // --------------------------------------------------------------------------------------
-        int simLengthHours = numberOfDays * 24;
-        System.out.println("simLengthHours " + simLengthHours);
 
         // --------------------------------------------------------------------------------------
         // Load daylight hours
@@ -157,8 +153,6 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
-        System.out.println("Starting time loop");
-
         double startDensity = 1.0;
         double[] dailyDensities = new double[0];
         if (!rp.seasonalDensityPath.isEmpty()) {
@@ -258,12 +252,11 @@ public class Particle_track {
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
                             rp.releaseScenario == 1 ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
-                        System.out.printf("  Release attempt: Release scenario %d, Time: %.1f, Density: %.1f, %dD movement, Total particles: %d \n",
-                                rp.releaseScenario, elapsedHours, startDensity, rp.verticalDynamics ? 3 : 2, numParticlesCreated);
+                        System.out.printf("  %dD movement, release density: %.1f\n", rp.verticalDynamics ? 3 : 2, startDensity);
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
-                        System.out.printf("  %d new particles (currently active: %d)\n", newParts.size(), particles.size());
+                        System.out.printf("  %,d new particles (%,d active of %,d total)\n", newParts.size(), particles.size(), numParticlesCreated);
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario == 0) {
                             allowRelease = false;

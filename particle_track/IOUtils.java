@@ -1054,7 +1054,7 @@ public class IOUtils {
     public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());
-        System.out.println("Checking files from " + startDate.getDateStr() + " to " + endDate.getDateStr());
+        System.out.print("Checking hydro files from " + startDate.getDateStr() + " to " + endDate.getDateStr());
         for (int i = 0; i < numberOfDays; i++) {
             List<File> checkFile = (List<File>) FileUtils.listFiles(
                     new File(rp.datadir + rp.datadirPrefix + checkDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),

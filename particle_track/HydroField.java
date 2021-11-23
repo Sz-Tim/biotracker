@@ -274,7 +274,8 @@ public class HydroField {
             }
         }
 
-        System.out.println("Combined files to single arrays (e.g. velocity dimensions " + u.length + " " + u[1].length + " " + u[0][1].length + "; sum = " + sumU + ")");
+        System.out.printf("Combined arrays: %d hours, %d layers, %d levels, %d elements, %d nodes\n",
+                u.length, u[1].length, k[1].length, u[0][1].length, k[0][1].length);
     }
 
     public float[][][] getU() {
