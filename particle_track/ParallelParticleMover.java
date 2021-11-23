@@ -228,7 +228,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[1] = part.getLocation()[1] - posInit[1];
             dActual[2] = part.getDepth() - posInit[2];
 
-            if (part.getID() % 2000 == 0) {
+            if (part.getID() % (rp.nparts * rp.numberOfDays * 20) == 0) {
                 IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, dActual, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
