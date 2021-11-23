@@ -50,21 +50,22 @@ public class Particle_track {
         // Print all main arguments
         System.out.println("-----------------------------------------------------------");
         System.out.printf("Location           = %s\n", rp.location);
-        System.out.printf("Habitat            = %s\n", rp.habitat);
         System.out.printf("N_parts/site       = %d\n", rp.nparts);
-        System.out.printf("hydromod dt (s)    = %f\n", rp.dt);
+        System.out.printf("hydromod dt (s)    = %.3f\n", rp.dt);
         System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile1);
         System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
-        System.out.printf("firstfile          = %s\n", rp.start_ymd.getDateStr());
-        System.out.printf("lastfile           = %s\n", rp.end_ymd.getDateStr());
-        System.out.printf("Simulated dur. (d) = %f\n", (double) numberOfDays);
-        System.out.printf("Simulated dur. (s) = %f\n", (double) numberOfDays * 86400);
+        System.out.printf("firstfile          = %s\n", rp.start_ymd);
+        System.out.printf("lastfile           = %s\n", rp.end_ymd);
+        System.out.printf("Simulated dur. (d) = %d\n", numberOfDays);
+        System.out.printf("Simulated dur. (s) = %d\n", numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
+        System.out.printf("Starting densities = %s\n", rp.seasonalDensityPath.isEmpty() ? "constant" : "seasonal");
         System.out.printf("Vertical dynamics  = %b\n", rp.verticalDynamics);
-        System.out.printf("Viable time (h)    = %f\n", rp.viabletime);
-        System.out.printf("Viable time (d)    = %f\n", rp.viabletime / 24.0);
+        System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
+        System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
         System.out.printf("Threshold distance = %d\n", rp.thresh);
-        System.out.printf("Diffusion D_h      = %f (diffusion: %s)\n", rp.D_h, rp.diffusion);
+        System.out.printf("Diffusion D_h      = %.3f (diffusion: %s)\n", rp.D_h, rp.diffusion);
+        System.out.printf("Diffusion D_v      = %s\n", rp.variableDiffusion ? "variable" : "" + rp.D_hVert);
         System.out.printf("Coord ref          = %s\n", rp.coordRef);
         System.out.println("-----------------------------------------------------------");
 
@@ -211,7 +212,6 @@ public class Particle_track {
                 boolean isLastDay = (fnum == numberOfDays - 1) && rp.duplicateLastDay;
 
                 String today = currentIsoDate.getDateStr();
-                System.out.println(today);
                 if (rp.recordLocations) {
                     IOUtils.printFileHeader(particleRestartHeader, "locations_" + today + ".dat");
                 }
@@ -225,7 +225,7 @@ public class Particle_track {
 
                 long splitTime = System.currentTimeMillis();
                 System.out.printf("\n------ Day %d (%s) - Stepcount %d (%.1f hrs) ------ \n",
-                        fnum + 1, currentIsoDate.getDateStr(), stepcount, elapsedHours);
+                        fnum + 1, currentIsoDate, stepcount, elapsedHours);
                 System.out.println("Elapsed time (s) = " + (splitTime - startTime) / 1000.0);
                 System.out.println("Last 24hr time (s) = " + (splitTime - currTime) / 1000.0);
                 currTime = System.currentTimeMillis();
@@ -250,22 +250,20 @@ public class Particle_track {
 
                     // Read new hydrodynamic fields?
                     if (currentHour == 0) {
-                        // Get new hydro fields
                         hydroFields.clear();
                         hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
                     }
 
-                    // Create new particles, if releases are scheduled hourly, or if release is scheduled for this
-                    // exact hour
+                    // Create new particles, if releases are scheduled hourly, or if release is scheduled for this hour
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
                             rp.releaseScenario == 1 ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
-                        System.out.printf("  Release attempt: Scenario %d, Time %.1f, Allowed=%s, Total particles: %d \n",
-                                rp.releaseScenario, elapsedHours, allowRelease, numParticlesCreated);
+                        System.out.printf("  Release attempt: Release scenario %d, Time: %.1f, Density: %.1f, %dD movement, Total particles: %d \n",
+                                rp.releaseScenario, elapsedHours, startDensity, rp.verticalDynamics ? 3 : 2, numParticlesCreated);
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
-                        System.out.printf("  %d new particles with starting density %4.3f (total particles: %d)\n", newParts.size(), newParts.get(0).getDensity(), particles.size());
+                        System.out.printf("  %d new particles (currently active: %d)\n", newParts.size(), particles.size());
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario == 0) {
                             allowRelease = false;
@@ -320,10 +318,8 @@ public class Particle_track {
                                 IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
                             }
                             // Add arrival to connectivity file
-                            int sourceIndex = part.getStartIndex();
-                            String destSite = part.getLastArrival();
-                            int destIndex = siteNames.indexOf(destSite);
-                            connectivity[sourceIndex][destIndex] += part.getDensity();
+                            int destIndex = siteNames.indexOf(part.getLastArrival());
+                            connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
                             // Reset ability to settle
                             part.setSettledThisHour(false);

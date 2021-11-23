@@ -163,6 +163,6 @@ public class ISO_datestr {
 
     @Override
     public String toString() {
-        return this.year + "-" + this.month + "-" + this.day;
+        return this.year + "-" + (this.month < 10 ? "0" : "") + this.month + "-" + (this.day < 10 ? "0" : "") + this.day;
     }
 }
