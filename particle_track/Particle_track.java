@@ -252,7 +252,7 @@ public class Particle_track {
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
                             rp.releaseScenario == 1 ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
-                        System.out.printf("  %dD movement, release density: %.1f\n", rp.verticalDynamics ? 3 : 2, startDensity);
+                        System.out.printf("  %dD movement, release density: %.3f\n", rp.verticalDynamics ? 3 : 2, startDensity);
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
