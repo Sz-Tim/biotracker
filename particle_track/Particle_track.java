@@ -36,11 +36,7 @@ public class Particle_track {
         System.out.println(System.getProperty("user.dir"));
 
         RunProperties rp = new RunProperties(args[0]); // first (and only?) cmd line arg is properties filename e.g. model_setup.properties
-
-        if (rp.verticalDynamics && !rp.mesh1Type.equals("FVCOM")) {
-            System.err.println("Error: Vertical dynamics are only implemented for FVCOM grids.");
-            System.exit(1);
-        }
+        rp.checkForConflictingProperties();
 
         ISO_datestr currentIsoDate = new ISO_datestr(rp.start_ymd);
         ISO_datestr endIsoDate = new ISO_datestr(rp.end_ymd);

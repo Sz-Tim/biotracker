@@ -122,10 +122,6 @@ public class RunProperties {
             end_ymd = new ISO_datestr(properties.getProperty("end_ymd", "20180102"));
             numberOfDays = end_ymd.getDateNum() - start_ymd.getDateNum() + 1;
         }
-        if (start_ymd.isLaterThan(end_ymd)) {
-            System.err.println("***** End date before start date! *****");
-            System.exit(1);
-        }
 
         // Run parameters
         backwards = Boolean.parseBoolean(properties.getProperty("backwards", "false"));
@@ -203,6 +199,33 @@ public class RunProperties {
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
 
         properties.list(System.out);
+    }
+
+
+    public void checkForConflictingProperties() {
+        boolean conflict = false;
+        String conflictingProperties = "Error: Conflicting properties\n";
+        if (verticalDynamics && fixDepth) {
+            conflict = true;
+            conflictingProperties += "  verticalDynamics && fixDepth\n";
+        }
+        if (variableDiffusion && !diffusion) {
+            conflict = true;
+            conflictingProperties += "  variableDiffusion && !diffusion\n";
+        }
+        if (start_ymd.isLaterThan(end_ymd)) {
+            conflict = true;
+            conflictingProperties += "  start_ymd.isLaterThan(end_ymd)\n";
+        }
+        if (verticalDynamics && !mesh1Type.equals("FVCOM")) {
+            conflict = true;
+            conflictingProperties += "  verticalDynamics && !mesh1Type.equals(\"FVCOM\")\n";
+        }
+
+        if(conflict) {
+            System.err.println(conflictingProperties);
+            System.exit(1);
+        }
     }
 }
 
