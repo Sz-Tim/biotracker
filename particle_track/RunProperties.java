@@ -59,10 +59,12 @@ public class RunProperties {
             mortalityRate, // Hourly mortality rate of particles
             maxParticleAge, // Maximum age for particles. Set to <=0 to ignore.
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
-            sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             vertSwimSpeedMean, vertSwimSpeedStd,
             vertSwimSpeedCopepodidMean, vertSwimSpeedCopepodidStd,
             vertSwimSpeedNaupliusMean, vertSwimSpeedNaupliusStd,
+            sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
+            sinkingRateCopepodidMean, sinkingRateCopepodidStd,
+            sinkingRateNaupliusMean, sinkingRateNaupliusStd,
             salinityThreshold,
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
@@ -168,6 +170,10 @@ public class RunProperties {
         vertSwimSpeedNaupliusStd = Double.parseDouble(properties.getProperty("vertSwimSpeedNaupliusStd", "" + vertSwimSpeedStd));
         sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean", "0"));
         sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd", "0"));
+        sinkingRateCopepodidMean = Double.parseDouble(properties.getProperty("sinkingRateCopepodidMean", "" + sinkingRateMean));
+        sinkingRateCopepodidStd = Double.parseDouble(properties.getProperty("sinkingRateCopepodidStd", "" + sinkingRateStd));
+        sinkingRateNaupliusMean = Double.parseDouble(properties.getProperty("sinkingRateNaupliusMean", "" + sinkingRateMean));
+        sinkingRateNaupliusStd = Double.parseDouble(properties.getProperty("sinkingRateNaupliusStd", "" + sinkingRateStd));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
 
         // Demographics

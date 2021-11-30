@@ -443,8 +443,10 @@ public class Particle {
     }
 
     public double sink(RunProperties rp) {
+        double sinkSpeedMean = this.isViable() ? rp.sinkingRateCopepodidMean : rp.sinkingRateNaupliusMean;
+        double sinkSpeedStd = this.isViable() ? rp.sinkingRateCopepodidStd : rp.sinkingRateNaupliusStd;
         int forceDownward = rp.sinkingRateMean < 0 ? -1 : 1;
-        return forceDownward * rp.sinkingRateMean + rp.sinkingRateStd * ThreadLocalRandom.current().nextGaussian();
+        return forceDownward * sinkSpeedMean + sinkSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
 
     public double swim(RunProperties rp) {
