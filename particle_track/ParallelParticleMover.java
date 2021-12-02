@@ -149,6 +149,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 double localSalinity = 35;
                 if (rp.salinityThreshold < 35) {
                     localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
+                    if (rp.salinityMort) {
+                        part.setMortRate(localSalinity);
+                    }
                 }
                 if (part.getStatus()<3) {
                     if (localSalinity < rp.salinityThreshold ||
