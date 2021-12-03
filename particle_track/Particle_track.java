@@ -86,13 +86,6 @@ public class Particle_track {
         System.out.println("Creating start sites");
         habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
 
-        FileWriter fstream = new FileWriter("startSitesUsed.dat", false);
-        PrintWriter out = new PrintWriter(fstream);
-        for (HabitatSite habitatSite : habitat) {
-            out.println(habitatSite.toString());
-        }
-        out.close();
-
         // Record the names for reference later when calculating psteps
         List<String> siteNames = new ArrayList<>();
         for (HabitatSite habitatSite : habitat) {
@@ -244,6 +237,22 @@ public class Particle_track {
                         hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
                     }
 
+                    for (HabitatSite site: habitat) {
+                        int siteElem = site.getContainingFVCOMElem();
+                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(0).getSiglay(), (float) site.getDepth())[0][0];
+                        double[][] currentConditions = new double[nLayers][4];
+                        double[] siteLoc = new double[2];
+                        siteLoc[0] = site.getLocation()[0];
+                        siteLoc[1] = site.getLocation()[1];
+                        for (int i = 0; i < nLayers; i++) {
+                            currentConditions[i][0] = hydroFields.get(0).getU()[currentHour][i][siteElem];
+                            currentConditions[i][1] = hydroFields.get(0).getV()[currentHour][i][siteElem];
+                            currentConditions[i][2] = hydroFields.get(0).getW()[currentHour][i][siteElem];
+                            currentConditions[i][3] = hydroFields.get(0).getAvgFromTrinodes(meshes.get(0), siteLoc, i, siteElem, currentHour, "salinity", rp);
+                            site.addEnvCondition(currentConditions[i]);
+                        }
+                    }
+
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this hour
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
                             rp.releaseScenario == 1 ||
@@ -373,6 +382,14 @@ public class Particle_track {
         } finally {
             executorService.shutdownNow();
         }
+
+        FileWriter fstream = new FileWriter("startSitesUsed.dat", false);
+        PrintWriter out = new PrintWriter(fstream);
+        out.println("site\tx\ty\tdepth\tmesh\tcentroid\telem\tMeshType\tu\tv\tw\tsalinity");
+        for (HabitatSite habitatSite : habitat) {
+            out.println(habitatSite);
+        }
+        out.close();
 
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = " + (endTime - startTime) / 1000.0);

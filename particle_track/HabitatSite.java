@@ -26,11 +26,15 @@ public class HabitatSite {
     private int[] containingROMSElemU;
     private int[] nearestROMSGridPointV;
     private int[] containingROMSElemV;
+    private double[] envConditionSum;
+    private int[] envConditionCount;
 
     public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes, RunProperties rp) {
         this.ID = ID;
         this.xy = new float[]{x, y};
         this.scale = scale;
+        this.envConditionSum = new double[4]; // [u, v, w, salinity]
+        this.envConditionCount = new int[4]; // [u, v, w, salinity]
 
         double[] xy2 = new double[]{this.xy[0], this.xy[1]};
 
@@ -131,7 +135,9 @@ public class HabitatSite {
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI")) {
             details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.depth + "\t"
                     + this.containingMesh + "\t" + this.nearestFVCOMCentroid + "\t" + this.containingFVCOMElem
-                    + "\t" + this.containingMeshType;
+                    + "\t" + this.containingMeshType
+                    + "\t" + this.getAvgEnvCondition()[0] + "\t" + this.getAvgEnvCondition()[1]
+                    + "\t" + this.getAvgEnvCondition()[2] + "\t" + this.getAvgEnvCondition()[3] ;
         } else if (this.containingMeshType.equalsIgnoreCase("ROMS")) {
             details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.containingMesh + " U_grid: ("
                     + this.nearestROMSGridPointU[0] + "," + this.nearestROMSGridPointU[1] + ") ("
@@ -154,6 +160,29 @@ public class HabitatSite {
 
     public double getScale() {
         return this.scale;
+    }
+
+    public double[] getEnvConditionSum() {
+        return this.envConditionSum;
+    }
+
+    public int[] getEnvConditionCount() {
+        return this.envConditionCount;
+    }
+
+    public void addEnvCondition(double[] currentConditions) {
+        for (int i=0; i < this.envConditionSum.length; i++) {
+            this.envConditionSum[i] += currentConditions[i];
+            this.envConditionCount[i] ++;
+        }
+    }
+
+    public double[] getAvgEnvCondition() {
+        double[] avgCondition = new double[this.envConditionSum.length];
+        for (int i=0; i < this.envConditionSum.length; i++) {
+            avgCondition[i] = this.getEnvConditionSum()[i] / this.envConditionCount[i];
+        }
+        return avgCondition;
     }
 
     public int getContainingMesh() {
