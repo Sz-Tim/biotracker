@@ -422,7 +422,7 @@ public class Particle {
      */
     public void setMortRate(double salinity) {
         // estimated 2nd order polynomial fit to Bricknell et al.'s (2006) data
-        this.mortRate = 0.0011 * salinity * salinity - 0.07 * salinity + 1.1439;
+        this.mortRate = 0.0011 * salinity * salinity - 0.07 * salinity + 1.1239;
     }
 
     public void incrementAge(double increment) {
