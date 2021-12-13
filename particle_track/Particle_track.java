@@ -174,8 +174,11 @@ public class Particle_track {
         // Set up array to hold connectivity counts
         float[][] connectivity = new float[habitat.size()][habitat.size()];
 
-        IOUtils.writeMovementsHeader("daytime elapsedHours date hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
-                "movementFile.dat");
+        int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
+        if (rp.recordMovement) {
+            IOUtils.writeMovementsHeader("daytime elapsedHours date hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+                    "movementFile.dat");
+        }
 
         try {
             // --------------------------------------------------------------------------------------
@@ -284,7 +287,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today));
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -296,7 +299,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today);
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity);
                             }
                         }
 
@@ -375,6 +378,9 @@ public class Particle_track {
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
             IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp);
+            if (rp.recordElemActivity) {
+                IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
+            }
 
             executorService.shutdownNow();
         } catch (Exception e) {

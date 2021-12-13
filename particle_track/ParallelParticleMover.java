@@ -26,6 +26,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final List<HabitatSite> habitatEnd;
     private final boolean isDaytime;
     private final String currentDate;
+    private final int[][] elemActivity;
 
     public ParallelParticleMover(List<Particle> particles, double elapsedHours, int hour, int step, double subStepDt,
                                  RunProperties rp,
@@ -33,7 +34,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  List<HydroField> hydroFields,
                                  List<HabitatSite> habitatEnd,
                                  int[] allElems,
-                                 boolean isDaytime, String currentDate) {
+                                 boolean isDaytime, String currentDate, int[][] elemActivity) {
         this.particles = particles;
         this.elapsedHours = elapsedHours;
         this.hour = hour;
@@ -46,13 +47,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.habitatEnd = habitatEnd;
         this.isDaytime = isDaytime;
         this.currentDate = currentDate;
+        this.elemActivity = elemActivity;
     }
 
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems,
-                    isDaytime, currentDate);
+                    isDaytime, currentDate, elemActivity);
         }
         return new ArrayList<>();
     }
@@ -68,7 +70,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             List<HydroField> hydroFields,
                             List<HabitatSite> habitatEnd,
                             int[] allElems,
-                            boolean isDaytime, String currentDate) {
+                            boolean isDaytime, String currentDate, int[][] elemActivity) {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
@@ -155,18 +157,25 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }
 
                 if (part.getStatus()<3) {
+                    int activity = 2; // 0 = sink; 1 = swim; 2 = float
                     if (localSalinity < rp.salinityThreshold ||
                             Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
                         activeMovement[2] = part.sink(rp);
+                        activity = 0;
                         sink++;
                     } else if (rp.swimLightLevel) {
                         activeMovement[2] = part.swim(rp, m, hf, hour);
                         if (Math.abs(activeMovement[2]) > 1e-10) {
+                            activity = 1;
                             swim++;
                         }
                     } else if (isDaytime) {
                         activeMovement[2] = part.swim(rp);
+                        activity = 1;
                         swim++;
+                    }
+                    if (rp.recordElemActivity) {
+                        elemActivity[elemPart][activity]++;
                     }
                 }
             }
@@ -224,7 +233,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[1] = part.getLocation()[1] - posInit[1];
             dActual[2] = part.getDepth() - posInit[2];
 
-            if (part.getID() % (rp.nparts * rp.numberOfDays * 20) == 0) {
+            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 20) == 0)) {
                 IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, dActual, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
             }
 
