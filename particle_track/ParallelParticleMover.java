@@ -205,7 +205,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
             }
 
-
             if (rp.coordRef.equalsIgnoreCase("WGS84")) {
                 double[] dXY2 = distanceMetresToDegrees2(new double[]{displacement[0], displacement[1]}, part.getLocation());
                 displacement[0] = dXY2[0];
@@ -311,10 +310,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         double latRad = 2 * Math.PI * location[1] / 360.0;
 
         // Calculate the length of a degree of latitude and longitude in meters
-        double latlen = m1 + (m2 * Math.cos(2 * latRad)) + (m3 * Math.cos(4 * latRad)) +
-                (m4 * Math.cos(6 * latRad));
-        double longlen = (p1 * Math.cos(latRad)) + (p2 * Math.cos(3 * latRad)) +
-                (p3 * Math.cos(5 * latRad));
+        double latlen = m1 + (m2 * Math.cos(2 * latRad)) + (m3 * Math.cos(4 * latRad)) + (m4 * Math.cos(6 * latRad));
+        double longlen = (p1 * Math.cos(latRad)) + (p2 * Math.cos(3 * latRad)) + (p3 * Math.cos(5 * latRad));
 
         distanceDegrees[0] = distanceMetres[0] / longlen;
         distanceDegrees[1] = distanceMetres[1] / latlen;
