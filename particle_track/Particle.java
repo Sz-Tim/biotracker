@@ -420,7 +420,7 @@ public class Particle {
     /**
      * Sets the mortality rate for the particle packet based upon local salinity
      */
-    public void setMortRate(double salinity) {
+    public void setMortRateSalinity(double salinity) {
         // estimated 2nd order polynomial fit to Bricknell et al.'s (2006) data
         this.mortRate = 0.0011 * salinity * salinity - 0.07 * salinity + 1.1239;
     }

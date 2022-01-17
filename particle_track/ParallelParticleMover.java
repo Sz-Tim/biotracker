@@ -128,7 +128,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (rp.salinityThreshold < 35) {
                 localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                 if (rp.salinityMort) {
-                    part.setMortRate(localSalinity);
+                    part.setMortRateSalinity(localSalinity);
                 }
             }
 
@@ -154,6 +154,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     if (K_zAdj > 0.1) {
                         K_zAdj = 0.1;
                     }
+                    // TODO: Set mortality for HABS if turbulence / shear is to high
                 }
 
                 if (part.getStatus()<3) {
