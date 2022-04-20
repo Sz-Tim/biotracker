@@ -22,13 +22,14 @@ public class RunProperties {
             location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
             seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
-            daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
+            daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
+            debug3D; // 'activity', 'currents', or 'diffusion' -- turns OFF specified process
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             parallel, // use multiple cores to speed up run?
             diffusion, variableDiffusion, // include random walk, use diffusion parameter from hydro output?
-            salinityMort, // mortality calculated based on local salinity (sea lice - doesn't presently do anything)?
+            salinityMort, // mortality calculated based on local salinity
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, fixDepth, // set particle depth at initiation?
             verticalDynamics, // should vertical dynamics be included? Turns on velocities, diffusion, and swimming behaviour; ONLY implemented for FVCOM
@@ -135,6 +136,7 @@ public class RunProperties {
         verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         maxDepth = Double.parseDouble(properties.getProperty("maxDepth", "10000"));
+        debug3D = properties.getProperty("debug3D", "");
 
         // Release
         restartParticles = properties.getProperty("restartParticles", "");

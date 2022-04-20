@@ -176,7 +176,7 @@ public class Particle_track {
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         if (rp.recordMovement) {
-            IOUtils.writeMovementsHeader("daytime elapsedHours date hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+            IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
                     "movementFile.dat");
         }
 
@@ -308,7 +308,7 @@ public class Particle_track {
                     }
 
                     if (rp.recordLocations) {
-                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp);
+                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
                     }
 
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
@@ -333,7 +333,7 @@ public class Particle_track {
                     }
 
                     // Write Psteps
-                    if (stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
+                    if (rp.recordPsteps && stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
                         // Trim arrays to non-zero rows and write to file
                         float[][] psImmTrim = null;
                         try {
@@ -353,7 +353,7 @@ public class Particle_track {
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
                     }
 
-                    if (stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
+                    if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
                         IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
                         connectivity = new float[habitat.size()][habitat.size()];
                     }
@@ -377,7 +377,7 @@ public class Particle_track {
             // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
-            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp);
+            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
             if (rp.recordElemActivity) {
                 IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
             }
