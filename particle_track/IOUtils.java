@@ -684,38 +684,35 @@ public class IOUtils {
             System.err.println("Error: " + e.getMessage());
         }
     }
-    public static void writeMovements(Particle part, boolean isDaytime, double elapsedHours, String currentDate, int currentHour, int step, double[] displacement, double[] advectStep, double[] activeMovement, double[] diffusion, int sink, int swim, String filename, boolean append) {
+    // ID date hour step startLocation startDate age density x y z layer status degreeDays sink swim temp salinity mortality dX dY dZ
+    public static void writeMovements(Particle part, String currentDate, int currentHour, int step,
+                                      int sink, int swim, double temperature, double temperatureSurface, double salinity, double[] displacement,
+                                      String filename, boolean append) {
         try {
             // Create file
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%b %.5f %s %d %d %d %s %.1f %.4f %.4f %.4f %d %d %.4f %d %d",
-                    isDaytime,
-                    elapsedHours,
+            out.printf("%d %s %d %d %s %.4f %.4f %.1f %.1f %.4f %d %d %.4f %d %d %.4f %.4f %.4f %.4f",
+                    part.getID(),
                     currentDate,
                     currentHour,
                     step,
-                    part.getID(),
                     part.getStartDate().getDateStr(),
                     part.getAge(),
+                    part.getDensity(),
                     part.getLocation()[0],
                     part.getLocation()[1],
                     part.getDepth(),
                     part.getDepthLayer(),
                     part.getStatus(),
                     part.getDegreeDays(),
-                    sink, swim
+                    sink, swim,
+                    temperature,
+                    salinity,
+                    part.getMortRate(),
+                    temperatureSurface
                     );
             for (double dim: displacement) {
-                out.printf(" %.7f", dim);
-            }
-            for (double dim: advectStep) {
-                out.printf(" %.7f", dim);
-            }
-            for (double dim: activeMovement) {
-                out.printf(" %.7f", dim);
-            }
-            for (double dim: diffusion) {
                 out.printf(" %.7f", dim);
             }
             out.print("\n");
@@ -903,52 +900,56 @@ public class IOUtils {
     }
 
 
-    public static void particlesToRestartFile(List<Particle> particles, int currentHour, String filename, boolean append, RunProperties rp) {
+    public static void particlesToRestartFile(List<Particle> particles, int currentHour, String filename, boolean append, RunProperties rp, int partSubset) {
         try {
             // Create file 
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
                 if (rp.coordRef.equalsIgnoreCase("WGS84")) {
-                    out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
-                            currentHour,
-                            p.getID(),
-                            p.getStartDate().getDateStr(),
-                            p.getAge(),
-                            p.getStartID(),
-                            p.getLocation()[0],
-                            p.getLocation()[1],
-                            p.getElem(),
-                            p.getStatus(),
-                            p.getDensity(),
-                            p.getMesh(),
-                            p.getDepth(),
-                            p.getDepthLayer(),
-                            p.getDegreeDays(),
-                            p.getxTotal(),
-                            p.getyTotal(),
-                            p.getzTotal()
-                    );
+                    if (p.getID() % partSubset == 0){
+                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                                currentHour,
+                                p.getID(),
+                                p.getStartDate().getDateStr(),
+                                p.getAge(),
+                                p.getStartID(),
+                                p.getLocation()[0],
+                                p.getLocation()[1],
+                                p.getElem(),
+                                p.getStatus(),
+                                p.getDensity(),
+                                p.getMesh(),
+                                p.getDepth(),
+                                p.getDepthLayer(),
+                                p.getDegreeDays(),
+                                p.getxTotal(),
+                                p.getyTotal(),
+                                p.getzTotal()
+                        );
+                    }
                 } else {
-                    out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
-                            currentHour,
-                            p.getID(),
-                            p.getStartDate().getDateStr(),
-                            p.getAge(),
-                            p.getStartID(),
-                            p.getLocation()[0],
-                            p.getLocation()[1],
-                            p.getElem(),
-                            p.getStatus(),
-                            p.getDensity(),
-                            p.getMesh(),
-                            p.getDepth(),
-                            p.getDepthLayer(),
-                            p.getDegreeDays(),
-                            p.getxTotal(),
-                            p.getyTotal(),
-                            p.getzTotal()
-                    );
+                    if (p.getID() % partSubset == 0) {
+                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                                currentHour,
+                                p.getID(),
+                                p.getStartDate().getDateStr(),
+                                p.getAge(),
+                                p.getStartID(),
+                                p.getLocation()[0],
+                                p.getLocation()[1],
+                                p.getElem(),
+                                p.getStatus(),
+                                p.getDensity(),
+                                p.getMesh(),
+                                p.getDepth(),
+                                p.getDepthLayer(),
+                                p.getDegreeDays(),
+                                p.getxTotal(),
+                                p.getyTotal(),
+                                p.getzTotal()
+                        );
+                    }
                 }
             }
 

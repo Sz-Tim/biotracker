@@ -94,6 +94,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[] displacement = {0,0,0};
             int sink = 0;
             int swim = 0;
+            double localTemperature = 12;
+            double localSalinity = 35;
+            double tempSurface = hf.getAvgFromTrinodes(m, part.getLocation(), 1, elemPart, hour, "temp", rp);
 
             // sigma layers
             float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
@@ -106,13 +109,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             if (!rp.readHydroVelocityOnly) {
-                double temperature;
                 if (rp.fixDepth) {
-                    temperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
+                    localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
                 } else {
-                    temperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
+                    localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
                 }
-                part.incrementDegreeDays(temperature, rp);
+                part.incrementDegreeDays(localTemperature, rp);
             }
 
             // Vertical diffusion and salinity
@@ -124,7 +126,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double K_zAdj = rp.D_hVert;
             double depthAdj;
 
-            double localSalinity = 35;
             if (rp.salinityThreshold < 35) {
                 localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                 if (rp.salinityMort) {
@@ -202,6 +203,16 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 diffusion = part.diffuse(rp, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
+            if (rp.debug3D.contains("activity")) {
+                activeMovement[2] = 0;
+            }
+            if (rp.debug3D.contains("currents")) {
+                advectStep[2] = 0;
+            }
+            if (rp.debug3D.contains("diffusion")) {
+                diffusion[2] = 0;
+            }
+
             for (int i = 0; i < nDims; i++) {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
             }
@@ -233,8 +244,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[1] = part.getLocation()[1] - posInit[1];
             dActual[2] = part.getDepth() - posInit[2];
 
-            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 20) == 0)) {
-                IOUtils.writeMovements(part, isDaytime, elapsedHours, currentDate, hour, step, dActual, advectStep, activeMovement, diffusion, sink, swim, "movementFile.dat", true);
+            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 10) == 0)) {  // * 10 = sample of ~485 particles
+                IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.dat", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************

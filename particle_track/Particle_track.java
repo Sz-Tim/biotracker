@@ -176,7 +176,7 @@ public class Particle_track {
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         if (rp.recordMovement) {
-            IOUtils.writeMovementsHeader("daytime elapsedHours date hour step ID startDate age x y z layer status degreeDays sink swim dX dY dZ advectX advectY advectZ activeX activeY activeZ diffuseX diffuseY diffuseZ",
+            IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
                     "movementFile.dat");
         }
 
