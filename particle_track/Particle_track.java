@@ -83,19 +83,19 @@ public class Particle_track {
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
         List<HabitatSite> habitat;
-        System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
-
-        // Record the names for reference later when calculating psteps
-        List<String> siteNames = new ArrayList<>();
-        for (HabitatSite habitatSite : habitat) {
-            siteNames.add(habitatSite.getID());
-        }
-
-        // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd;
-        System.out.println("Creating end sites");
+        System.out.println("Creating start and end sites");
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
         habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, false, meshes, rp);
+
+        List<String> siteStartNames = new ArrayList<>();
+        for (HabitatSite habitatSite : habitat) {
+            siteStartNames.add(habitatSite.getID());
+        }
+        List<String> siteEndNames = new ArrayList<>();
+        for (HabitatSite habitatSite : habitatEnd) {
+            siteEndNames.add(habitatSite.getID());
+        }
 
         // --------------------------------------------------------------------------------------
         // Setup particles
@@ -172,7 +172,7 @@ public class Particle_track {
         float[][] pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
 
         // Set up array to hold connectivity counts
-        float[][] connectivity = new float[habitat.size()][habitat.size()];
+        float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         if (rp.recordMovement) {
@@ -319,7 +319,7 @@ public class Particle_track {
                                 IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
                             }
                             // Add arrival to connectivity file
-                            int destIndex = siteNames.indexOf(part.getLastArrival());
+                            int destIndex = siteEndNames.indexOf(part.getLastArrival()); // TODO: make sure arrival indexes are for siteEnd, not site
                             connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
                             // Reset ability to settle
@@ -355,7 +355,7 @@ public class Particle_track {
 
                     if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
                         IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
-                        connectivity = new float[habitat.size()][habitat.size()];
+                        connectivity = new float[habitat.size()][habitatEnd.size()];
                     }
 
                     // Clean up "dead" (666) and "exited" (66) particles
@@ -541,8 +541,8 @@ public class Particle_track {
 
 
     // calculate a connectivity matrix detailing the 
-    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int npartsPerSite) {
-        double[][] connectMatrix = new double[nStartLocs][nStartLocs];
+    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int nEndLocs, int npartsPerSite) {
+        double[][] connectMatrix = new double[nStartLocs][nEndLocs];
         for (Particle part : particles) {
             for (Arrival arrival : part.getArrivals()) {
                 connectMatrix[arrival.getSourceLocation()][arrival.getArrivalLocation()] += arrival.getArrivalDensity() / npartsPerSite;
