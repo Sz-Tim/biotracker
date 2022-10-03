@@ -67,7 +67,7 @@ public class RunProperties {
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             sinkingRateCopepodidMean, sinkingRateCopepodidStd,
             sinkingRateNaupliusMean, sinkingRateNaupliusStd,
-            salinityThreshold,
+            salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sanvdik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
@@ -178,6 +178,8 @@ public class RunProperties {
         sinkingRateNaupliusMean = Double.parseDouble(properties.getProperty("sinkingRateNaupliusMean", "" + sinkingRateMean));
         sinkingRateNaupliusStd = Double.parseDouble(properties.getProperty("sinkingRateNaupliusStd", "" + sinkingRateStd));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
+        salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
+        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold));
 
         // Demographics
         salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "false"));

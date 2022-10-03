@@ -442,6 +442,17 @@ public class Particle {
         return this.degreeDays;
     }
 
+    public double calcSinkProb(double salinity, RunProperties rp) {
+        double prSink = 0;
+        if (salinity < rp.salinityThreshMax) {
+            prSink = 0.125 * (31 - salinity);
+        }
+        if (salinity < rp.salinityThreshMin) {
+            prSink = 1;
+        }
+        return prSink;
+    }
+
     public double sink(RunProperties rp) {
         double sinkSpeedMean = this.isViable() ? rp.sinkingRateCopepodidMean : rp.sinkingRateNaupliusMean;
         double sinkSpeedStd = this.isViable() ? rp.sinkingRateCopepodidStd : rp.sinkingRateNaupliusStd;

@@ -8,6 +8,7 @@ package particle_track;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author sa01ta
@@ -160,8 +161,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
                 if (part.getStatus()<3) {
                     int activity = 2; // 0 = sink; 1 = swim; 2 = float
-                    if (localSalinity < rp.salinityThreshold ||
-                            Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
+                    // following Sandvik et al 2020, citing on Crosbie 2019
+                    double prSink = part.calcSinkProb(localSalinity, rp);
+                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)) { // ||
+                        //Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
                         activeMovement[2] = part.sink(rp);
                         activity = 0;
                         sink++;
