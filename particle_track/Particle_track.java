@@ -83,19 +83,19 @@ public class Particle_track {
         // Creating initial particle array
         // --------------------------------------------------------------------------------------
         List<HabitatSite> habitat;
-        System.out.println("Creating start sites");
-        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
-
-        // Record the names for reference later when calculating psteps
-        List<String> siteNames = new ArrayList<>();
-        for (HabitatSite habitatSite : habitat) {
-            siteNames.add(habitatSite.getID());
-        }
-
-        // Need a list of end sites - have just used the same list for now
         List<HabitatSite> habitatEnd;
-        System.out.println("Creating end sites");
+        System.out.println("Creating start and end sites");
+        habitat = IOUtils.createHabitatSites(rp.sitefile, null, 4, false, meshes, rp);
         habitatEnd = IOUtils.createHabitatSites(rp.sitefileEnd, null, 4, false, meshes, rp);
+
+        List<String> siteStartNames = new ArrayList<>();
+        for (HabitatSite habitatSite : habitat) {
+            siteStartNames.add(habitatSite.getID());
+        }
+        List<String> siteEndNames = new ArrayList<>();
+        for (HabitatSite habitatSite : habitatEnd) {
+            siteEndNames.add(habitatSite.getID());
+        }
 
         // --------------------------------------------------------------------------------------
         // Setup particles
@@ -172,7 +172,7 @@ public class Particle_track {
         float[][] pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
 
         // Set up array to hold connectivity counts
-        float[][] connectivity = new float[habitat.size()][habitat.size()];
+        float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         if (rp.recordMovement) {
@@ -308,7 +308,7 @@ public class Particle_track {
                     }
 
                     if (rp.recordLocations) {
-                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp);
+                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
                     }
 
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
@@ -319,7 +319,7 @@ public class Particle_track {
                                 IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
                             }
                             // Add arrival to connectivity file
-                            int destIndex = siteNames.indexOf(part.getLastArrival());
+                            int destIndex = siteEndNames.indexOf(part.getLastArrival()); // TODO: make sure arrival indexes are for siteEnd, not site
                             connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
                             // Reset ability to settle
@@ -333,7 +333,7 @@ public class Particle_track {
                     }
 
                     // Write Psteps
-                    if (stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
+                    if (rp.recordPsteps && stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
                         // Trim arrays to non-zero rows and write to file
                         float[][] psImmTrim = null;
                         try {
@@ -353,9 +353,9 @@ public class Particle_track {
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
                     }
 
-                    if (stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
+                    if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
                         IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
-                        connectivity = new float[habitat.size()][habitat.size()];
+                        connectivity = new float[habitat.size()][habitatEnd.size()];
                     }
 
                     // Clean up "dead" (666) and "exited" (66) particles
@@ -377,7 +377,7 @@ public class Particle_track {
             // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
-            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp);
+            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
             if (rp.recordElemActivity) {
                 IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
             }
@@ -474,7 +474,7 @@ public class Particle_track {
                                     new WildcardFileFilter(rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"),
                                     null);
                             // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp.readHydroVelocityOnly));
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
                         }
                         // Instead read time backwards, so need yesterday instead
                         else {
@@ -492,7 +492,7 @@ public class Particle_track {
                                     new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
                                     null);
                             // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp.readHydroVelocityOnly));
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
                         }
 
 
@@ -515,7 +515,7 @@ public class Particle_track {
                         + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
                 String[] varNames1 = {"u", "v", "", "", ""};
                 // Read both files and combine
-                hydroFields.add(new HydroField(filename1, filename2, varNames1, null, null, null, "ROMS_TRI", rp.readHydroVelocityOnly));
+                hydroFields.add(new HydroField(filename1, filename2, varNames1, null, null, null, "ROMS_TRI", rp));
             }
 
         }
@@ -541,8 +541,8 @@ public class Particle_track {
 
 
     // calculate a connectivity matrix detailing the 
-    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int npartsPerSite) {
-        double[][] connectMatrix = new double[nStartLocs][nStartLocs];
+    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int nEndLocs, int npartsPerSite) {
+        double[][] connectMatrix = new double[nStartLocs][nEndLocs];
         for (Particle part : particles) {
             for (Arrival arrival : part.getArrivals()) {
                 connectMatrix[arrival.getSourceLocation()][arrival.getArrivalLocation()] += arrival.getArrivalDensity() / npartsPerSite;
