@@ -309,7 +309,7 @@ public class Particle_track {
                     }
 
                     if (rp.recordLocations) {
-                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
+                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
                     }
 
                     // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
@@ -347,8 +347,12 @@ public class Particle_track {
                         } catch (Exception ignored) {
                         }
                         System.out.println("Writing psteps");
-                        IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
-                        IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
+                        if (psImmTrim != null) {
+                            IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
+                        }
+                        if (psMatTrim != null) {
+                            IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
+                        }
 
                         pstepsImmature = new float[meshes.get(0).getNElems()][habitat.size()];
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
