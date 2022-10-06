@@ -56,6 +56,7 @@ public class RunProperties {
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Time step (s) per record
+            openBoundaryThresh, // distance threshold (m) to open boundary nodes for particles to be ejected
             D_h, // Horizontal diffusion parameter
             D_hVert, // Vertical diffusion parameter
             mortalityRate, // Hourly mortality rate of particles
@@ -106,6 +107,7 @@ public class RunProperties {
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
+        openBoundaryThresh = Double.parseDouble(properties.getProperty("openBoundaryThresh", "500"));
 
         // Sites
         sitefile = properties.getProperty("sitefile", "startlocations.dat");

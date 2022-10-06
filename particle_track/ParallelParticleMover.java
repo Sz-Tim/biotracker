@@ -368,6 +368,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
     public static int openBoundaryCheck(float x, float y, Mesh m, RunProperties rp) {
         // check whether the particle has gone within a certain range of one of the boundary nodes
+        // note that this uses the mesh NODES (nodexy), not elements or centroids
         // (make it settle there, even if it is inviable)
         int nBNode = 0;
         if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
@@ -377,7 +378,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         }
 
         for (int loc = 0; loc < nBNode; loc++) {
-            double dist = 6001;
+            double dist = 0;
 
             if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
                 dist = Particle.distanceEuclid2(x, y,
@@ -385,14 +386,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             } else if (m.getType().equalsIgnoreCase("ROMS")) {
                 dist = Particle.distanceEuclid2(x, y,
                         m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
-
             }
 
-            //System.out.println("dist to OBC loc = "+dist);
-
-            double distThresh = 6000;
-
-            if (dist < distThresh) {
+            if (dist < rp.openBoundaryThresh) {
                 return loc;
             }
         }
@@ -400,4 +396,15 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         return -1;
     }
 
+    public static int openBoundaryCheck(Particle part, Mesh m, RunProperties rp) {
+        // check whether the particle has entered into a boundary *element*
+        // (make it settle there, even if it is inviable)
+        int nBElems = m.getOpenBoundaryNodes().length;
+        for (int elem = 0; elem < nBElems; elem++) {
+            if (m.getOpenBoundaryNodes()[elem] == part.getElem()) {
+                return part.getElem();
+            }
+        }
+        return -1;
+    }
 }
