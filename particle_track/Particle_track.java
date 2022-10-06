@@ -257,8 +257,9 @@ public class Particle_track {
                     }
 
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this hour
+                    int hourRemainder = Math.round(Math.round(elapsedHours % rp.releaseInterval));
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
-                            rp.releaseScenario == 1 ||
+                            rp.releaseScenario == 1 && (hourRemainder == 0 || hourRemainder == rp.releaseInterval) ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
                         System.out.printf("  %dD movement, release density: %.3f\n", rp.verticalDynamics ? 3 : 2, startDensity);
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);

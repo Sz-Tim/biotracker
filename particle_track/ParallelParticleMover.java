@@ -186,7 +186,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // Implement mortality once per hour
-            if (step == 0) {
+            boolean approxHour = elapsedHours % 1 < 0.01 || elapsedHours % 1 > 0.99;
+            if (step == 0 && approxHour) {
                 part.setDensity();
             }
 

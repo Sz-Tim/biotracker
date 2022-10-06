@@ -45,7 +45,7 @@ public class RunProperties {
     ISO_datestr start_ymd, end_ymd;
 
     int numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
-            releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
+            releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per releaseInterval hours per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
@@ -70,6 +70,7 @@ public class RunProperties {
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sanvdik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
+            releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
     public RunProperties(String filename) {
@@ -145,6 +146,7 @@ public class RunProperties {
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
+        releaseInterval = Double.parseDouble(properties.getProperty("releaseInterval", "1"));
         nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
         releaseTime = Double.parseDouble(properties.getProperty("releaseTime", "0"));
         releaseTimeEnd = Double.parseDouble(properties.getProperty("releaseTimeEnd", "24"));
