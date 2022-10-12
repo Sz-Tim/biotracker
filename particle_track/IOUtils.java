@@ -908,7 +908,7 @@ public class IOUtils {
             for (Particle p : particles) {
                 if (rp.coordRef.equalsIgnoreCase("WGS84")) {
                     if (p.getID() % partSubset == 0){
-                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -925,12 +925,13 @@ public class IOUtils {
                                 p.getDegreeDays(),
                                 p.getxTotal(),
                                 p.getyTotal(),
+                                p.getxyTotal(),
                                 p.getzTotal()
                         );
                     }
                 } else {
                     if (p.getID() % partSubset == 0) {
-                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -947,6 +948,7 @@ public class IOUtils {
                                 p.getDegreeDays(),
                                 p.getxTotal(),
                                 p.getyTotal(),
+                                p.getxyTotal(),
                                 p.getzTotal()
                         );
                     }

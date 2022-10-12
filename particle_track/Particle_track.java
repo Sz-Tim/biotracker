@@ -160,7 +160,7 @@ public class Particle_track {
 
         final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
 
-        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot zTot";
+        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot xyTot zTot";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
 
         // Set up arrays to hold particle density*hour counts

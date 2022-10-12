@@ -61,6 +61,7 @@ public class Particle {
 
     private double xTotal = 0;
     private double yTotal = 0;
+    private double xyTotal = 0;
     private double zTotal = 0;
 
     // A list to store data on the arrivals made by each particle.
@@ -309,6 +310,10 @@ public class Particle {
         this.yTotal += yTravel;
     }
 
+    public void addXY(double xTravel, double yTravel) {
+        this.xyTotal += Math.sqrt(xTravel*xTravel + yTravel*yTravel);
+    }
+
     public void addZ(double zTravel) {
         this.zTotal += zTravel;
     }
@@ -319,6 +324,10 @@ public class Particle {
 
     public double getyTotal() {
         return this.yTotal;
+    }
+
+    public double getxyTotal() {
+        return this.xyTotal;
     }
 
     public double getzTotal() {

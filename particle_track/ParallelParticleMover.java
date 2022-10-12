@@ -232,14 +232,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[] dActual = new double[3];
             double newlocx = part.getLocation()[0] + displacement[0];
             double newlocy = part.getLocation()[1] + displacement[1];
-            part.addX(Math.abs(displacement[0]));
-            part.addY(Math.abs(displacement[1]));
 
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             if (rp.verticalDynamics) {
                 double newDepth = part.getDepth() + displacement[2];
                 double maxAllowedDepth = m.getDepthUvnode()[elemPart] < rp.maxDepth ? m.getDepthUvnode()[elemPart] : rp.maxDepth;
-                part.addZ(Math.abs(displacement[2]));
                 part.setDepth(newDepth, maxAllowedDepth);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
@@ -247,6 +244,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[0] = part.getLocation()[0] - posInit[0];
             dActual[1] = part.getLocation()[1] - posInit[1];
             dActual[2] = part.getDepth() - posInit[2];
+            part.addX(Math.abs(dActual[0]));
+            part.addY(Math.abs(dActual[1]));
+            part.addZ(Math.abs(dActual[2]));
 
             if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 10) == 0)) {  // * 10 = sample of ~485 particles
                 IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.dat", true);
