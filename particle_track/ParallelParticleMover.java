@@ -246,6 +246,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[2] = part.getDepth() - posInit[2];
             part.addX(Math.abs(dActual[0]));
             part.addY(Math.abs(dActual[1]));
+            part.addXY(dActual[0], dActual[1]);
             part.addZ(Math.abs(dActual[2]));
 
             if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 10) == 0)) {  // * 10 = sample of ~485 particles
