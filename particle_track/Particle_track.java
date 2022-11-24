@@ -142,6 +142,9 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
+        // TODO: Load 2D array with daily densities by release site
+        // Challenges: Matching rows to the actual sites that are used (startSiteNames)
+        // Probably best to add a field to HabitatSite or match with HabitatSite.getID()
         double startDensity = 1.0;
         double[] dailyDensities = new double[0];
         if (!rp.seasonalDensityPath.isEmpty()) {
@@ -242,16 +245,17 @@ public class Particle_track {
 
                     for (HabitatSite site: habitat) {
                         int siteElem = site.getContainingFVCOMElem();
-                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(0).getSiglay(), (float) site.getDepth())[0][0];
+                        int m = site.getContainingMesh();
+                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) site.getDepth())[0][0];
                         double[][] currentConditions = new double[nLayers][4];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = site.getLocation()[0];
                         siteLoc[1] = site.getLocation()[1];
                         for (int i = 0; i < nLayers; i++) {
-                            currentConditions[i][0] = hydroFields.get(0).getU()[currentHour][i][siteElem];
-                            currentConditions[i][1] = hydroFields.get(0).getV()[currentHour][i][siteElem];
-                            currentConditions[i][2] = hydroFields.get(0).getW()[currentHour][i][siteElem];
-                            currentConditions[i][3] = hydroFields.get(0).getAvgFromTrinodes(meshes.get(0), siteLoc, i, siteElem, currentHour, "salinity", rp);
+                            currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
+                            currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
+                            currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
+                            currentConditions[i][3] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp);
                             site.addEnvCondition(currentConditions[i]);
                         }
                     }
@@ -320,7 +324,7 @@ public class Particle_track {
                                 IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
                             }
                             // Add arrival to connectivity file
-                            int destIndex = siteEndNames.indexOf(part.getLastArrival()); // TODO: make sure arrival indexes are for siteEnd, not site
+                            int destIndex = siteEndNames.indexOf(part.getLastArrival());
                             connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
                             // Reset ability to settle
