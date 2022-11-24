@@ -19,9 +19,10 @@ public class RunProperties {
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
+            location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
             seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
+            siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
             debug3D; // 'activity', 'currents', or 'diffusion' -- turns OFF specified process
 
@@ -51,7 +52,7 @@ public class RunProperties {
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
             thresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
-            minchVersion, // Another element of the filename for hydrodynamic files
+            minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
@@ -100,7 +101,9 @@ public class RunProperties {
         // Geography, hydrodynamic files, & mesh files
         coordRef = properties.getProperty("coordRef", "WGS84");
         location = properties.getProperty("location", "minch");
+        location2 = properties.getProperty("location2", "minch");
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
+        minchVersion2 = Integer.parseInt(properties.getProperty("minchVersion2", "2"));
         recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
         mesh1 = properties.getProperty("mesh1", "/home/sa01ta/particle_track/WestCOMS_mesh.nc");
         mesh2 = properties.getProperty("mesh2", "");
@@ -145,6 +148,7 @@ public class RunProperties {
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
         seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
+        siteDensityPath = properties.getProperty("siteDensityPath", "");
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));

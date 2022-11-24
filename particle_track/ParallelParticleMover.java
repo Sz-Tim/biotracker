@@ -179,7 +179,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activity = 1;
                         swim++;
                     }
-                    if (rp.recordElemActivity) {
+                    if (rp.recordElemActivity && part.getMesh()==0) {
                         elemActivity[elemPart][activity]++;
                     }
                 }
