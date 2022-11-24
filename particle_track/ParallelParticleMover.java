@@ -127,11 +127,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double K_zAdj = rp.D_hVert;
             double depthAdj;
 
-            if (rp.salinityThreshold < 35) {
-                localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
-                if (rp.salinityMort) {
-                    part.setMortRateSalinity(localSalinity);
-                }
+            if (rp.salinityMort) {
+                part.setMortRateSalinity(hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers));
             }
 
             if (rp.fixDepth) {
