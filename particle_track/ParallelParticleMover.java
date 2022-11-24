@@ -163,8 +163,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     int activity = 2; // 0 = sink; 1 = swim; 2 = float
                     // following Sandvik et al 2020, citing on Crosbie 2019
                     double prSink = part.calcSinkProb(localSalinity, rp);
-                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)) { // ||
-                        //Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
+                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
+                        Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
                         activeMovement[2] = part.sink(rp);
                         activity = 0;
                         sink++;
