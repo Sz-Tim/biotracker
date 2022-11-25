@@ -22,7 +22,7 @@ public class RunProperties {
             location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
             seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
-            siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles
+            siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
             debug3D; // 'activity', 'currents', or 'diffusion' -- turns OFF specified process
 

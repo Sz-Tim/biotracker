@@ -146,9 +146,13 @@ public class Particle_track {
         // Challenges: Matching rows to the actual sites that are used (startSiteNames)
         // Probably best to add a field to HabitatSite or match with HabitatSite.getID()
         double startDensity = 1.0;
-        double[] dailyDensities = new double[0];
+        double[] seasonalDensities = new double[0];
         if (!rp.seasonalDensityPath.isEmpty()) {
-            dailyDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
+            seasonalDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
+        }
+        float[][] siteDensities = new float[0][0];
+        if(!rp.siteDensityPath.isEmpty()) {
+            siteDensities = IOUtils.readDailyDensities(rp.siteDensityPath, siteStartNames, rp);
         }
 
         int stepcount = 0;
@@ -209,7 +213,14 @@ public class Particle_track {
                 }
 
                 if (!rp.seasonalDensityPath.isEmpty()) {
-                    startDensity = dailyDensities[fnum];
+                    startDensity = seasonalDensities[fnum];
+                }
+
+                // get new site start densities
+                if(!rp.siteDensityPath.isEmpty()) {
+                    for (int i=0; i < habitat.size(); i++) {
+                        habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts);
+                    }
                 }
 
                 long splitTime = System.currentTimeMillis();
@@ -416,7 +427,7 @@ public class Particle_track {
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
-                                                    ISO_datestr currentDate, int currentTime, double startDensity, int numParticlesCreated) {
+                                                    ISO_datestr currentDate, int currentTime, double seasonalDensity, int numParticlesCreated) {
 
         List<Particle> newParts = new ArrayList<>(rp.nparts * habitat.size());
         for (int i = 0; i < rp.nparts * habitat.size(); i++) {
@@ -429,6 +440,7 @@ public class Particle_track {
             int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
             int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
             int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
+            double startDensity = seasonalDensity * habitat.get(startid).getScale();
 
             Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated + i,
                     rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordRef, rp.species);
