@@ -218,9 +218,14 @@ public class Particle_track {
 
                 // get new site start densities
                 if(!rp.siteDensityPath.isEmpty()) {
+                    System.out.println("Density file read: " + rp.siteDensityPath + " " + today);
                     for (int i=0; i < habitat.size(); i++) {
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts);
+                        if (rp.verboseSetUp) {
+                            System.out.println("  Start density for " + habitat.get(i).getID() + " = " + siteDensities[i][fnum]/rp.nparts);
+                        }
                     }
+
                 }
 
                 long splitTime = System.currentTimeMillis();
@@ -249,6 +254,7 @@ public class Particle_track {
                     }
 
                     // Read new hydrodynamic fields?
+                    // Why is this here instead of out of the loop? Old file formats? currentHour is always 0
                     if (currentHour == 0) {
                         hydroFields.clear();
                         hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
@@ -476,7 +482,7 @@ public class Particle_track {
             if (mesh.getType().equalsIgnoreCase("FVCOM")) {
 
                 try {
-                    System.out.println("Reading file " + currentHour); // Dima file naming format: minch2_20171229_0003.nc
+                    // Dima file naming format: minch2_20171229_0003.nc
                     String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
                     // Normal "forwards time"
@@ -486,6 +492,7 @@ public class Particle_track {
                             System.out.println("** Last day - reading same hydro file twice **");
                             tomorrow = currentIsoDate;
                         }
+                        // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
                         String[] dirsT1 = new String[]{
                                 rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
                                 rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
