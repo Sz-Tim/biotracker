@@ -107,16 +107,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float[][] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[elemPart]);
             float[][] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);
 
-            // Increment in particle age & degree days
-            part.incrementAge(subStepDt / 3600.0); // particle age in hours
+            // Get local salinity, temperature
             if (!rp.readHydroVelocityOnly) {
                 if (rp.fixDepth) {
+                    localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "salinity", rp);
                     localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
                 } else {
+                    localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                     localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
                 }
-                part.incrementDegreeDays(localTemperature, rp);
             }
+            // Increment in particle age & degree days
+            part.incrementAge(subStepDt / 3600.0); // particle age in hours
+            part.incrementDegreeDays(localTemperature, rp);
 
             // Vertical diffusion and salinity
             double K_below;
@@ -128,7 +131,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double depthAdj;
 
             if (rp.salinityMort) {
-                part.setMortRateSalinity(hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers));
+                part.setMortRateSalinity(localSalinity);
             }
 
             if (rp.fixDepth) {
