@@ -423,7 +423,8 @@ public class Particle {
         boolean byAge = getAge() > rp.maxParticleAge && rp.maxParticleAge > 0;
         boolean byDegreeDays = getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0;
         boolean byPrevious = getStatus() == 666;
-        return byAge || byDegreeDays || byPrevious;
+        boolean byDensity = getDensity() < 1e-15;
+        return byAge || byDegreeDays || byPrevious || byDensity;
     }
 
     /**
