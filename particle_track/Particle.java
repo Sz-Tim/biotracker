@@ -539,7 +539,7 @@ public class Particle {
         //              If YES, switch to other mesh
         //              If NO, BOUNDARY EXIT!! (nearest bnode)
         //          If NO: CARRY ON!!!
-        //      i.iii) If NO, is particle within other mesh > n?
+        //      i.iii) If NO, is particle within other mesh > n? // TODO: There should only be movement between meshes near open boundaries
         //          If YES, switch mesh
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
 
@@ -597,25 +597,25 @@ public class Particle {
                     // stay in same mesh and keep going!
                 }
             }
-        } else {
-            if (meshes.size() == 2) {
-                // Not in original mesh, so check the other one
-                int otherMesh = 1;
-                if (meshID == 1) {
-                    otherMesh = 0;
-                }
-                m = meshes.get(otherMesh);
-                if (m.isInMesh(newLoc, true, true, null)) {
-                    // switch to other mesh
-                    this.setLocation(newLoc[0], newLoc[1]);
-                    this.placeInMesh(meshes, otherMesh, true);
-                } else {
-                    // boundary exit
-                    this.setBoundaryExit(true);
-                    this.setStatus(66);
-                }
-            }
-        }
+        } //else {
+//            if (meshes.size() == 2) {
+//                // Not in original mesh, so check the other one
+//                int otherMesh = 1;
+//                if (meshID == 1) {
+//                    otherMesh = 0;
+//                }
+//                m = meshes.get(otherMesh);
+//                if (m.isInMesh(newLoc, true, true, null)) {
+//                    // switch to other mesh
+//                    this.setLocation(newLoc[0], newLoc[1]);
+//                    this.placeInMesh(meshes, otherMesh, true);
+//                } else {
+//                    // boundary exit
+//                    this.setBoundaryExit(true);
+//                    this.setStatus(66);
+//                }
+//            }
+        //}
     }
 
 
