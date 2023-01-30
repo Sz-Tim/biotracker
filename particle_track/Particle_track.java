@@ -333,21 +333,26 @@ public class Particle_track {
                         IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
                     }
 
-                    // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
-                    for (Particle part : particles) {
-                        if (part.hasSettledThisHour()) {
-                            // Save arrival
-                            if (rp.recordArrivals) {
-                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
-                            }
-                            // Add arrival to connectivity file
-                            int destIndex = siteEndNames.indexOf(part.getLastArrival());
-                            connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
-                            // Reset ability to settle
-                            part.setSettledThisHour(false);
+                    double elapsedHourRemainder = Math.round((elapsedHours % 1) * 100.0) / 100.0;
+                    if (elapsedHourRemainder == 1 || elapsedHourRemainder == 0) {
+                        // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
+                        for (Particle part : particles) {
+                            if (part.hasSettledThisHour()) {
+                                // Save arrival
+                                if (rp.recordArrivals) {
+                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
+                                }
+                                // Add arrival to connectivity file
+                                int destIndex = siteEndNames.indexOf(part.getLastArrival());
+                                connectivity[part.getStartIndex()][destIndex] += part.getDensity();
+
+                                // Reset ability to settle
+                                part.setSettledThisHour(false);
+                            }
                         }
                     }
+
 
                     // Hourly updates to pstep arrays
                     if (rp.recordPsteps) {
