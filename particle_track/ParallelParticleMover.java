@@ -28,6 +28,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final boolean isDaytime;
     private final String currentDate;
     private final int[][] elemActivity;
+    private final int[][] hourActivity;
 
     public ParallelParticleMover(List<Particle> particles, double elapsedHours, int hour, int step, double subStepDt,
                                  RunProperties rp,
@@ -35,7 +36,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  List<HydroField> hydroFields,
                                  List<HabitatSite> habitatEnd,
                                  int[] allElems,
-                                 boolean isDaytime, String currentDate, int[][] elemActivity) {
+                                 boolean isDaytime, String currentDate, int[][] elemActivity, int[][] hourActivity) {
         this.particles = particles;
         this.elapsedHours = elapsedHours;
         this.hour = hour;
@@ -49,13 +50,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.isDaytime = isDaytime;
         this.currentDate = currentDate;
         this.elemActivity = elemActivity;
+        this.hourActivity = hourActivity;
     }
 
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems,
-                    isDaytime, currentDate, elemActivity);
+                    isDaytime, currentDate, elemActivity, hourActivity);
         }
         return new ArrayList<>();
     }
@@ -71,7 +73,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             List<HydroField> hydroFields,
                             List<HabitatSite> habitatEnd,
                             int[] allElems,
-                            boolean isDaytime, String currentDate, int[][] elemActivity) {
+                            boolean isDaytime, String currentDate, int[][] elemActivity, int[][] hourActivity) {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
@@ -179,8 +181,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activity = 1;
                         swim++;
                     }
-                    if (rp.recordElemActivity && part.getMesh()==0) {
+                    if (rp.recordActivity && part.getMesh()==0) {
                         elemActivity[elemPart][activity]++;
+                        hourActivity[Math.toIntExact(Math.round(elapsedHours))][activity]++;
                     }
                 }
             }

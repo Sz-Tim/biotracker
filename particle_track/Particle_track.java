@@ -182,6 +182,7 @@ public class Particle_track {
         float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
+        int[][] hourActivity = new int[numberOfDays*24+1][3]; // count of sink, swim, float within each hour
         if (rp.recordMovement) {
             IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
                     "movementFile.dat");
@@ -309,7 +310,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity));
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity, hourActivity));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -321,7 +322,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity);
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity, hourActivity);
                             }
                         }
 
@@ -409,8 +410,9 @@ public class Particle_track {
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
             IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
-            if (rp.recordElemActivity) {
+            if (rp.recordActivity) {
                 IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
+                IOUtils.writeIntegerArrayToFile(hourActivity, "hourActivity.dat");
             }
 
             executorService.shutdownNow();

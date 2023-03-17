@@ -38,7 +38,7 @@ public class RunProperties {
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
-            recordMovement, recordElemActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element?
+            recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp;
@@ -217,7 +217,7 @@ public class RunProperties {
         recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations", "true"));
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
         recordMovement = Boolean.parseBoolean(properties.getProperty("recordMovement", "false"));
-        recordElemActivity = Boolean.parseBoolean(properties.getProperty("recordElemActivity", "false"));
+        recordActivity = Boolean.parseBoolean(properties.getProperty("recordElemActivity", "false"));
 
         properties.list(System.out);
     }
