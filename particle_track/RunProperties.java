@@ -21,10 +21,8 @@ public class RunProperties {
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
-            seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
-            daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
-            debug3D; // 'activity', 'currents', or 'diffusion' -- turns OFF specified process
+            daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
@@ -142,12 +140,10 @@ public class RunProperties {
         verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         maxDepth = Double.parseDouble(properties.getProperty("maxDepth", "10000"));
-        debug3D = properties.getProperty("debug3D", "");
 
         // Release
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
-        seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
         siteDensityPath = properties.getProperty("siteDensityPath", "");
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
@@ -167,7 +163,7 @@ public class RunProperties {
         diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
         variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
-        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.005"));
+        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
 
         // Behaviour
         species = properties.getProperty("species", "none");

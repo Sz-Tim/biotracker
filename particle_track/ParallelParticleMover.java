@@ -210,15 +210,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 diffusion = part.diffuse(rp, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
-            if (rp.debug3D.contains("activity")) {
-                activeMovement[2] = 0;
-            }
-            if (rp.debug3D.contains("currents")) {
-                advectStep[2] = 0;
-            }
-            if (rp.debug3D.contains("diffusion")) {
-                diffusion[2] = 0;
-            }
 
             for (int i = 0; i < nDims; i++) {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];

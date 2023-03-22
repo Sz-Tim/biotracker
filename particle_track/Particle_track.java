@@ -55,7 +55,6 @@ public class Particle_track {
         System.out.printf("Simulated dur. (d) = %d\n", numberOfDays);
         System.out.printf("Simulated dur. (s) = %d\n", numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
-        System.out.printf("Starting densities = %s\n", rp.seasonalDensityPath.isEmpty() ? "constant" : "seasonal");
         System.out.printf("Vertical dynamics  = %b\n", rp.verticalDynamics);
         System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
         System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
@@ -146,10 +145,6 @@ public class Particle_track {
         // Challenges: Matching rows to the actual sites that are used (startSiteNames)
         // Probably best to add a field to HabitatSite or match with HabitatSite.getID()
         double startDensity = 1.0;
-        double[] seasonalDensities = new double[0];
-        if (!rp.seasonalDensityPath.isEmpty()) {
-            seasonalDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
-        }
         float[][] siteDensities = new float[0][0];
         if(!rp.siteDensityPath.isEmpty()) {
             siteDensities = IOUtils.readDailyDensities(rp.siteDensityPath, siteStartNames, rp);
@@ -211,10 +206,6 @@ public class Particle_track {
                 }
                 if (rp.recordArrivals) {
                     IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".dat");
-                }
-
-                if (!rp.seasonalDensityPath.isEmpty()) {
-                    startDensity = seasonalDensities[fnum];
                 }
 
                 // get new site start densities
@@ -283,8 +274,7 @@ public class Particle_track {
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
                             rp.releaseScenario == 1 && (hourRemainder == 0 || hourRemainder == rp.releaseInterval) ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
-                        System.out.printf("  %dD movement, release density: %.3f\n", rp.verticalDynamics ? 3 : 2, startDensity);
-                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
+                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
                         System.out.printf("  %,d new particles (%,d active of %,d total)\n", newParts.size(), particles.size(), numParticlesCreated);
@@ -440,7 +430,7 @@ public class Particle_track {
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
-                                                    ISO_datestr currentDate, int currentTime, double seasonalDensity, int numParticlesCreated) {
+                                                    ISO_datestr currentDate, int currentTime, int numParticlesCreated) {
 
         List<Particle> newParts = new ArrayList<>(rp.nparts * habitat.size());
         for (int i = 0; i < rp.nparts * habitat.size(); i++) {
@@ -453,7 +443,7 @@ public class Particle_track {
             int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
             int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
             int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
-            double startDensity = seasonalDensity * habitat.get(startid).getScale();
+            double startDensity = habitat.get(startid).getScale();
 
             Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated + i,
                     rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordRef, rp.species);
