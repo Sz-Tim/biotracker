@@ -120,11 +120,11 @@ public class Particle_track {
         List<HydroField> hydroFields = new ArrayList<>();
         ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
         if(!missingHydroFiles.isEmpty()) {
-            System.err.println("\nError! Cannot find the following hydrodynamic files:");
+            System.out.println("\nWarning! Cannot find the following hydrodynamic files:");
             for (String missing: missingHydroFiles) {
-                System.err.println(missing);
+                System.out.println(missing);
             }
-            System.exit(1);
+            System.out.println("-- The previous day will be used for each instead!");
         } else {
             System.out.println(": All found");
         }
@@ -246,10 +246,21 @@ public class Particle_track {
                     }
 
                     // Read new hydrodynamic fields?
-                    // Why is this here instead of out of the loop? Old file formats? currentHour is always 0
                     if (currentHour == 0) {
-                        hydroFields.clear();
-                        hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
+                        String currentDateShort = currentIsoDate.toStringShort();
+                        ISO_datestr nextIsoDate = ISO_datestr.getTomorrow(currentIsoDate);
+                        String nextDateShort = nextIsoDate.toStringShort();
+                        boolean missingToday = missingHydroFiles.contains(currentDateShort);
+                        boolean missingTomorrow = missingHydroFiles.contains(nextDateShort);
+                        if(missingToday) {
+                            System.out.print("Reusing last hydrofile\n");
+                        } else {
+                            if(missingTomorrow) {
+                                isLastDay = true;
+                            }
+                            hydroFields.clear();
+                            hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
+                        }
                     }
 
                     for (HabitatSite site: habitat) {
@@ -486,7 +497,7 @@ public class Particle_track {
                     if (!rp.backwards) {
                         ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
                         if (isLastDay) {
-                            System.out.println("** Last day - reading same hydro file twice **");
+                            System.out.println("** Last day or missing day - reading same hydro file twice **");
                             tomorrow = currentIsoDate;
                         }
                         // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.

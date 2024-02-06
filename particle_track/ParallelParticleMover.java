@@ -243,7 +243,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             part.addXY(dActual[0], dActual[1]);
             part.addZ(Math.abs(dActual[2]));
 
-            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 10) == 0)) {  // * 10 = sample of ~485 particles
+            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays / 3) == 0)) {  // * 10 = sample of ~485 particles
                 IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.dat", true);
             }
 
