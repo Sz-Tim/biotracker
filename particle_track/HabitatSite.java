@@ -17,7 +17,7 @@ public class HabitatSite {
     private final String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
     private float[] xy; // Coordinate for site
     private float depth;
-    private final float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
+    private float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
     private String containingMeshType;
     private int nearestFVCOMCentroid; // the mesh u,v point that is closest to this location
@@ -160,6 +160,10 @@ public class HabitatSite {
 
     public double getScale() {
         return this.scale;
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
     }
 
     public double[] getEnvConditionSum() {

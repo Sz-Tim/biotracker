@@ -19,11 +19,10 @@ public class RunProperties {
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            location, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
+            location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             coordRef, // Coordinate reference system
-            seasonalDensityPath, // Path + filename for month-specific particle start densities; defaults to "" = 1 for all particles
-            daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
-            debug3D; // 'activity', 'currents', or 'diffusion' -- turns OFF specified process
+            siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
+            daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
@@ -37,7 +36,7 @@ public class RunProperties {
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
-            recordMovement, recordElemActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element?
+            recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp;
@@ -45,17 +44,18 @@ public class RunProperties {
     ISO_datestr start_ymd, end_ymd;
 
     int numberOfDays, // Start and end of run. If numberOfDays = 0, it is ignored and end_ymd is used instead
-            releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per hour per site)
+            releaseScenario, // 0 release all at "releaseTime", 1 continuous release ("nparts" per releaseInterval hours per site)
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
             thresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
-            minchVersion, // Another element of the filename for hydrodynamic files
+            minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Time step (s) per record
+            openBoundaryThresh, // distance threshold (m) to open boundary nodes for particles to be ejected
             D_h, // Horizontal diffusion parameter
             D_hVert, // Vertical diffusion parameter
             mortalityRate, // Hourly mortality rate of particles
@@ -70,6 +70,7 @@ public class RunProperties {
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sanvdik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
+            releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
     public RunProperties(String filename) {
@@ -98,13 +99,16 @@ public class RunProperties {
         // Geography, hydrodynamic files, & mesh files
         coordRef = properties.getProperty("coordRef", "WGS84");
         location = properties.getProperty("location", "minch");
+        location2 = properties.getProperty("location2", "minch");
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
+        minchVersion2 = Integer.parseInt(properties.getProperty("minchVersion2", "2"));
         recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
         mesh1 = properties.getProperty("mesh1", "/home/sa01ta/particle_track/WestCOMS_mesh.nc");
         mesh2 = properties.getProperty("mesh2", "");
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
+        openBoundaryThresh = Double.parseDouble(properties.getProperty("openBoundaryThresh", "500"));
 
         // Sites
         sitefile = properties.getProperty("sitefile", "startlocations.dat");
@@ -136,15 +140,15 @@ public class RunProperties {
         verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         maxDepth = Double.parseDouble(properties.getProperty("maxDepth", "10000"));
-        debug3D = properties.getProperty("debug3D", "");
 
         // Release
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
-        seasonalDensityPath = properties.getProperty("seasonalDensityPath", "");
+        siteDensityPath = properties.getProperty("siteDensityPath", "");
         setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
         startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
+        releaseInterval = Double.parseDouble(properties.getProperty("releaseInterval", "1"));
         nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
         releaseTime = Double.parseDouble(properties.getProperty("releaseTime", "0"));
         releaseTimeEnd = Double.parseDouble(properties.getProperty("releaseTimeEnd", "24"));
@@ -159,7 +163,7 @@ public class RunProperties {
         diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
         variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
-        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.005"));
+        D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
 
         // Behaviour
         species = properties.getProperty("species", "none");
@@ -209,7 +213,7 @@ public class RunProperties {
         recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations", "true"));
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
         recordMovement = Boolean.parseBoolean(properties.getProperty("recordMovement", "false"));
-        recordElemActivity = Boolean.parseBoolean(properties.getProperty("recordElemActivity", "false"));
+        recordActivity = Boolean.parseBoolean(properties.getProperty("recordElemActivity", "false"));
 
         properties.list(System.out);
     }

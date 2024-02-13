@@ -55,7 +55,6 @@ public class Particle_track {
         System.out.printf("Simulated dur. (d) = %d\n", numberOfDays);
         System.out.printf("Simulated dur. (s) = %d\n", numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
-        System.out.printf("Starting densities = %s\n", rp.seasonalDensityPath.isEmpty() ? "constant" : "seasonal");
         System.out.printf("Vertical dynamics  = %b\n", rp.verticalDynamics);
         System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
         System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
@@ -121,11 +120,11 @@ public class Particle_track {
         List<HydroField> hydroFields = new ArrayList<>();
         ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
         if(!missingHydroFiles.isEmpty()) {
-            System.err.println("\nError! Cannot find the following hydrodynamic files:");
+            System.out.println("\nWarning! Cannot find the following hydrodynamic files:");
             for (String missing: missingHydroFiles) {
-                System.err.println(missing);
+                System.out.println(missing);
             }
-            System.exit(1);
+            System.out.println("-- The previous day will be used for each instead!");
         } else {
             System.out.println(": All found");
         }
@@ -142,10 +141,13 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
+        // TODO: Load 2D array with daily densities by release site
+        // Challenges: Matching rows to the actual sites that are used (startSiteNames)
+        // Probably best to add a field to HabitatSite or match with HabitatSite.getID()
         double startDensity = 1.0;
-        double[] dailyDensities = new double[0];
-        if (!rp.seasonalDensityPath.isEmpty()) {
-            dailyDensities = IOUtils.readFileDouble1D(rp.seasonalDensityPath);
+        float[][] siteDensities = new float[0][0];
+        if(!rp.siteDensityPath.isEmpty()) {
+            siteDensities = IOUtils.readDailyDensities(rp.siteDensityPath, siteStartNames, rp);
         }
 
         int stepcount = 0;
@@ -160,7 +162,7 @@ public class Particle_track {
 
         final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
 
-        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot zTot";
+        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot xyTot zTot";
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
 
         // Set up arrays to hold particle density*hour counts
@@ -175,6 +177,7 @@ public class Particle_track {
         float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
+        int[][] hourActivity = new int[numberOfDays*24+1][3]; // count of sink, swim, float within each hour
         if (rp.recordMovement) {
             IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
                     "movementFile.dat");
@@ -205,8 +208,16 @@ public class Particle_track {
                     IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".dat");
                 }
 
-                if (!rp.seasonalDensityPath.isEmpty()) {
-                    startDensity = dailyDensities[fnum];
+                // get new site start densities
+                if(!rp.siteDensityPath.isEmpty()) {
+                    System.out.println("Density file read: " + rp.siteDensityPath + " " + today);
+                    for (int i=0; i < habitat.size(); i++) {
+                        habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts);
+                        if (rp.verboseSetUp) {
+                            System.out.println("  Start density for " + habitat.get(i).getID() + " = " + siteDensities[i][fnum]/rp.nparts);
+                        }
+                    }
+
                 }
 
                 long splitTime = System.currentTimeMillis();
@@ -236,32 +247,45 @@ public class Particle_track {
 
                     // Read new hydrodynamic fields?
                     if (currentHour == 0) {
-                        hydroFields.clear();
-                        hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
+                        String currentDateShort = currentIsoDate.toStringShort();
+                        ISO_datestr nextIsoDate = ISO_datestr.getTomorrow(currentIsoDate);
+                        String nextDateShort = nextIsoDate.toStringShort();
+                        boolean missingToday = missingHydroFiles.contains(currentDateShort);
+                        boolean missingTomorrow = missingHydroFiles.contains(nextDateShort);
+                        if(missingToday) {
+                            System.out.print("Reusing last hydrofile\n");
+                        } else {
+                            if(missingTomorrow) {
+                                isLastDay = true;
+                            }
+                            hydroFields.clear();
+                            hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
+                        }
                     }
 
                     for (HabitatSite site: habitat) {
                         int siteElem = site.getContainingFVCOMElem();
-                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(0).getSiglay(), (float) site.getDepth())[0][0];
+                        int m = site.getContainingMesh();
+                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) site.getDepth())[0][0];
                         double[][] currentConditions = new double[nLayers][4];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = site.getLocation()[0];
                         siteLoc[1] = site.getLocation()[1];
                         for (int i = 0; i < nLayers; i++) {
-                            currentConditions[i][0] = hydroFields.get(0).getU()[currentHour][i][siteElem];
-                            currentConditions[i][1] = hydroFields.get(0).getV()[currentHour][i][siteElem];
-                            currentConditions[i][2] = hydroFields.get(0).getW()[currentHour][i][siteElem];
-                            currentConditions[i][3] = hydroFields.get(0).getAvgFromTrinodes(meshes.get(0), siteLoc, i, siteElem, currentHour, "salinity", rp);
+                            currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
+                            currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
+                            currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
+                            currentConditions[i][3] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp);
                             site.addEnvCondition(currentConditions[i]);
                         }
                     }
 
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this hour
+                    double hourRemainder = Math.round((elapsedHours % rp.releaseInterval) * 100.0) / 100.0;
                     if ((rp.releaseScenario == 0 && elapsedHours >= rp.releaseTime && allowRelease) ||
-                            rp.releaseScenario == 1 ||
+                            rp.releaseScenario == 1 && (hourRemainder == 0 || hourRemainder == rp.releaseInterval) ||
                             (rp.releaseScenario == 2 && elapsedHours >= rp.releaseTime && elapsedHours <= rp.releaseTimeEnd)) {
-                        System.out.printf("  %dD movement, release density: %.3f\n", rp.verticalDynamics ? 3 : 2, startDensity);
-                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, startDensity, numParticlesCreated);
+                        List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
                         System.out.printf("  %,d new particles (%,d active of %,d total)\n", newParts.size(), particles.size(), numParticlesCreated);
@@ -287,7 +311,7 @@ public class Particle_track {
                                     subList = particles.subList(i * listStep, (i + 1) * listStep);
                                 }
                                 callables.add(new ParallelParticleMover(subList, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity));
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity, hourActivity));
                             }
                             for (Callable<List<Particle>> callable : callables) {
                                 executorCompletionService.submit(callable);
@@ -299,7 +323,7 @@ public class Particle_track {
                         } else {
                             for (Particle part : particles) {
                                 ParallelParticleMover.move(part, elapsedHours, currentHour, step, subStepDt, rp,
-                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity);
+                                        meshes, hydroFields, habitatEnd, allelems, isDaytime, today, elemActivity, hourActivity);
                             }
                         }
 
@@ -308,24 +332,29 @@ public class Particle_track {
                     }
 
                     if (rp.recordLocations) {
-                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
+                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
                     }
 
-                    // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
-                    for (Particle part : particles) {
-                        if (part.hasSettledThisHour()) {
-                            // Save arrival
-                            if (rp.recordArrivals) {
-                                IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
-                            }
-                            // Add arrival to connectivity file
-                            int destIndex = siteEndNames.indexOf(part.getLastArrival()); // TODO: make sure arrival indexes are for siteEnd, not site
-                            connectivity[part.getStartIndex()][destIndex] += part.getDensity();
 
-                            // Reset ability to settle
-                            part.setSettledThisHour(false);
+                    double elapsedHourRemainder = Math.round((elapsedHours % 1) * 100.0) / 100.0;
+                    if (elapsedHourRemainder == 1 || elapsedHourRemainder == 0) {
+                        // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
+                        for (Particle part : particles) {
+                            if (part.hasSettledThisHour()) {
+                                // Save arrival
+                                if (rp.recordArrivals) {
+                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
+                                }
+                                // Add arrival to connectivity file
+                                int destIndex = siteEndNames.indexOf(part.getLastArrival());
+                                connectivity[part.getStartIndex()][destIndex] += part.getDensity();
+
+                                // Reset ability to settle
+                                part.setSettledThisHour(false);
+                            }
                         }
                     }
+
 
                     // Hourly updates to pstep arrays
                     if (rp.recordPsteps) {
@@ -346,8 +375,12 @@ public class Particle_track {
                         } catch (Exception ignored) {
                         }
                         System.out.println("Writing psteps");
-                        IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
-                        IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
+                        if (psImmTrim != null) {
+                            IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
+                        }
+                        if (psMatTrim != null) {
+                            IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
+                        }
 
                         pstepsImmature = new float[meshes.get(0).getNElems()][habitat.size()];
                         pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
@@ -378,8 +411,9 @@ public class Particle_track {
             // start a new run on the next day.
             IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
             IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
-            if (rp.recordElemActivity) {
+            if (rp.recordActivity) {
                 IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
+                IOUtils.writeIntegerArrayToFile(hourActivity, "hourActivity.dat");
             }
 
             executorService.shutdownNow();
@@ -407,7 +441,7 @@ public class Particle_track {
      * @return List of the new particles to be appended to existing list
      */
     public static List<Particle> createNewParticles(List<HabitatSite> habitat, List<Mesh> meshes, RunProperties rp,
-                                                    ISO_datestr currentDate, int currentTime, double startDensity, int numParticlesCreated) {
+                                                    ISO_datestr currentDate, int currentTime, int numParticlesCreated) {
 
         List<Particle> newParts = new ArrayList<>(rp.nparts * habitat.size());
         for (int i = 0; i < rp.nparts * habitat.size(); i++) {
@@ -420,6 +454,7 @@ public class Particle_track {
             int[] elemROMSStartV = habitat.get(startid).getContainingROMSElemV();
             int[] nearestROMSGridPointU = habitat.get(startid).getNearestROMSPointU();
             int[] nearestROMSGridPointV = habitat.get(startid).getNearestROMSPointV();
+            double startDensity = habitat.get(startid).getScale();
 
             Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated + i,
                     rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordRef, rp.species);
@@ -450,63 +485,68 @@ public class Particle_track {
         List<HydroField> hydroFields = new ArrayList<>();
 
         // 24 hr files only case - read once a day
+        int m = 0;
         for (Mesh mesh : meshes) {
             if (mesh.getType().equalsIgnoreCase("FVCOM")) {
-                if (currentHour % rp.recordsPerFile1 == 0) {
-                    hydroFields.clear();
-                    try {
-                        System.out.println("Reading file " + currentHour); // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
-                        // Normal "forwards time"
-                        if (!rp.backwards) {
-                            List<File> files1 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"),
-                                    null);
-                            ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-                            if (isLastDay) {
-                                System.out.println("** Last day - reading same hydro file twice **");
-                                tomorrow = currentIsoDate;
-                            }
-                            List<File> files2 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"),
-                                    null);
-                            // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
-                        }
-                        // Instead read time backwards, so need yesterday instead
-                        else {
-                            List<File> files1 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
-                                    null);
-                            ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
-                            if (isLastDay) {
-                                System.out.println("** Last day - reading same hydro file twice **");
-                                yesterday = currentIsoDate;
-                            }
-                            List<File> files2 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
-                                    null);
-                            // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
-                        }
+                try {
+                    // Dima file naming format: minch2_20171229_0003.nc
+                    String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
-
-                    } catch (Exception e) {
-                        System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
-                        if (!rp.backwards) {
-                            System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
-                                    + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
-                        } else {
-                            System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
-                                    + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                    // Normal "forwards time"
+                    if (!rp.backwards) {
+                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+                        if (isLastDay) {
+                            System.out.println("** Last day or missing day - reading same hydro file twice **");
+                            tomorrow = currentIsoDate;
                         }
-                        System.exit(1);
+                        // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
+                        String[] dirsT1 = new String[]{
+                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
+                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                        String[] dirsT2 = new String[]{
+                                rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
+                                rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                        String[] filesT1 = new String[]{
+                                rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                                rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                        String[] filesT2 = new String[]{
+                                rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
+                                rp.location2 + rp.minchVersion2 + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
+                        List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
+                        List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
+                        // Read both files and combine
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
                     }
+                    // Instead read time backwards, so need yesterday instead
+                    else {
+                        List<File> files1 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
+                                null);
+                        ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
+                        if (isLastDay) {
+                            System.out.println("** Last day - reading same hydro file twice **");
+                            yesterday = currentIsoDate;
+                        }
+                        List<File> files2 = (List<File>) FileUtils.listFiles(
+                                new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
+                                null);
+                        // Read both files and combine
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+                    }
+
+                } catch (Exception e) {
+                    System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
+                    if (!rp.backwards) {
+                        System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                    } else {
+                        System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                    }
+                    System.exit(1);
                 }
             } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
                 String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
@@ -518,8 +558,9 @@ public class Particle_track {
                 hydroFields.add(new HydroField(filename1, filename2, varNames1, null, null, null, "ROMS_TRI", rp));
             }
 
-        }
+            m++;
 
+        }
         return hydroFields;
     }
 

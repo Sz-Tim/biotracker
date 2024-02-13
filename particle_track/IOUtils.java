@@ -92,7 +92,7 @@ public class IOUtils {
                 if (values.length > 3) {
                     depth = (float) Double.parseDouble(values[3]);
                 }
-                float scale = 0;
+                float scale = 1;
                 if (values.length > 4 && scaleCol < values.length) {
                     scale = (float) Double.parseDouble(values[scaleCol]);
                 }
@@ -206,6 +206,38 @@ public class IOUtils {
 
         return parts;
     }
+
+
+    public static float[][] readDailyDensities(String filename, List<String> siteStartNames, RunProperties rp) {
+        float[][] dailyDensities = new float[siteStartNames.size()][rp.numberOfDays];
+        int nLines;
+        try {
+            nLines = countLines(new File(filename));
+            System.out.println("FILE " + filename + " NLINES " + nLines);
+        } catch (Exception e) {
+            System.err.println("Cannot open " + filename);
+        }
+
+        // try to create habitat from file
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(filename));    //reading files in specified directory
+            String line;
+
+            while ((line = in.readLine()) != null) {
+                String[] values = line.split("\t");
+                String ID = values[0];
+                int site = siteStartNames.indexOf(ID);
+                for (int i=0; i < rp.numberOfDays; i++) {
+                    dailyDensities[site][i] = Float.parseFloat(values[i+1]);
+                }
+            }
+            in.close();
+        } catch (Exception e) {
+            System.err.println("Cannot load daily site densities from " + filename);
+        }
+        return(dailyDensities);
+    }
+
 
     public static int[] readFileInt1D(String fullFileName) {
         int nLines = countLines(new File(fullFileName));
@@ -908,7 +940,7 @@ public class IOUtils {
             for (Particle p : particles) {
                 if (rp.coordRef.equalsIgnoreCase("WGS84")) {
                     if (p.getID() % partSubset == 0){
-                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -925,12 +957,13 @@ public class IOUtils {
                                 p.getDegreeDays(),
                                 p.getxTotal(),
                                 p.getyTotal(),
+                                p.getxyTotal(),
                                 p.getzTotal()
                         );
                     }
                 } else {
                     if (p.getID() % partSubset == 0) {
-                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -947,6 +980,7 @@ public class IOUtils {
                                 p.getDegreeDays(),
                                 p.getxTotal(),
                                 p.getyTotal(),
+                                p.getxyTotal(),
                                 p.getzTotal()
                         );
                     }

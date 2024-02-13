@@ -28,6 +28,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
     private final boolean isDaytime;
     private final String currentDate;
     private final int[][] elemActivity;
+    private final int[][] hourActivity;
 
     public ParallelParticleMover(List<Particle> particles, double elapsedHours, int hour, int step, double subStepDt,
                                  RunProperties rp,
@@ -35,7 +36,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                                  List<HydroField> hydroFields,
                                  List<HabitatSite> habitatEnd,
                                  int[] allElems,
-                                 boolean isDaytime, String currentDate, int[][] elemActivity) {
+                                 boolean isDaytime, String currentDate, int[][] elemActivity, int[][] hourActivity) {
         this.particles = particles;
         this.elapsedHours = elapsedHours;
         this.hour = hour;
@@ -49,13 +50,14 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         this.isDaytime = isDaytime;
         this.currentDate = currentDate;
         this.elemActivity = elemActivity;
+        this.hourActivity = hourActivity;
     }
 
     @Override
     public ArrayList<Particle> call() throws Exception {
         for (Particle part : particles) {
             move(part, elapsedHours, hour, step, subStepDt, rp, meshes, hydroFields, habitatEnd, allElems,
-                    isDaytime, currentDate, elemActivity);
+                    isDaytime, currentDate, elemActivity, hourActivity);
         }
         return new ArrayList<>();
     }
@@ -71,7 +73,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                             List<HydroField> hydroFields,
                             List<HabitatSite> habitatEnd,
                             int[] allElems,
-                            boolean isDaytime, String currentDate, int[][] elemActivity) {
+                            boolean isDaytime, String currentDate, int[][] elemActivity, int[][] hourActivity) {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
@@ -107,16 +109,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float[][] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[elemPart]);
             float[][] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);
 
-            // Increment in particle age & degree days
-            part.incrementAge(subStepDt / 3600.0); // particle age in hours
+            // Get local salinity, temperature
             if (!rp.readHydroVelocityOnly) {
                 if (rp.fixDepth) {
+                    localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "salinity", rp);
                     localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
                 } else {
+                    localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                     localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
                 }
-                part.incrementDegreeDays(localTemperature, rp);
             }
+            // Increment in particle age & degree days
+            part.incrementAge(subStepDt / 3600.0); // particle age in hours
+            part.incrementDegreeDays(localTemperature, rp);
 
             // Vertical diffusion and salinity
             double K_below;
@@ -127,11 +132,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double K_zAdj = rp.D_hVert;
             double depthAdj;
 
-            if (rp.salinityThreshold < 35) {
-                localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
-                if (rp.salinityMort) {
-                    part.setMortRateSalinity(localSalinity);
-                }
+            if (rp.salinityMort) {
+                part.setMortRateSalinity(localSalinity);
             }
 
             if (rp.fixDepth) {
@@ -163,8 +165,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     int activity = 2; // 0 = sink; 1 = swim; 2 = float
                     // following Sandvik et al 2020, citing on Crosbie 2019
                     double prSink = part.calcSinkProb(localSalinity, rp);
-                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)) { // ||
-                        //Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean)) {
+                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
+                        (rp.variableDiffusion && Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean))) {
                         activeMovement[2] = part.sink(rp);
                         activity = 0;
                         sink++;
@@ -179,14 +181,16 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activity = 1;
                         swim++;
                     }
-                    if (rp.recordElemActivity) {
+                    if (rp.recordActivity && part.getMesh()==0) {
                         elemActivity[elemPart][activity]++;
+                        hourActivity[Math.toIntExact(Math.round(elapsedHours))][activity]++;
                     }
                 }
             }
 
             // Implement mortality once per hour
-            if (step == 0) {
+            boolean approxHour = elapsedHours % 1 < 0.01 || elapsedHours % 1 > 0.99;
+            if (step == 0 && approxHour) {
                 part.setDensity();
             }
 
@@ -206,15 +210,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 diffusion = part.diffuse(rp, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
-            if (rp.debug3D.contains("activity")) {
-                activeMovement[2] = 0;
-            }
-            if (rp.debug3D.contains("currents")) {
-                advectStep[2] = 0;
-            }
-            if (rp.debug3D.contains("diffusion")) {
-                diffusion[2] = 0;
-            }
 
             for (int i = 0; i < nDims; i++) {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
@@ -231,14 +226,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double[] dActual = new double[3];
             double newlocx = part.getLocation()[0] + displacement[0];
             double newlocy = part.getLocation()[1] + displacement[1];
-            part.addX(Math.abs(displacement[0]));
-            part.addY(Math.abs(displacement[1]));
 
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             if (rp.verticalDynamics) {
                 double newDepth = part.getDepth() + displacement[2];
                 double maxAllowedDepth = m.getDepthUvnode()[elemPart] < rp.maxDepth ? m.getDepthUvnode()[elemPart] : rp.maxDepth;
-                part.addZ(Math.abs(displacement[2]));
                 part.setDepth(newDepth, maxAllowedDepth);
                 part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
             }
@@ -246,8 +238,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             dActual[0] = part.getLocation()[0] - posInit[0];
             dActual[1] = part.getLocation()[1] - posInit[1];
             dActual[2] = part.getDepth() - posInit[2];
+            part.addX(Math.abs(dActual[0]));
+            part.addY(Math.abs(dActual[1]));
+            part.addXY(dActual[0], dActual[1]);
+            part.addZ(Math.abs(dActual[2]));
 
-            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays * 10) == 0)) {  // * 10 = sample of ~485 particles
+            if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays / 3) == 0)) {  // * 10 = sample of ~485 particles
                 IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.dat", true);
             }
 
@@ -367,6 +363,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
     public static int openBoundaryCheck(float x, float y, Mesh m, RunProperties rp) {
         // check whether the particle has gone within a certain range of one of the boundary nodes
+        // note that this uses the mesh NODES (nodexy), not elements or centroids
         // (make it settle there, even if it is inviable)
         int nBNode = 0;
         if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
@@ -376,7 +373,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         }
 
         for (int loc = 0; loc < nBNode; loc++) {
-            double dist = 6001;
+            double dist = 0;
 
             if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
                 dist = Particle.distanceEuclid2(x, y,
@@ -384,14 +381,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             } else if (m.getType().equalsIgnoreCase("ROMS")) {
                 dist = Particle.distanceEuclid2(x, y,
                         m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
-
             }
 
-            //System.out.println("dist to OBC loc = "+dist);
-
-            double distThresh = 6000;
-
-            if (dist < distThresh) {
+            if (dist < rp.openBoundaryThresh) {
                 return loc;
             }
         }
@@ -399,4 +391,15 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         return -1;
     }
 
+    public static int openBoundaryCheck(Particle part, Mesh m, RunProperties rp) {
+        // check whether the particle has entered into a boundary *element*
+        // (make it settle there, even if it is inviable)
+        int nBElems = m.getOpenBoundaryNodes().length;
+        for (int elem = 0; elem < nBElems; elem++) {
+            if (m.getOpenBoundaryNodes()[elem] == part.getElem()) {
+                return part.getElem();
+            }
+        }
+        return -1;
+    }
 }

@@ -61,6 +61,7 @@ public class Particle {
 
     private double xTotal = 0;
     private double yTotal = 0;
+    private double xyTotal = 0;
     private double zTotal = 0;
 
     // A list to store data on the arrivals made by each particle.
@@ -309,6 +310,10 @@ public class Particle {
         this.yTotal += yTravel;
     }
 
+    public void addXY(double xTravel, double yTravel) {
+        this.xyTotal += Math.sqrt(xTravel*xTravel + yTravel*yTravel);
+    }
+
     public void addZ(double zTravel) {
         this.zTotal += zTravel;
     }
@@ -319,6 +324,10 @@ public class Particle {
 
     public double getyTotal() {
         return this.yTotal;
+    }
+
+    public double getxyTotal() {
+        return this.xyTotal;
     }
 
     public double getzTotal() {
@@ -414,7 +423,8 @@ public class Particle {
         boolean byAge = getAge() > rp.maxParticleAge && rp.maxParticleAge > 0;
         boolean byDegreeDays = getDegreeDays() > rp.maxDegreeDays && rp.maxDegreeDays > 0;
         boolean byPrevious = getStatus() == 666;
-        return byAge || byDegreeDays || byPrevious;
+        boolean byDensity = getDensity() < 1e-15;
+        return byAge || byDegreeDays || byPrevious || byDensity;
     }
 
     /**
@@ -529,7 +539,7 @@ public class Particle {
         //              If YES, switch to other mesh
         //              If NO, BOUNDARY EXIT!! (nearest bnode)
         //          If NO: CARRY ON!!!
-        //      i.iii) If NO, is particle within other mesh > n?
+        //      i.iii) If NO, is particle within other mesh > n? // TODO: There should only be movement between meshes near open boundaries
         //          If YES, switch mesh
         //          If NO, BOUNDARY EXIT!! (nearest bnode)
 
@@ -587,25 +597,25 @@ public class Particle {
                     // stay in same mesh and keep going!
                 }
             }
-        } else {
-            if (meshes.size() == 2) {
-                // Not in original mesh, so check the other one
-                int otherMesh = 1;
-                if (meshID == 1) {
-                    otherMesh = 0;
-                }
-                m = meshes.get(otherMesh);
-                if (m.isInMesh(newLoc, true, true, null)) {
-                    // switch to other mesh
-                    this.setLocation(newLoc[0], newLoc[1]);
-                    this.placeInMesh(meshes, otherMesh, true);
-                } else {
-                    // boundary exit
-                    this.setBoundaryExit(true);
-                    this.setStatus(66);
-                }
-            }
-        }
+        } //else {
+//            if (meshes.size() == 2) {
+//                // Not in original mesh, so check the other one
+//                int otherMesh = 1;
+//                if (meshID == 1) {
+//                    otherMesh = 0;
+//                }
+//                m = meshes.get(otherMesh);
+//                if (m.isInMesh(newLoc, true, true, null)) {
+//                    // switch to other mesh
+//                    this.setLocation(newLoc[0], newLoc[1]);
+//                    this.placeInMesh(meshes, otherMesh, true);
+//                } else {
+//                    // boundary exit
+//                    this.setBoundaryExit(true);
+//                    this.setStatus(66);
+//                }
+//            }
+        //}
     }
 
 

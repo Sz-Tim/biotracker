@@ -165,4 +165,7 @@ public class ISO_datestr {
     public String toString() {
         return this.year + "-" + (this.month < 10 ? "0" : "") + this.month + "-" + (this.day < 10 ? "0" : "") + this.day;
     }
+    public String toStringShort() {
+        return this.year + (this.month < 10 ? "0" : "") + this.month + (this.day < 10 ? "0" : "") + this.day;
+    }
 }
