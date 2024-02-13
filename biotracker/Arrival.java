@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package particle_track;
+package biotracker;
 
 /**
  * This class is used to record an instance of an arrival within the particle class,

@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package particle_track;
+package biotracker;
 
 /**
  * Only works for years 1993 - 2023 // updated SA04TS: leap years fixed; works until 2100

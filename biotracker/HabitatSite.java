@@ -1,14 +1,14 @@
 /*
  * Class to represent a site at which particles can be released/settle in particle tracking
  */
-package particle_track;
+package biotracker;
 
 //import java.util.Arrays;
 
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static particle_track.Particle.distanceEuclid2;
+import static biotracker.Particle.distanceEuclid2;
 
 /**
  * @author SA01TA
