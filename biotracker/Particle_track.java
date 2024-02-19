@@ -141,9 +141,6 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Final setup bits
         // --------------------------------------------------------------------------------------
-        // TODO: Load 2D array with daily densities by release site
-        // Challenges: Matching rows to the actual sites that are used (startSiteNames)
-        // Probably best to add a field to HabitatSite or match with HabitatSite.getID()
         double startDensity = 1.0;
         float[][] siteDensities = new float[0][0];
         if(!rp.siteDensityPath.isEmpty()) {
@@ -382,8 +379,8 @@ public class Particle_track {
                             IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
                         }
 
-                        pstepsImmature = new float[meshes.get(0).getNElems()][habitat.size()];
-                        pstepsMature = new float[meshes.get(0).getNElems()][habitat.size()];
+                        pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2];
+                        pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
                     }
 
                     if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
