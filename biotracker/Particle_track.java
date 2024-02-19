@@ -163,7 +163,7 @@ public class Particle_track {
         String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
 
         // Set up arrays to hold particle density*hour counts
-        int pstepsInd2 = 2;
+        int pstepsInd2 = 1;
         if (rp.splitPsteps) {
             pstepsInd2 = habitat.size();
         }
