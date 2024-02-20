@@ -77,7 +77,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
-        int elemPart = part.getElem();
         int nDims = rp.verticalDynamics ? 3 : 2;
 
         // Set particles free once they pass their defined release time (hours)
@@ -99,21 +98,21 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int swim = 0;
             double localTemperature = 12;
             double localSalinity = 35;
-            double tempSurface = hf.getAvgFromTrinodes(m, part.getLocation(), 1, elemPart, hour, "temp", rp);
+            double tempSurface = hf.getAvgFromTrinodes(m, part.getLocation(), 1, part.getElem(), hour, "temp", rp);
 
             // sigma layers
-            float localDepth = m.getDepthUvnode()[elemPart]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
+            float localDepth = m.getDepthUvnode()[part.getElem()]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
             // Get the sigma depths at this location, and compare with particle depth
             // For particles on surface or sea bed, set surroundingLayers[0 = layerBelow = [0 | sigDepths.length-1]
             // returns [layerBelow, layerAbove][depthBelow, depthAbove]
-            float[][] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[elemPart]);
-            float[][] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[elemPart]);
+            float[][] nearestLayers = Mesh.findNearestSigmas(part.getDepth(), m.getSiglay(), m.getDepthUvnode()[part.getElem()]);
+            float[][] nearestLevels = Mesh.findNearestSigmas(part.getDepth(), m.getSiglev(), m.getDepthUvnode()[part.getElem()]);
 
             // Get local salinity, temperature
             if (!rp.readHydroVelocityOnly) {
                 if (rp.fixDepth) {
-                    localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "salinity", rp);
-                    localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), elemPart, hour, "temp", rp);
+                    localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "salinity", rp);
+                    localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "temp", rp);
                 } else {
                     localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
                     localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
@@ -137,12 +136,12 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             if (rp.fixDepth) {
-                part.setDepth(rp.startDepth, m.getDepthUvnode()[elemPart]);
-                part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
+                part.setDepth(rp.startDepth, m.getDepthUvnode()[part.getElem()]);
+                part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
             } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
                 if (rp.variableDiffusion) {
-                    K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], elemPart, hour, "k", rp);
-                    K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], elemPart, hour, "k", rp);
+                    K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "k", rp);
+                    K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "k", rp);
                     if (nearestLevels[0][1] == nearestLevels[1][1]) {
                         K_gradient = 0;
                     } else {
@@ -150,7 +149,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     }
                     K_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "k", rp, nearestLevels);
                     depthAdj = part.getDepth() + subStepDt * K_gradient / 2; // = (z + K_gradient/2 * dt) following Visser 1997
-                    nearestLevelsAdj = Mesh.findNearestSigmas(depthAdj, m.getSiglev(), m.getDepthUvnode()[elemPart]);
+                    nearestLevelsAdj = Mesh.findNearestSigmas(depthAdj, m.getSiglev(), m.getDepthUvnode()[part.getElem()]);
                     K_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "k", rp, nearestLevelsAdj);
                     if (K_z > 0.1) { // following Johnsen et al 2016
                         K_z = 0.1;
@@ -182,7 +181,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         swim++;
                     }
                     if (rp.recordActivity && part.getMesh()==0) {
-                        elemActivity[elemPart][activity]++;
+                        elemActivity[part.getElem()][activity]++;
                         hourActivity[Math.toIntExact(Math.round(elapsedHours))][activity]++;
                     }
                 }
@@ -221,18 +220,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 displacement[1] = dXY2[1];
             }
 
-            // Update particle location, changing mesh or exit status if necessary
+            // Calculate new particle location, changing mesh or exit status if necessary
             double[] posInit = {part.getLocation()[0], part.getLocation()[1], part.getDepth()};
             double[] dActual = new double[3];
             double newlocx = part.getLocation()[0] + displacement[0];
             double newlocy = part.getLocation()[1] + displacement[1];
 
+            // Location actually updated here
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             if (rp.verticalDynamics) {
                 double newDepth = part.getDepth() + displacement[2];
-                double maxAllowedDepth = m.getDepthUvnode()[elemPart] < rp.maxDepth ? m.getDepthUvnode()[elemPart] : rp.maxDepth;
+                double maxAllowedDepth = m.getDepthUvnode()[part.getElem()] < rp.maxDepth ? m.getDepthUvnode()[part.getElem()] : rp.maxDepth;
                 part.setDepth(newDepth, maxAllowedDepth);
-                part.setLayerFromDepth(m.getDepthUvnode()[elemPart], m.getSiglay());
+                part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
             }
 
             dActual[0] = part.getLocation()[0] - posInit[0];
