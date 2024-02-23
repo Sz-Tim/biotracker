@@ -478,7 +478,7 @@ public class Particle_track {
      * iii) More than one mesh, hour 23 of the day. In this case, as single hour (23) is read from
      * the first file, and then record 0 from tomorrow's file is read.
      */
-    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) {
+    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) throws InterruptedException {
         List<HydroField> hydroFields = new ArrayList<>();
 
         // 24 hr files only case - read once a day
@@ -486,64 +486,73 @@ public class Particle_track {
         for (Mesh mesh : meshes) {
             if (mesh.getType().equalsIgnoreCase("FVCOM")) {
 
-                try {
-                    // Dima file naming format: minch2_20171229_0003.nc
-                    String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
+                // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
+                int readAttempt = 0;
+                while (readAttempt < 5) {
+                    try{
+                        // Dima file naming format: minch2_20171229_0003.nc
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
 
-                    // Normal "forwards time"
-                    if (!rp.backwards) {
-                        ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-                        if (isLastDay) {
-                            System.out.println("** Last day or missing day - reading same hydro file twice **");
-                            tomorrow = currentIsoDate;
+                        // Normal "forwards time"
+                        if (!rp.backwards) {
+                            ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+                            if (isLastDay) {
+                                System.out.println("** Last day or missing day - reading same hydro file twice **");
+                                tomorrow = currentIsoDate;
+                            }
+                            // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
+                            String[] dirsT1 = new String[]{
+                                    rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
+                                    rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                            String[] dirsT2 = new String[]{
+                                    rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
+                                    rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                            String[] filesT1 = new String[]{
+                                    rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                                    rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                            String[] filesT2 = new String[]{
+                                    rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
+                                    rp.location2 + rp.minchVersion2 + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
+                            List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
+                            List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
+                            // Read both files and combine
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
                         }
-                        // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
-                        String[] dirsT1 = new String[]{
-                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
-                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
-                        String[] dirsT2 = new String[]{
-                                rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
-                                rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
-                        String[] filesT1 = new String[]{
-                                rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
-                                rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
-                        String[] filesT2 = new String[]{
-                                rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
-                                rp.location2 + rp.minchVersion2 + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
-                        List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
-                        List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
-                        // Read both files and combine
-                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
-                    }
-                    // Instead read time backwards, so need yesterday instead
-                    else {
-                        List<File> files1 = (List<File>) FileUtils.listFiles(
-                                new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
-                                null);
-                        ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
-                        if (isLastDay) {
-                            System.out.println("** Last day - reading same hydro file twice **");
-                            yesterday = currentIsoDate;
+                        // Instead read time backwards, so need yesterday instead
+                        else {
+                            List<File> files1 = (List<File>) FileUtils.listFiles(
+                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
+                                    null);
+                            ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
+                            if (isLastDay) {
+                                System.out.println("** Last day - reading same hydro file twice **");
+                                yesterday = currentIsoDate;
+                            }
+                            List<File> files2 = (List<File>) FileUtils.listFiles(
+                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
+                                    null);
+                            // Read both files and combine
+                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
                         }
-                        List<File> files2 = (List<File>) FileUtils.listFiles(
-                                new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                                new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
-                                null);
-                        // Read both files and combine
-                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+                        readAttempt = 5; // success, so exit loop
+                    } catch (Exception ignored) {
+                        System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt+1);
+                        readAttempt++;
+                        Thread.sleep(5000);
+                        if (readAttempt == 5) {
+                            System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
+                            if (!rp.backwards) {
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                            } else {
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                            }
+                            System.exit(1);
+                        }
                     }
-
-                } catch (Exception e) {
-                    System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
-                    if (!rp.backwards) {
-                        System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
-                                + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
-                    } else {
-                        System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
-                                + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
-                    }
-                    System.exit(1);
                 }
             } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
                 String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
