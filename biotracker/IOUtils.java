@@ -1086,6 +1086,23 @@ public class IOUtils {
         }
     }
 
+    /**
+     * Make additions to the element vertical distribution
+     */
+    public static void vertDistrUpdater(List<Particle> particles, RunProperties rp,
+                                        float[][] vertDistrMature, float[][] vertDistrImmature, double dt) {
+        for (Particle p : particles) {
+            double d = p.getDensity();
+            int elemPart = p.getElem();
+            int col = (int) Math.min(Math.floor(p.getDepth()), rp.vertDistrMax);
+            if (p.isViable()) {
+                vertDistrMature[elemPart][col] += (float) d * (float) (dt / 3600);
+            } else if (p.isFree()) {
+                vertDistrImmature[elemPart][col] += (float) d * (float) (dt / 3600);
+            }
+        }
+    }
+
     public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());

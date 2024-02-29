@@ -37,6 +37,7 @@ public class RunProperties {
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
             recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
+            recordVertDistr, // record vertical distributions?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp;
@@ -51,7 +52,8 @@ public class RunProperties {
             thresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
             minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
-            pstepsInterval, connectivityInterval; // Interval in hours between recording element density summaries, and connectivity
+            pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
+            vertDistrInterval, vertDistrMax; // Interval in hours for recording vertDistr, max depth for bins (1 m bins from 0 to vertDistrMax)
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Time step (s) per record
@@ -214,6 +216,9 @@ public class RunProperties {
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
         recordMovement = Boolean.parseBoolean(properties.getProperty("recordMovement", "false"));
         recordActivity = Boolean.parseBoolean(properties.getProperty("recordElemActivity", "false"));
+        recordVertDistr = Boolean.parseBoolean(properties.getProperty("recordVertDistr", "false"));
+        vertDistrInterval = Integer.parseInt(properties.getProperty("vertDistrInterval", "1"));
+        vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
 
         properties.list(System.out);
     }

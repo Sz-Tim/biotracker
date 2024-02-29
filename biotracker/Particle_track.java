@@ -177,6 +177,8 @@ public class Particle_track {
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         int[][] hourActivity = new int[numberOfDays*24+1][3]; // count of sink, swim, float within each hour
+        float[][] vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
+        float[][] vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
         if (rp.recordMovement) {
             IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
                     "movementFile.dat");
@@ -357,7 +359,7 @@ public class Particle_track {
 
                     // Hourly updates to pstep arrays
                     if (rp.recordPsteps) {
-                        IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, 3600);
+                        IOUtils.pstepsUpdater(particles, rp, pstepsMature, pstepsImmature, rp.dt);
                     }
 
                     // Write Psteps
@@ -390,9 +392,30 @@ public class Particle_track {
                         connectivity = new float[habitat.size()][habitatEnd.size()];
                     }
 
+                    if (rp.recordVertDistr) {
+                        IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
+                        if (stepcount % (rp.vertDistrInterval * rp.vertDistrInterval) == 0) {
+                            // Trim arrays to non-zero rows and write to file
+                            float[][] vertDistrMatureTrim = null, vertDistrImmatureTrim = null;
+                            try {
+                                vertDistrMatureTrim = nonZeroRows(vertDistrMature);
+                                vertDistrImmatureTrim = nonZeroRows(vertDistrImmature);
+                            } catch (Exception ignored) {
+                            }
+                            System.out.println("Writing vertical distribution");
+                            if (vertDistrMatureTrim != null) {
+                                IOUtils.writeFloatArrayToFile(vertDistrMatureTrim, "vertDistrMature_" + today + "_" + stepcount + ".dat", false, true);
+                            }
+                            if (vertDistrImmatureTrim != null) {
+                                IOUtils.writeFloatArrayToFile(vertDistrImmatureTrim, "vertDistrImmature_" + today + "_" + stepcount + ".dat", false, true);
+                            }
+                            vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
+                            vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
+                        }
+                    }
+
                     // Clean up "dead" (666) and "exited" (66) particles
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
-
                 }
                 System.out.println();
 
@@ -813,11 +836,11 @@ public class Particle_track {
                 }
             }
         }
-        System.out.println("count " + count);
+        //System.out.println("count " + count);
         float[][] temp = null;
         if (count > 0) {
             temp = new float[count][A[0].length + 1];
-            System.out.println("temp size = " + temp.length + " " + temp[0].length);
+            //System.out.println("temp size = " + temp.length + " " + temp[0].length);
             //System.out.println("A size = "+A.length+" "+A[0].length);
             int p = 0;
             for (int row : list) {
