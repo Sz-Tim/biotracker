@@ -7,6 +7,7 @@ package biotracker;
 
 import java.util.stream.IntStream;
 
+
 /**
  * @author SA01TA
  */
@@ -20,6 +21,18 @@ public class HydroField {
     private float[][] zeta;  // zeta = temporally varying sea surface height above geoid [time][node]
     private float[][][] k;  // turbulent eddy viscosity for momentum [time][sigLev][node] -- Km in FVCOM
     private float[][] light;  // shortwave radiation at surface [time][node]
+
+    public HydroField(float[][][] u, float[][][] v, float[][][] w, float[][][] s, float[][][] t, float[][] zeta, float[][][] k, float[][] light) {
+        this.u = u;
+        this.v = v;
+        this.w = w;
+        this.s = s;
+        this.t = t;
+        this.zeta = zeta;
+        this.k = k;
+        this.light = light;
+    }
+
 
     /**
      * Default constructor for a single day's data
@@ -248,27 +261,27 @@ public class HydroField {
             for (int dep = 0; dep < u1[0].length; dep++) {
                 for (int elem = 0; elem < u1[0][0].length; elem++) {
                     u[u.length - 1][dep][elem] = u2[0][dep][elem];
-                    v[u.length - 1][dep][elem] = v2[0][dep][elem];
-                    w[u.length - 1][dep][elem] = w2[0][dep][elem];
+                    v[v.length - 1][dep][elem] = v2[0][dep][elem];
+                    w[w.length - 1][dep][elem] = w2[0][dep][elem];
                     sumU += u[u.length - 1][dep][elem];
                 }
                 for (int node = 0; node < zeta1[0].length; node++) {
                     if (s2 != null) {
-                        s[u.length - 1][dep][node] = s2[0][dep][node];
+                        s[s.length - 1][dep][node] = s2[0][dep][node];
                     }
                     if (t2 != null) {
-                        t[u.length - 1][dep][node] = t2[0][dep][node];
+                        t[t.length - 1][dep][node] = t2[0][dep][node];
                     }
                     if (dep == 0) {
-                        zeta[u.length - 1][node] = zeta2[0][node];
-                        light[u.length - 1][node] = light2[0][node];
+                        zeta[zeta.length - 1][node] = zeta2[0][node];
+                        light[light.length - 1][node] = light2[0][node];
                     }
                     if (rp.variableDiffusion) {
                         if (k2 != null) {
-                            k[u.length - 1][dep][node] = k2[0][dep][node];
+                            k[k.length - 1][dep][node] = k2[0][dep][node];
                             // easiest way to adjust for extra sigma level
                             if (dep == u1[0].length - 1) {
-                                k[u.length - 1][dep + 1][node] = k2[0][dep + 1][node];
+                                k[k.length - 1][dep + 1][node] = k2[0][dep + 1][node];
                             }
                         }
                     }

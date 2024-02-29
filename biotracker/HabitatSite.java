@@ -33,8 +33,8 @@ public class HabitatSite {
         this.ID = ID;
         this.xy = new float[]{x, y};
         this.scale = scale;
-        this.envConditionSum = new double[4]; // [u, v, w, salinity]
-        this.envConditionCount = new int[4]; // [u, v, w, salinity]
+        this.envConditionSum = new double[6]; // [u, v, w, uv, salinity, temp, km]
+        this.envConditionCount = new int[6]; // [u, v, w, uv, salinity, temp, km]
 
         double[] xy2 = new double[]{this.xy[0], this.xy[1]};
 
@@ -137,7 +137,8 @@ public class HabitatSite {
                     + this.containingMesh + "\t" + this.nearestFVCOMCentroid + "\t" + this.containingFVCOMElem
                     + "\t" + this.containingMeshType
                     + "\t" + this.getAvgEnvCondition()[0] + "\t" + this.getAvgEnvCondition()[1]
-                    + "\t" + this.getAvgEnvCondition()[2] + "\t" + this.getAvgEnvCondition()[3] ;
+                    + "\t" + this.getAvgEnvCondition()[2] + "\t" + this.getAvgEnvCondition()[3]
+                    + "\t" + this.getAvgEnvCondition()[4] + "\t" + this.getAvgEnvCondition()[5];
         } else if (this.containingMeshType.equalsIgnoreCase("ROMS")) {
             details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.containingMesh + " U_grid: ("
                     + this.nearestROMSGridPointU[0] + "," + this.nearestROMSGridPointU[1] + ") ("

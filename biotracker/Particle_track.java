@@ -118,6 +118,8 @@ public class Particle_track {
         // Setup hydrodynamic fields and file lists
         // --------------------------------------------------------------------------------------
         List<HydroField> hydroFields = new ArrayList<>();
+        List<HydroField> hfToday = null;
+        List<HydroField> hfTomorrow = null;
         ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
         if(!missingHydroFiles.isEmpty()) {
             System.out.println("\nWarning! Cannot find the following hydrodynamic files:");
@@ -249,14 +251,12 @@ public class Particle_track {
                         String nextDateShort = nextIsoDate.toStringShort();
                         boolean missingToday = missingHydroFiles.contains(currentDateShort);
                         boolean missingTomorrow = missingHydroFiles.contains(nextDateShort);
-                        if(missingToday) {
-                            System.out.print("Reusing last hydrofile\n");
+                        if (missingToday) {
+                            System.out.print("Can't find file: Reusing hydrodynamics from yesterday\n");
                         } else {
-                            if(missingTomorrow) {
-                                isLastDay = true;
-                            }
-                            hydroFields.clear();
-                            hydroFields = readHydroFields(meshes, currentIsoDate, currentHour, isLastDay, rp);
+                            hfToday = fnum == 0 ? readHydroField(meshes, currentIsoDate, rp) : hfTomorrow;
+                            hfTomorrow = missingTomorrow ? hfToday : readHydroField(meshes, nextIsoDate, rp);
+                            hydroFields = mergeHydroFields(hfToday, hfTomorrow, rp);
                         }
                     }
 
@@ -264,7 +264,7 @@ public class Particle_track {
                         int siteElem = site.getContainingFVCOMElem();
                         int m = site.getContainingMesh();
                         int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) site.getDepth())[0][0];
-                        double[][] currentConditions = new double[nLayers][4];
+                        double[][] currentConditions = new double[nLayers][6];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = site.getLocation()[0];
                         siteLoc[1] = site.getLocation()[1];
@@ -272,7 +272,9 @@ public class Particle_track {
                             currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
                             currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
                             currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
-                            currentConditions[i][3] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp);
+                            currentConditions[i][3] = Math.sqrt(currentConditions[i][0]*currentConditions[i][0] + currentConditions[i][1]*currentConditions[i][1]);
+                            currentConditions[i][4] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp);
+                            currentConditions[i][5] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "temp", rp);
                             site.addEnvCondition(currentConditions[i]);
                         }
                     }
@@ -422,7 +424,7 @@ public class Particle_track {
 
         FileWriter fstream = new FileWriter("startSitesUsed.dat", false);
         PrintWriter out = new PrintWriter(fstream);
-        out.println("site\tx\ty\tdepth\tmesh\tcentroid\telem\tMeshType\tu\tv\tw\tsalinity");
+        out.println("site\tx\ty\tdepth\tmesh\tcentroid\telem\tMeshType\tu\tv\tw\tuv\tsalinity\ttemperature\tk");
         for (HabitatSite habitatSite : habitat) {
             out.println(habitatSite);
         }
@@ -570,6 +572,187 @@ public class Particle_track {
         return hydroFields;
     }
 
+
+    public static List<HydroField> readHydroField(List<Mesh> meshes, ISO_datestr currentIsoDate, RunProperties rp) throws InterruptedException {
+        List<HydroField> hydroFields = new ArrayList<>();
+        // 24 hr files only case - read once a day
+        int m = 0;
+        for (Mesh mesh : meshes) {
+            if (mesh.getType().equalsIgnoreCase("FVCOM")) {
+
+                // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
+                int readAttempt = 0;
+                while (readAttempt < 5) {
+                    try{
+                        // Dima file naming format: minch2_20171229_0003.nc
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
+
+                        // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
+                        String[] dirsT1 = new String[]{
+                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
+                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                        String[] filesT1 = new String[]{
+                                rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                                rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                        List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
+                        // Read both files and combine
+                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+                        readAttempt = 5; // success, so exit loop
+                    } catch (Exception ignored) {
+                        System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt+1);
+                        readAttempt++;
+                        Thread.sleep(5000);
+                        if (readAttempt == 5) {
+                            System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
+                            if (!rp.backwards) {
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                            } else {
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                            }
+                            System.exit(1);
+                        }
+                    }
+                }
+            } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
+                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
+                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
+                String[] varNames1 = {"u", "v", "", "", ""};
+                // Read both files and combine
+                hydroFields.add(new HydroField(filename1, varNames1, null, null, null, "ROMS_TRI", rp));
+            }
+            m++;
+        }
+        return hydroFields;
+    }
+
+    public static List<HydroField> mergeHydroFields(List<HydroField> hf1, List<HydroField> hf2, RunProperties rp) {
+        List<HydroField> hydroFields = new ArrayList<>();
+
+        for (int m=0; m < hf1.size(); m++) {
+            // Get hydrodynamics
+            float[][][] u1 = hf1.get(m).getU(), u2 = hf2.get(m).getU();
+            float[][][] v1 = hf1.get(m).getV(), v2 = hf2.get(m).getV();
+            float[][][] w1 = hf1.get(m).getW(), w2 = hf2.get(m).getW();
+            float[][][] s1 = hf1.get(m).getS(), s2 = hf2.get(m).getS();
+            float[][][] t1 = hf1.get(m).getT(), t2 = hf2.get(m).getT();
+            float[][] zeta1 = hf1.get(m).getZeta(), zeta2 = hf2.get(m).getZeta();
+            float[][] light1 = hf1.get(m).getLight(), light2 = hf2.get(m).getLight();
+            float[][][] k1 = null, k2 = null, k = null;
+            if(rp.variableDiffusion) {
+                k1 = hf1.get(m).getK();
+                k2 = hf2.get(m).getK();
+            }
+
+            float[][][] u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+            float[][][] v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+            float[][][] w = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+            // Next quantities are recorded at nodes in FVCOM
+            float[][][] s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
+            float[][][] t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
+            float[][] zeta = new float[zeta1.length + 1][zeta1[0].length];
+            float[][] light = new float[light1.length + 1][light1[0].length];
+            if (rp.variableDiffusion) {
+                k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
+            }
+
+            double sumU = 0;
+
+            // Use this to test zero velocity/diffusion cases
+            boolean createTest = false;
+            float testU = 0;
+            float testV = (float) 0.1;
+            float testW = (float) 0.1;
+            //noinspection ConstantConditions
+            if (createTest) {
+                for (int hour = 0; hour < u.length; hour++) {
+                    for (int dep = 0; dep < u[0].length; dep++) {
+                        for (int elem = 0; elem < u[0][0].length; elem++) {
+                            u[hour][dep][elem] = testU;
+                            v[hour][dep][elem] = testV;
+                            w[hour][dep][elem] = testW;
+                            sumU += u[hour][dep][elem];
+                        }
+                        if (!rp.readHydroVelocityOnly) {
+                            for (int node = 0; node < zeta1[0].length; node++) {
+
+                                if (s2 != null) {
+                                    s[u.length - 1][dep][node] = 0;
+                                }
+                                if (t2 != null) {
+                                    t[u.length - 1][dep][node] = 0;
+                                }
+                                if (k2 != null) {
+                                    k[u.length - 1][dep][node] = 0;
+                                    // easiest way to adjust for extra sigma level
+                                    if (dep == u[0].length - 1) {
+                                        k[u.length - 1][dep + 1][node] = 0;
+                                    }
+                                }
+                                if (dep == 0) {
+                                    zeta[u.length - 1][node] = 0;
+                                    light[u.length - 1][node] = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (int hour = 0; hour < u1.length; hour++) {
+                    for (int dep = 0; dep < u1[0].length; dep++) {
+                        for (int elem = 0; elem < u1[0][0].length; elem++) {
+                            u[hour][dep][elem] = u1[hour][dep][elem];
+                            v[hour][dep][elem] = v1[hour][dep][elem];
+                            assert w1 != null;
+                            w[hour][dep][elem] = w1[hour][dep][elem];
+                            sumU += u[hour][dep][elem];
+                        }
+                        for (int node = 0; node < zeta1[0].length; node++) {
+                            s[hour][dep][node] = s1[hour][dep][node];
+                            t[hour][dep][node] = t1[hour][dep][node];
+                            if (dep == 0) {
+                                zeta[hour][node] = zeta1[hour][node];
+                                light[hour][node] = light1[hour][node];
+                            }
+                            if (rp.variableDiffusion) {
+                                k[hour][dep][node] = k1[hour][dep][node];
+                                // easiest way to adjust for extra sigma level
+                                if (dep == u1[0].length - 1) {
+                                    k[hour][dep + 1][node] = k1[hour][dep + 1][node];
+                                }
+                            }
+                        }
+                    }
+                }
+                for (int dep = 0; dep < u1[0].length; dep++) {
+                    for (int elem = 0; elem < u1[0][0].length; elem++) {
+                        u[u.length - 1][dep][elem] = u2[0][dep][elem];
+                        v[u.length - 1][dep][elem] = v2[0][dep][elem];
+                        w[u.length - 1][dep][elem] = w2[0][dep][elem];
+                        sumU += u[u.length - 1][dep][elem];
+                    }
+                    for (int node = 0; node < zeta1[0].length; node++) {
+                        s[u.length - 1][dep][node] = s2[0][dep][node];
+                        t[u.length - 1][dep][node] = t2[0][dep][node];
+                        if (dep == 0) {
+                            zeta[u.length - 1][node] = zeta2[0][node];
+                            light[u.length - 1][node] = light2[0][node];
+                        }
+                        if (rp.variableDiffusion) {
+                            k[u.length - 1][dep][node] = k2[0][dep][node];
+                            // easiest way to adjust for extra sigma level
+                            if (dep == u1[0].length - 1) {
+                                k[u.length - 1][dep + 1][node] = k2[0][dep + 1][node];
+                            }
+                        }
+                    }
+                }
+            }
+            hydroFields.add(new HydroField(u, v, w, s, t, zeta, k, light));
+        }
+        return hydroFields;
+    }
 
     /**
      * Count the number of particles in different states (free, viable, settled,
