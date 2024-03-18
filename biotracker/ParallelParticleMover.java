@@ -98,7 +98,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             int swim = 0;
             double localTemperature = 12;
             double localSalinity = 35;
-            double tempSurface = hf.getAvgFromTrinodes(m, part.getLocation(), 1, part.getElem(), hour, "temp", rp);
+            double tempSurface = rp.needT ? hf.getAvgFromTrinodes(m, part.getLocation(), 1, part.getElem(), hour, "temp", rp) : localTemperature;
 
             // sigma layers
             float localDepth = m.getDepthUvnode()[part.getElem()]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
@@ -111,11 +111,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Get local salinity, temperature
             if (!rp.readHydroVelocityOnly) {
                 if (rp.fixDepth) {
-                    localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "salinity", rp);
-                    localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "temp", rp);
+                    if (rp.needS) {
+                        localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "salinity", rp);
+                    }
+                    if (rp.needT) {
+                        localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "temp", rp);
+                    }
                 } else {
-                    localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
-                    localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
+                    if (rp.needS) {
+                        localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
+                    }
+                    if (rp.needT) {
+                        localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
+                    }
                 }
             }
             // Increment in particle age & degree days
@@ -138,7 +146,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[part.getElem()]);
                 part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
-            } else if (meshes.get(part.getMesh()).getType().equalsIgnoreCase("FVCOM") || meshes.get(part.getMesh()).getType().equalsIgnoreCase("ROMS_TRI")) {
+            } else if (meshes.get(part.getMesh()).getType().equals("FVCOM") || meshes.get(part.getMesh()).getType().equals("ROMS_TRI")) {
                 if (rp.variableDiffusion) {
                     K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "k", rp);
                     K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "k", rp);
@@ -214,7 +222,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
             }
 
-            if (rp.coordRef.equalsIgnoreCase("WGS84")) {
+            if (rp.coordRef.equals("WGS84")) {
                 double[] dXY2 = distanceMetresToDegrees2(new double[]{displacement[0], displacement[1]}, part.getLocation());
                 displacement[0] = dXY2[0];
                 displacement[1] = dXY2[1];
@@ -366,19 +374,19 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         // note that this uses the mesh NODES (nodexy), not elements or centroids
         // (make it settle there, even if it is inviable)
         int nBNode = 0;
-        if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
+        if (rp.FVCOM) {
             nBNode = m.getOpenBoundaryNodes().length;
-        } else if (m.getType().equalsIgnoreCase("ROMS")) {
+        } else if (m.getType().equals("ROMS")) {
             nBNode = m.getConvexHull().length;
         }
 
         for (int loc = 0; loc < nBNode; loc++) {
             double dist = 0;
 
-            if (m.getType().equalsIgnoreCase("FVCOM") || m.getType().equalsIgnoreCase("ROMS_TRI")) {
+            if (rp.FVCOM) {
                 dist = Particle.distanceEuclid2(x, y,
                         m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
-            } else if (m.getType().equalsIgnoreCase("ROMS")) {
+            } else if (m.getType().equals("ROMS")) {
                 dist = Particle.distanceEuclid2(x, y,
                         m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
             }

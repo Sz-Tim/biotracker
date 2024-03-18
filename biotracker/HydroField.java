@@ -63,15 +63,23 @@ public class HydroField {
         if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
             v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            w = IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape);
-            if (!rp.readHydroVelocityOnly) {
+            if(rp.needW) {
+                w = IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape);
+            }
+            if(rp.needS) {
                 s = IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST);
+            }
+            if(rp.needT) {
                 t = IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST);
-                light = IOUtils.readNetcdfFloat2D(filename, varNames[7], origin2, shapeST2);
+            }
+            if(rp.needZeta) {
                 zeta = IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2);
-                if (rp.variableDiffusion) {
-                    k = IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2);
-                }
+            }
+            if(rp.needK) {
+                k = IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2);
+            }
+            if(rp.needLight) {
+                light = IOUtils.readNetcdfFloat2D(filename, varNames[7], origin2, shapeST2);
             }
         } else if (type.equalsIgnoreCase("ROMS")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
@@ -109,6 +117,8 @@ public class HydroField {
             shapeST2[1] = shapeST[2];
         }
 
+        int nHour = 0, nDep = 0, nElem = 0, nNode = 0;
+
         System.out.println("Reading two hydro files and combining");
         float[][][] u1 = null, v1 = null, s1 = null, t1 = null, u2 = null, v2 = null, s2 = null, t2 = null, k1 = null, k2 = null, w1 = null, w2 = null;
         float[][] zeta1 = null, zeta2 = null, light1 = null, light2 = null;
@@ -117,13 +127,29 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename1);
             u1 = IOUtils.readNetcdfFloat3D(filename1, varNames[0], origin, shape);
             v1 = IOUtils.readNetcdfFloat3D(filename1, varNames[1], origin, shape);
-            w1 = IOUtils.readNetcdfFloat3D(filename1, varNames[2], origin, shape);
-            s1 = IOUtils.readNetcdfFloat3D(filename1, varNames[3], origin, shapeST);
-            t1 = IOUtils.readNetcdfFloat3D(filename1, varNames[4], origin, shapeST);
-            zeta1 = IOUtils.readNetcdfFloat2D(filename1, varNames[5], origin2, shapeST2);  // origin and shape need to lose a dimension (middle one) here
-            light1 = IOUtils.readNetcdfFloat2D(filename1, varNames[7], origin2, shapeST2);
-            if (rp.variableDiffusion) {
+            nHour = u1.length;
+            nDep = u1[0].length;
+            nElem = u1[0][0].length;
+            if (rp.needW) {
+                w1 = IOUtils.readNetcdfFloat3D(filename1, varNames[2], origin, shape);
+            }
+            if (rp.needS) {
+                s1 = IOUtils.readNetcdfFloat3D(filename1, varNames[3], origin, shapeST);
+                nNode = s1[0][0].length;
+            }
+            if (rp.needT) {
+                t1 = IOUtils.readNetcdfFloat3D(filename1, varNames[4], origin, shapeST);
+                nNode = t1[0][0].length;
+            }
+            if (rp.needZeta) {
+                zeta1 = IOUtils.readNetcdfFloat2D(filename1, varNames[5], origin2, shapeST2);  // origin and shape rp.need to lose a dimension (middle one) here
+                nNode = zeta1[0].length;
+            }
+            if (rp.needK) {
                 k1 = IOUtils.readNetcdfFloat3D(filename1, varNames[6], origin, shapeST);
+            }
+            if (rp.needLight) {
+                light1 = IOUtils.readNetcdfFloat2D(filename1, varNames[7], origin2, shapeST2);
             }
 
             // When reading two files, we ALWAYS want to start from t=0 for the second one
@@ -134,12 +160,22 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename2);
             u2 = IOUtils.readNetcdfFloat3D(filename2, varNames[0], origin, shape);
             v2 = IOUtils.readNetcdfFloat3D(filename2, varNames[1], origin, shape);
-            w2 = IOUtils.readNetcdfFloat3D(filename2, varNames[2], origin, shape);
-            s2 = IOUtils.readNetcdfFloat3D(filename2, varNames[3], origin, shapeST);
-            t2 = IOUtils.readNetcdfFloat3D(filename2, varNames[4], origin, shapeST);
-            zeta2 = IOUtils.readNetcdfFloat2D(filename2, varNames[5], origin2, shapeST2);  // origin and shape need to lose a dimension here (depth)
-            light2 = IOUtils.readNetcdfFloat2D(filename2, varNames[7], origin2, shapeST2);
-            if (rp.variableDiffusion) {
+            if (rp.needW) {
+                w2 = IOUtils.readNetcdfFloat3D(filename2, varNames[2], origin, shape);
+            }
+            if (rp.needS) {
+                s2 = IOUtils.readNetcdfFloat3D(filename2, varNames[3], origin, shapeST);
+            }
+            if (rp.needT) {
+                t2 = IOUtils.readNetcdfFloat3D(filename2, varNames[4], origin, shapeST);
+            }
+            if (rp.needZeta) {
+                zeta2 = IOUtils.readNetcdfFloat2D(filename2, varNames[5], origin2, shapeST2);  // origin and shape rp.need to lose a dimension here (depth)
+            }
+            if (rp.needLight) {
+                light2 = IOUtils.readNetcdfFloat2D(filename2, varNames[7], origin2, shapeST2);
+            }
+            if (rp.needK) {
                 k2 = IOUtils.readNetcdfFloat3D(filename2, varNames[6], origin, shapeST);
             }
         } else if (type.equalsIgnoreCase("ROMS")) {
@@ -165,23 +201,24 @@ public class HydroField {
 
         // These are recorded at element centroids in FVCOM
         assert u1 != null;
-        u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-        v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-        w = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+        u = new float[nHour + 1][nDep][nElem];
+        v = new float[nHour + 1][nDep][nElem];
+        w = new float[nHour + 1][nDep][nElem];
         // Next quantities are recorded at nodes in FVCOM
         if (s1 != null) {
-            s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
+            s = new float[nHour + 1][nDep][nNode];
         }
         if (t1 != null) {
-            t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
+            t = new float[nHour + 1][nDep][nNode];
         }
-        zeta = new float[zeta1.length + 1][zeta1[0].length];
-        assert light1 != null;
-        light = new float[light1.length + 1][light1[0].length];
-        if (rp.variableDiffusion) {
-            if (k1 != null) {
-                k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
-            }
+        if (zeta1 != null) {
+            zeta = new float[nHour + 1][nNode];
+        }
+        if (light1 != null) {
+            light = new float[nHour + 1][nNode];
+        }
+        if (k1 != null) {
+            k = new float[nHour + 1][nDep+1][nNode];
         }
 
         double sumU = 0;
@@ -202,7 +239,7 @@ public class HydroField {
                         sumU += u[hour][dep][elem];
                     }
                     if (!rp.readHydroVelocityOnly) {
-                        for (int node = 0; node < zeta1[0].length; node++) {
+                        for (int node = 0; node < nNode; node++) {
 
                             if (s2 != null) {
                                 s[u.length - 1][dep][node] = 0;
@@ -226,16 +263,16 @@ public class HydroField {
                 }
             }
         } else {
-            for (int hour = 0; hour < u1.length; hour++) {
-                for (int dep = 0; dep < u1[0].length; dep++) {
-                    for (int elem = 0; elem < u1[0][0].length; elem++) {
+            for (int hour = 0; hour < nHour; hour++) {
+                for (int dep = 0; dep < nDep; dep++) {
+                    for (int elem = 0; elem < nElem; elem++) {
                         u[hour][dep][elem] = u1[hour][dep][elem];
                         v[hour][dep][elem] = v1[hour][dep][elem];
                         assert w1 != null;
                         w[hour][dep][elem] = w1[hour][dep][elem];
                         sumU += u[hour][dep][elem];
                     }
-                    for (int node = 0; node < zeta1[0].length; node++) {
+                    for (int node = 0; node < nNode; node++) {
                         if (s1 != null) {
                             s[hour][dep][node] = s1[hour][dep][node];
                         }
@@ -243,29 +280,31 @@ public class HydroField {
                             t[hour][dep][node] = t1[hour][dep][node];
                         }
                         if (dep == 0) {
-                            zeta[hour][node] = zeta1[hour][node];
-                            light[hour][node] = light1[hour][node];
+                            if (zeta != null) {
+                                zeta[hour][node] = zeta1[hour][node];
+                            }
+                            if (light != null) {
+                                light[hour][node] = light1[hour][node];
+                            }
                         }
-                        if (rp.variableDiffusion) {
-                            if (k1 != null) {
-                                k[hour][dep][node] = k1[hour][dep][node];
-                                // easiest way to adjust for extra sigma level
-                                if (dep == u1[0].length - 1) {
-                                    k[hour][dep + 1][node] = k1[hour][dep + 1][node];
-                                }
+                        if (k1 != null) {
+                            k[hour][dep][node] = k1[hour][dep][node];
+                            // easiest way to adjust for extra sigma level
+                            if (dep == nDep - 1) {
+                                k[hour][dep + 1][node] = k1[hour][dep + 1][node];
                             }
                         }
                     }
                 }
             }
-            for (int dep = 0; dep < u1[0].length; dep++) {
-                for (int elem = 0; elem < u1[0][0].length; elem++) {
+            for (int dep = 0; dep < nDep; dep++) {
+                for (int elem = 0; elem < nElem; elem++) {
                     u[u.length - 1][dep][elem] = u2[0][dep][elem];
                     v[v.length - 1][dep][elem] = v2[0][dep][elem];
                     w[w.length - 1][dep][elem] = w2[0][dep][elem];
                     sumU += u[u.length - 1][dep][elem];
                 }
-                for (int node = 0; node < zeta1[0].length; node++) {
+                for (int node = 0; node < nNode; node++) {
                     if (s2 != null) {
                         s[s.length - 1][dep][node] = s2[0][dep][node];
                     }
@@ -274,13 +313,15 @@ public class HydroField {
                     }
                     if (dep == 0) {
                         zeta[zeta.length - 1][node] = zeta2[0][node];
-                        light[light.length - 1][node] = light2[0][node];
+                        if (light != null) {
+                            light[light.length - 1][node] = light2[0][node];
+                        }
                     }
                     if (rp.variableDiffusion) {
                         if (k2 != null) {
                             k[k.length - 1][dep][node] = k2[0][dep][node];
                             // easiest way to adjust for extra sigma level
-                            if (dep == u1[0].length - 1) {
+                            if (dep == nDep - 1) {
                                 k[k.length - 1][dep + 1][node] = k2[0][dep + 1][node];
                             }
                         }
@@ -351,15 +392,15 @@ public class HydroField {
             dist[i] = Particle.distanceEuclid2(location[0], location[1], mesh.getNodexy()[0][particleNodes[i]], mesh.getNodexy()[1][particleNodes[i]], rp.coordRef);
             weights[i] = 1.0 / (dist[i] * dist[i]);
             weightSum += weights[i];
-            if (varName.equalsIgnoreCase("temp")) {
+            if (varName.equals("temp")) {
                 sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equalsIgnoreCase("salinity")) {
+            } else if (varName.equals("salinity")) {
                 sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equalsIgnoreCase("k")) {
+            } else if (varName.equals("k")) {
                 sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equalsIgnoreCase("zeta")) {
+            } else if (varName.equals("zeta")) {
                 sum += getZeta()[hour][particleNodes[i]] * weights[i];
-            } else if (varName.equalsIgnoreCase("short_wave")) {
+            } else if (varName.equals("short_wave")) {
                 sum += getLight()[hour][particleNodes[i]] * weights[i];
             }
         }

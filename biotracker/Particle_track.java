@@ -118,7 +118,7 @@ public class Particle_track {
         // Setup hydrodynamic fields and file lists
         // --------------------------------------------------------------------------------------
         List<HydroField> hydroFields = new ArrayList<>();
-        List<HydroField> hfToday = null;
+        List<HydroField> hfToday;
         List<HydroField> hfTomorrow = null;
         ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
         if(!missingHydroFiles.isEmpty()) {
@@ -257,7 +257,7 @@ public class Particle_track {
                             System.out.print("Can't find file: Reusing hydrodynamics from yesterday\n");
                         } else {
                             hfToday = fnum == 0 ? readHydroField(meshes, currentIsoDate, rp) : hfTomorrow;
-                            hfTomorrow = missingTomorrow ? hfToday : readHydroField(meshes, nextIsoDate, rp);
+                            hfTomorrow = (missingTomorrow | isLastDay) ? hfToday : readHydroField(meshes, nextIsoDate, rp);
                             hydroFields = mergeHydroFields(hfToday, hfTomorrow, rp);
                         }
                     }
@@ -273,10 +273,10 @@ public class Particle_track {
                         for (int i = 0; i < nLayers; i++) {
                             currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
                             currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
-                            currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
+                            currentConditions[i][2] = rp.needW ? hydroFields.get(m).getW()[currentHour][i][siteElem] : -9999;
                             currentConditions[i][3] = Math.sqrt(currentConditions[i][0]*currentConditions[i][0] + currentConditions[i][1]*currentConditions[i][1]);
-                            currentConditions[i][4] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp);
-                            currentConditions[i][5] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "temp", rp);
+                            currentConditions[i][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp) : -9999;
+                            currentConditions[i][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "temp", rp) : -9999;
                             site.addEnvCondition(currentConditions[i]);
                         }
                     }
@@ -394,7 +394,7 @@ public class Particle_track {
 
                     if (rp.recordVertDistr) {
                         IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
-                        if (stepcount % (rp.vertDistrInterval * rp.vertDistrInterval) == 0) {
+                        if (stepcount % (rp.vertDistrInterval * rp.stepsPerStep) == 0) {
                             // Trim arrays to non-zero rows and write to file
                             float[][] vertDistrMatureTrim = null, vertDistrImmatureTrim = null;
                             try {
@@ -656,27 +656,48 @@ public class Particle_track {
         for (int m=0; m < hf1.size(); m++) {
             // Get hydrodynamics
             float[][][] u1 = hf1.get(m).getU(), u2 = hf2.get(m).getU();
+            float[][][] u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
             float[][][] v1 = hf1.get(m).getV(), v2 = hf2.get(m).getV();
-            float[][][] w1 = hf1.get(m).getW(), w2 = hf2.get(m).getW();
-            float[][][] s1 = hf1.get(m).getS(), s2 = hf2.get(m).getS();
-            float[][][] t1 = hf1.get(m).getT(), t2 = hf2.get(m).getT();
-            float[][] zeta1 = hf1.get(m).getZeta(), zeta2 = hf2.get(m).getZeta();
-            float[][] light1 = hf1.get(m).getLight(), light2 = hf2.get(m).getLight();
-            float[][][] k1 = null, k2 = null, k = null;
-            if(rp.variableDiffusion) {
+            float[][][] v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+
+            int nHour = u1.length;
+            int nDep = u1[0].length;
+            int nElem = u1[0][0].length;
+            int nNode = 0;
+
+            float[][][] w = null, w1 = null, w2 = null, s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null;
+            float[][] zeta = null, zeta1 = null, zeta2 = null, light = null, light1 = null, light2 = null;
+            if(rp.needW) {
+                w1 = hf1.get(m).getW();
+                w2 = hf2.get(m).getW();
+                w = new float[w1.length + 1][w1[0].length][w1[0][0].length];
+            }
+            if(rp.needS) {
+                s1 = hf1.get(m).getS();
+                s2 = hf2.get(m).getS();
+                s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
+                nNode = s1[0][0].length;
+            }
+            if(rp.needT) {
+                t1 = hf1.get(m).getT();
+                t2 = hf2.get(m).getT();
+                t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
+                nNode = t1[0][0].length;
+            }
+            if(rp.needZeta) {
+                zeta1 = hf1.get(m).getZeta();
+                zeta2 = hf2.get(m).getZeta();
+                zeta = new float[zeta1.length + 1][zeta1[0].length];
+                nNode = zeta1[0].length;
+            }
+            if(rp.needLight) {
+                light1 = hf1.get(m).getLight();
+                light2 = hf2.get(m).getLight();
+                light = new float[light1.length + 1][light1[0].length];
+            }
+            if(rp.needK) {
                 k1 = hf1.get(m).getK();
                 k2 = hf2.get(m).getK();
-            }
-
-            float[][][] u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-            float[][][] v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-            float[][][] w = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-            // Next quantities are recorded at nodes in FVCOM
-            float[][][] s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
-            float[][][] t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
-            float[][] zeta = new float[zeta1.length + 1][zeta1[0].length];
-            float[][] light = new float[light1.length + 1][light1[0].length];
-            if (rp.variableDiffusion) {
                 k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
             }
 
@@ -722,23 +743,32 @@ public class Particle_track {
                     }
                 }
             } else {
-                for (int hour = 0; hour < u1.length; hour++) {
-                    for (int dep = 0; dep < u1[0].length; dep++) {
-                        for (int elem = 0; elem < u1[0][0].length; elem++) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    for (int dep = 0; dep < nDep; dep++) {
+                        for (int elem = 0; elem < nElem; elem++) {
                             u[hour][dep][elem] = u1[hour][dep][elem];
                             v[hour][dep][elem] = v1[hour][dep][elem];
-                            assert w1 != null;
-                            w[hour][dep][elem] = w1[hour][dep][elem];
+                            if (w != null) {
+                                w[hour][dep][elem] = w1[hour][dep][elem];
+                            }
                             sumU += u[hour][dep][elem];
                         }
-                        for (int node = 0; node < zeta1[0].length; node++) {
-                            s[hour][dep][node] = s1[hour][dep][node];
-                            t[hour][dep][node] = t1[hour][dep][node];
-                            if (dep == 0) {
-                                zeta[hour][node] = zeta1[hour][node];
-                                light[hour][node] = light1[hour][node];
+                        for (int node = 0; node < nNode; node++) {
+                            if (s != null) {
+                                s[hour][dep][node] = s1[hour][dep][node];
                             }
-                            if (rp.variableDiffusion) {
+                            if (t != null) {
+                                t[hour][dep][node] = t1[hour][dep][node];
+                            }
+                            if (dep == 0) {
+                                if (zeta != null) {
+                                    zeta[hour][node] = zeta1[hour][node];
+                                }
+                                if (light != null) {
+                                    light[hour][node] = light1[hour][node];
+                                }
+                            }
+                            if (k != null) {
                                 k[hour][dep][node] = k1[hour][dep][node];
                                 // easiest way to adjust for extra sigma level
                                 if (dep == u1[0].length - 1) {
@@ -748,21 +778,31 @@ public class Particle_track {
                         }
                     }
                 }
-                for (int dep = 0; dep < u1[0].length; dep++) {
-                    for (int elem = 0; elem < u1[0][0].length; elem++) {
+                for (int dep = 0; dep < nDep; dep++) {
+                    for (int elem = 0; elem < nElem; elem++) {
                         u[u.length - 1][dep][elem] = u2[0][dep][elem];
                         v[u.length - 1][dep][elem] = v2[0][dep][elem];
-                        w[u.length - 1][dep][elem] = w2[0][dep][elem];
+                        if (w != null) {
+                            w[u.length - 1][dep][elem] = w2[0][dep][elem];
+                        }
                         sumU += u[u.length - 1][dep][elem];
                     }
-                    for (int node = 0; node < zeta1[0].length; node++) {
-                        s[u.length - 1][dep][node] = s2[0][dep][node];
-                        t[u.length - 1][dep][node] = t2[0][dep][node];
-                        if (dep == 0) {
-                            zeta[u.length - 1][node] = zeta2[0][node];
-                            light[u.length - 1][node] = light2[0][node];
+                    for (int node = 0; node < nNode; node++) {
+                        if (s != null) {
+                            s[u.length - 1][dep][node] = s2[0][dep][node];
                         }
-                        if (rp.variableDiffusion) {
+                        if (t != null) {
+                            t[u.length - 1][dep][node] = t2[0][dep][node];
+                        }
+                        if (dep == 0) {
+                            if (zeta != null) {
+                                zeta[u.length - 1][node] = zeta2[0][node];
+                            }
+                            if (light != null) {
+                                light[u.length - 1][node] = light2[0][node];
+                            }
+                        }
+                        if (k != null) {
                             k[u.length - 1][dep][node] = k2[0][dep][node];
                             // easiest way to adjust for extra sigma level
                             if (dep == u1[0].length - 1) {
@@ -836,17 +876,13 @@ public class Particle_track {
                 }
             }
         }
-        //System.out.println("count " + count);
         float[][] temp = null;
         if (count > 0) {
             temp = new float[count][A[0].length + 1];
-            //System.out.println("temp size = " + temp.length + " " + temp[0].length);
-            //System.out.println("A size = "+A.length+" "+A[0].length);
             int p = 0;
             for (int row : list) {
                 temp[p][0] = row;
                 for (int j = 0; j < A[0].length; j++) {
-                    //System.out.println(A[row][j]);
                     if (A[row][j] > 0) {
                         temp[p][j + 1] = A[row][j];
                     }

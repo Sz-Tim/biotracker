@@ -40,7 +40,9 @@ public class RunProperties {
             recordVertDistr, // record vertical distributions?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
-            verboseSetUp;
+            verboseSetUp,
+            needW, needS, needT, needZeta, needK, needLight, // Internal use: which hydrodynamic variables need to be loaded?
+            FVCOM; // Is mesh FVCOM? If not, not all functions are supported
 
     ISO_datestr start_ymd, end_ymd;
 
@@ -109,6 +111,7 @@ public class RunProperties {
         mesh2 = properties.getProperty("mesh2", "");
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
+        FVCOM = properties.getProperty("mesh1Type").equals("FVCOM");
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
         openBoundaryThresh = Double.parseDouble(properties.getProperty("openBoundaryThresh", "500"));
 
@@ -219,6 +222,14 @@ public class RunProperties {
         recordVertDistr = Boolean.parseBoolean(properties.getProperty("recordVertDistr", "false"));
         vertDistrInterval = Integer.parseInt(properties.getProperty("vertDistrInterval", "1"));
         vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
+
+        // hydrodynamic file requirements
+        needW = verticalDynamics;
+        needS = verticalDynamics || salinityMort;
+        needT = viableDegreeDays > -1;
+        needZeta = false;
+        needK = verticalDynamics && variableDiffusion;
+        needLight = verticalDynamics;
 
         properties.list(System.out);
     }

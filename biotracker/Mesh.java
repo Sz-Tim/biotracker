@@ -42,6 +42,7 @@ public class Mesh {
     private float[] siglay;
     private float[] siglev;
     private float[][] convexHull;
+    private Path2D.Float convexHullPath;
 
     /**
      * Create a Mesh from a NetCDF file, and supplementary text files detailing
@@ -51,8 +52,8 @@ public class Mesh {
         System.out.println("Reading mesh file: " + meshFilename);
 
         meshType = type;
-        if (type.equalsIgnoreCase("ROMS_TRI") || type.equalsIgnoreCase("FVCOM")) {
-            if (coordRef.equalsIgnoreCase("WGS84")) {
+        if (type.equals("ROMS_TRI") || type.equals("FVCOM")) {
+            if (coordRef.equals("WGS84")) {
                 uvnode = IOUtils.readNetcdfFloat2D(meshFilename, "uvnode", null, null);
                 nodexy = IOUtils.readNetcdfFloat2D(meshFilename, "nodexy", null, null);
                 if (uvnode == null) {
@@ -157,7 +158,7 @@ public class Mesh {
             }
             convexHull = ConvexHull.convexHull(uvnodeT);
             IOUtils.writeFloatArrayToFile(convexHull, "convexHull_" + type + ".dat", false, false);
-        } else if (type.equalsIgnoreCase("ROMS")) {
+        } else if (type.equals("ROMS")) {
             rangeUV[0][0] = 300;
             rangeUV[0][1] = 748;
             rangeUV[1][0] = 250;
@@ -200,6 +201,7 @@ public class Mesh {
             // increasing first index => increasing longitude
             // increasing second index => decreasing latitude
         }
+        convexHullPath = Mesh.pointsToPath(this.getConvexHull());
     }
 
     /**
@@ -211,10 +213,11 @@ public class Mesh {
      * @return float[0=below,1=above][0=index,1=depth]
      */
     public static float[][] findNearestSigmas(double particleDepth, float[] sigmas, float localDepth) {
-        float[][] sigmaInfo = new float[2][2];
         int layerBelow = sigmas.length;
+        float[] sigDepths = new float[sigmas.length];
         for (int i = 0; i < sigmas.length; i++) {
-            if (particleDepth < sigmas[i] * localDepth) {
+            sigDepths[i] = sigmas[i] * localDepth;
+            if (particleDepth < sigDepths[i]) {
                 layerBelow = i;
                 break;
             }
@@ -226,12 +229,35 @@ public class Mesh {
         if (layerBelow == sigmas.length) {
             layerBelow = layerAbove;
         }
+        float[][] sigmaInfo = new float[2][2];
         sigmaInfo[0][0] = layerBelow;
-        sigmaInfo[0][1] = sigmas[layerBelow]*localDepth;
+        sigmaInfo[0][1] = sigDepths[layerBelow];
         sigmaInfo[1][0] = layerAbove;
-        sigmaInfo[1][1] = sigmas[layerAbove]*localDepth;
+        sigmaInfo[1][1] = sigDepths[layerAbove];
         return sigmaInfo;
     }
+
+    public static int[] findNearestSigmaIndexes(double particleDepth, float[] sigmas, float localDepth) {
+        int[] layerBelowAbove = new int[2];
+        layerBelowAbove[0] = sigmas.length;
+        float[] sigDepths = new float[sigmas.length];
+        for (int i = 0; i < sigmas.length; i++) {
+            sigDepths[i] = sigmas[i] * localDepth;
+            if (particleDepth < sigDepths[i]) {
+                layerBelowAbove[0] = i;
+                break;
+            }
+        }
+        layerBelowAbove[1] = layerBelowAbove[0] - 1;
+        if (layerBelowAbove[1] < 0) {
+            layerBelowAbove[1] = 0;
+        }
+        if (layerBelowAbove[0] == sigmas.length) {
+            layerBelowAbove[0] = layerBelowAbove[1];
+        }
+        return layerBelowAbove;
+    }
+
 
     public float[][] getNodexy() {
         return nodexy;
@@ -305,6 +331,9 @@ public class Mesh {
         return convexHull;
     }
 
+    public Path2D.Float getConvexHullPath() {
+        return convexHullPath;
+    }
     public String getType() {
         return meshType;
     }
@@ -347,20 +376,20 @@ public class Mesh {
     }
 
     public boolean isInMesh(double[] xy, boolean checkElements, boolean checkAllElems, int[] elemLoc) {
-        Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
+        Path2D.Float cHull = this.getConvexHullPath();
         boolean inMesh = cHull.contains(xy[0], xy[1]);
         // Do the element check, if required. This will identify when a point is NOT in the mesh
         // when it has fallen inside the convex hull but is outside any element
         if (checkElements && inMesh) {
             int[] c = new int[5];
-            if (this.getType().equalsIgnoreCase("FVCOM") || this.getType().equalsIgnoreCase("ROMS_TRI")) {
+            if (this.getType().equals("FVCOM") || this.getType().equals("ROMS_TRI")) {
                 int eL = 0;
                 if (elemLoc != null) {
                     eL = elemLoc[0];
                 }
                 c = Particle.findContainingElement(xy, eL,
                         this.getNodexy(), this.getTrinodes(), this.getNeighbours(), checkAllElems);
-            } else if (this.getType().equalsIgnoreCase("ROMS")) {
+            } else if (this.getType().equals("ROMS")) {
                 // Use the U grid to determine whether within the mesh or not.
                 // This leads to some particles that are outside the V grid being identified as in the mesh.
                 // The same would happen with rho
