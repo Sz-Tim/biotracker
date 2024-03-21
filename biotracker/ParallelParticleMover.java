@@ -77,7 +77,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
         Mesh m = meshes.get(part.getMesh());
         HydroField hf = hydroFields.get(part.getMesh());
-        int nDims = rp.verticalDynamics ? 3 : 2;
 
         // Set particles free once they pass their defined release time (hours)
         if (!part.isFree()) {
@@ -89,7 +88,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         if (part.isFree() && !part.hasArrived() && !part.hasExited()) {
 
             // Three types of possible movement: advection, diffusion, and active swimming/sinking; [x,y,(z)]
-            // Note: (z) stays 0 unless rp.verticalDynamics == true
+            // Note: (z) stays 0 if rp.fixDepth == true
             double[] advectStep;
             double[] diffusion = {0,0,0};
             double[] activeMovement = {0,0,0};
@@ -203,9 +202,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // advection
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
+                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef);
             } else {
-                advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.verticalDynamics);
+                advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.fixDepth);
             }
             if (rp.backwards) {
                 for (int i = 0; i < advectStep.length; i++) {
@@ -218,7 +217,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
 
-            for (int i = 0; i < nDims; i++) {
+            for (int i = 0; i < 3; i++) {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
             }
 
@@ -236,12 +235,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Location actually updated here
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
-            if (rp.verticalDynamics) {
-                double newDepth = part.getDepth() + displacement[2];
-                double maxAllowedDepth = m.getDepthUvnode()[part.getElem()] < rp.maxDepth ? m.getDepthUvnode()[part.getElem()] : rp.maxDepth;
-                part.setDepth(newDepth, maxAllowedDepth);
-                part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
-            }
+            double newDepth = part.getDepth() + displacement[2];
+            double maxAllowedDepth = m.getDepthUvnode()[part.getElem()] < rp.maxDepth ? m.getDepthUvnode()[part.getElem()] : rp.maxDepth;
+            part.setDepth(newDepth, maxAllowedDepth);
+            part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
 
             dActual[0] = part.getLocation()[0] - posInit[0];
             dActual[1] = part.getLocation()[1] - posInit[1];
@@ -373,40 +370,39 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         // check whether the particle has gone within a certain range of one of the boundary nodes
         // note that this uses the mesh NODES (nodexy), not elements or centroids
         // (make it settle there, even if it is inviable)
-        int nBNode = 0;
-        if (rp.FVCOM) {
-            nBNode = m.getOpenBoundaryNodes().length;
-        } else if (m.getType().equals("ROMS")) {
-            nBNode = m.getConvexHull().length;
-        }
 
-        for (int loc = 0; loc < nBNode; loc++) {
-            double dist = 0;
-
-            if (rp.FVCOM) {
+        // most particles exit north or west; WeStCOMS indexes start south, so reverse for efficiency
+        if(rp.FVCOM) {
+            int nBNode = m.getOpenBoundaryNodes().length - 1;
+            double dist;
+            for (int loc = nBNode; loc >= 0; loc--) {
                 dist = Particle.distanceEuclid2(x, y,
                         m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
-            } else if (m.getType().equals("ROMS")) {
-                dist = Particle.distanceEuclid2(x, y,
-                        m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
+                if (dist < rp.openBoundaryThresh) {
+                    return loc;
+                }
             }
-
-            if (dist < rp.openBoundaryThresh) {
-                return loc;
+        } else if (m.getType().equals("ROMS")) {
+            int nBNode = m.getConvexHull().length;
+            double dist;
+            for (int loc = 0; loc < nBNode; loc++) {
+               dist = Particle.distanceEuclid2(x, y,
+                            m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
+                if (dist < rp.openBoundaryThresh) {
+                    return loc;
+                }
             }
         }
         // If not close to any open boundary points, must be a land departure => return -1
         return -1;
     }
 
-    public static int openBoundaryCheck(Particle part, Mesh m, RunProperties rp) {
+    public static int openBoundaryCheck(double[] newLoc, int elem, Mesh m, RunProperties rp) {
         // check whether the particle has entered into a boundary *element*
         // (make it settle there, even if it is inviable)
-        int nBElems = m.getOpenBoundaryNodes().length;
-        for (int elem = 0; elem < nBElems; elem++) {
-            if (m.getOpenBoundaryNodes()[elem] == part.getElem()) {
-                return part.getElem();
-            }
+        int elemNew = Particle.findContainingElement(newLoc, elem, m.getNodexy(), m.getTrinodes(), m.getNeighbours(), false)[0];
+        if (m.getOpenBoundaryElems().contains(elemNew)) {
+            return elemNew;
         }
         return -1;
     }

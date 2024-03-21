@@ -55,7 +55,7 @@ public class Particle_track {
         System.out.printf("Simulated dur. (d) = %d\n", numberOfDays);
         System.out.printf("Simulated dur. (s) = %d\n", numberOfDays * 86400);
         System.out.printf("RK4                = %s\n", rp.rk4);
-        System.out.printf("Vertical dynamics  = %b\n", rp.verticalDynamics);
+        System.out.printf("Fixed depth        = %b\n", rp.fixDepth);
         System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
         System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
         System.out.printf("Threshold distance = %d\n", rp.thresh);
@@ -273,7 +273,7 @@ public class Particle_track {
                         for (int i = 0; i < nLayers; i++) {
                             currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
                             currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
-                            currentConditions[i][2] = rp.needW ? hydroFields.get(m).getW()[currentHour][i][siteElem] : -9999;
+                            currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
                             currentConditions[i][3] = Math.sqrt(currentConditions[i][0]*currentConditions[i][0] + currentConditions[i][1]*currentConditions[i][1]);
                             currentConditions[i][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp) : -9999;
                             currentConditions[i][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "temp", rp) : -9999;
@@ -667,11 +667,9 @@ public class Particle_track {
 
             float[][][] w = null, w1 = null, w2 = null, s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null;
             float[][] zeta = null, zeta1 = null, zeta2 = null, light = null, light1 = null, light2 = null;
-            if(rp.needW) {
-                w1 = hf1.get(m).getW();
-                w2 = hf2.get(m).getW();
-                w = new float[w1.length + 1][w1[0].length][w1[0][0].length];
-            }
+            w1 = hf1.get(m).getW();
+            w2 = hf2.get(m).getW();
+            w = new float[w1.length + 1][w1[0].length][w1[0][0].length];
             if(rp.needS) {
                 s1 = hf1.get(m).getS();
                 s2 = hf2.get(m).getS();

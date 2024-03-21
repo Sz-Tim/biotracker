@@ -492,18 +492,17 @@ public class Particle {
     }
 
     public double[] diffuse(RunProperties rp, double K_gradient, double K_zAdj, double dt, String distribution) {
-        int nDims = rp.verticalDynamics ? 3 : 2;
         double[] diffusion = {0,0,0};
         double[] randoms = {0,0,0};
         double r = 0.0;
 
         if (distribution.equals("uniform")) {
-            for (int i = 0; i < nDims; i++) {
+            for (int i = 0; i < 3; i++) {
                 randoms[i] = ThreadLocalRandom.current().nextDouble(-1.0, 1.0);
             }
             r = 1.0 / 3.0;
         } else if (distribution.equals("gaussian")) {
-            for (int i = 0; i < nDims; i++) {
+            for (int i = 0; i < 3; i++) {
                 randoms[i] = ThreadLocalRandom.current().nextGaussian();
             }
             r = 1.414;
@@ -514,14 +513,12 @@ public class Particle {
         diffusion[0] = randoms[0] * Math.sqrt(2 / r * rp.D_h * dt);
         diffusion[1] = randoms[1] * Math.sqrt(2 / r * rp.D_h * dt);
 
-        if (rp.verticalDynamics) {
-            if (rp.variableDiffusion) {
-                // following Visser 1997 (eq. 6):
-                // dZ = K_gradient * dt + Rand * sqrt(2 * dt/r * K_zAdj), where K_zAdj = K(z + K_gradient/2 * dt)
-                diffusion[2] = K_gradient * dt + randoms[2] * Math.pow(2 / r * K_zAdj * dt, 0.5);
-            } else {
-                diffusion[2] = randoms[2] * Math.sqrt(2 / r * rp.D_hVert * dt);
-            }
+        if (rp.variableDiffusion) {
+            // following Visser 1997 (eq. 6):
+            // dZ = K_gradient * dt + Rand * sqrt(2 * dt/r * K_zAdj), where K_zAdj = K(z + K_gradient/2 * dt)
+            diffusion[2] = K_gradient * dt + randoms[2] * Math.pow(2 / r * K_zAdj * dt, 0.5);
+        } else {
+            diffusion[2] = randoms[2] * Math.sqrt(2 / r * rp.D_hVert * dt);
         }
         return diffusion;
     }
@@ -576,7 +573,8 @@ public class Particle {
                 // boundary check
                 int bnode = -1;
                 if (rp.checkOpenBoundaries) {
-                    bnode = ParallelParticleMover.openBoundaryCheck((float) newLoc[0], (float) newLoc[1], m, rp);
+                    // bnode = ParallelParticleMover.openBoundaryCheck((float) newLoc[0], (float) newLoc[1], m, rp);
+                    bnode = ParallelParticleMover.openBoundaryCheck(newLoc, el[0], m, rp);
                 }
                 if (bnode != -1) {
                     // Close to boundary
@@ -905,8 +903,7 @@ public class Particle {
     }
 
 
-    public static double[] velocityFromNearestList(double[][] nrList, int hour, float[][][] u, float[][][] v, float[][][] w, int depLayer, boolean verticalDynamics) {
-        int nDims = verticalDynamics ? 3 : 2;
+    public static double[] velocityFromNearestList(double[][] nrList, int hour, float[][][] u, float[][][] v, float[][][] w) {
         double[] velocity = {0,0,0};
         double[] weights = new double[nrList.length];
         double usum = 0, vsum = 0, wsum = 0, sum = 0;
@@ -914,19 +911,15 @@ public class Particle {
             int elem = (int) nrList[i][0];
             double distance = nrList[i][1];
             weights[i] = distance == 0 ? 1 : 1.0 / (distance * distance);
-            if (verticalDynamics) {
-                depLayer = (int) nrList[i][2];
-                wsum += weights[i] * w[hour][depLayer][elem];
-            }
+            int depLayer = (int) nrList[i][2];
+            wsum += weights[i] * w[hour][depLayer][elem];
             usum += weights[i] * u[hour][depLayer][elem];
             vsum += weights[i] * v[hour][depLayer][elem];
             sum += weights[i];
         }
         velocity[0] = usum / sum;
         velocity[1] = vsum / sum;
-        if (verticalDynamics) {
-            velocity[2] = - wsum / sum; // upward velocity; ww * -1 so that positive values = increased depth
-        }
+        velocity[2] = - wsum / sum; // upward velocity; ww * -1 so that positive values = increased depth
         return velocity;
     }
 
@@ -990,26 +983,27 @@ public class Particle {
         double dx = x1 - x2;
         double dy = y1 - y2;
 
-        double[] distXY = new double[]{dx, dy};
-
         if (coordRef.equals("WGS84")) {
+            double[] distXY = new double[]{dx, dy};
             distXY = ParallelParticleMover.distanceDegreesToMetres(distXY, new double[]{x1, y2});
+            return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1]);
         }
 
-        return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1]);
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     public static double distanceEuclid2(double x1, double y1, double z1, double x2, double y2, double z2, String coordRef) {
         double dx = x1 - x2;
         double dy = y1 - y2;
-
-        double[] distXY = new double[]{dx, dy};
+        double dz = z1 - z2;
 
         if (coordRef.equals("WGS84")) {
+            double[] distXY = new double[]{dx, dy};
             distXY = ParallelParticleMover.distanceDegreesToMetres(distXY, new double[]{x1, y2});
+            return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1] + dz * dz);
         }
 
-        return Math.sqrt(distXY[0] * distXY[0] + distXY[1] * distXY[1] + (z1 - z2) * (z1 - z2));
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
 
@@ -1149,39 +1143,61 @@ public class Particle {
      * euclidean distances from the particle to the centroids
      *
      * @param xy particle location
-     * @param elemPart0 particle element
+     * @param elemPart particle element
      * @param depth particle depth
      * @param coordRef coordinate system
      * @return double[8][3] with rows = elements and columns = [elementID, distance to particle (3D), depth layer]
      */
-    public static double[][] neighbourCellsList3D(double[] xy, int elemPart0, float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes, float[] siglayers, int[][] neighbours, double depth, String coordRef) {
+    public static double[][] neighbourCellsList3D(double[] xy, int elemPart, int depLayer, float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes, float[] siglayers, int[][] neighbours, double depth, String coordRef) {
 
         double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
-        int[][] nrLayerIndexes = new int[4][2];
 
-        int thisElem = findContainingElement(xy, elemPart0, nodexy, trinodes, neighbours, false)[0];
-        if (thisElem == -1) {
+        if (elemPart == -1) {
             return nrList;
         }
 
-        int nrRow = 0;
-        // layer 0 = above particle, layer 1 = below particle
-        nrLayerIndexes[0] = Mesh.findNearestSigmaIndexes(depth, siglayers, depthUvnode[thisElem]);
+        int[][] nrLayerIndexes = new int[4][2];
+
+        // layer 0 = below particle, layer 1 = above particle
+        nrLayerIndexes[0] = Mesh.findNearestSigmaIndexes(depLayer, siglayers.length);
         for (int nbr = 0; nbr < 3; nbr++) {
-            nrLayerIndexes[nbr+1] = Mesh.findNearestSigmaIndexes(depth, siglayers, depthUvnode[neighbours[nbr][thisElem]]);
+            nrLayerIndexes[nbr+1] = Mesh.findNearestSigmaIndexes(depth, siglayers, depthUvnode[neighbours[nbr][elemPart]]);
         }
-        for (int layer = 0; layer < 2; layer++) {
-            nrList[nrRow][0] = thisElem;
-            nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][thisElem], uvnode[1][thisElem], nrLayerIndexes[0][layer], coordRef);
-            nrList[nrRow][2] = nrLayerIndexes[0][layer];
-            nrRow++;
-            for (int nbr = 0; nbr < 3; nbr++) {
-                nrList[nrRow][0] = neighbours[nbr][thisElem];
-                nrList[nrRow][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][thisElem]], uvnode[1][neighbours[nbr][thisElem]], nrLayerIndexes[nbr+1][layer], coordRef);
-                nrList[nrRow][2] = nrLayerIndexes[nbr+1][layer];
-                nrRow++;
+
+        // layer 0: below particle
+        // containing element
+        nrList[0][0] = elemPart;
+        nrList[0][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][elemPart], uvnode[1][elemPart], depthUvnode[elemPart] * siglayers[nrLayerIndexes[0][0]], coordRef);
+        nrList[0][2] = nrLayerIndexes[0][0];
+        // 3 neighbours
+        for (int nbr = 0; nbr < 3; nbr++) {
+            nrList[nbr+1][0] = neighbours[nbr][elemPart];
+            nrList[nbr+1][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][elemPart]], uvnode[1][neighbours[nbr][elemPart]], depthUvnode[neighbours[nbr][elemPart]] * siglayers[nrLayerIndexes[nbr+1][0]], coordRef);
+            nrList[nbr+1][2] = nrLayerIndexes[nbr+1][0];
+        }
+
+        // layer 1: above particle
+        // copy layer 0, then update if layer 0 != layer 1
+        for (int i = 4; i < 8; i++) {
+            nrList[i][0] = nrList[i-4][0];
+            nrList[i][1] = nrList[i-4][1];
+            nrList[i][2] = nrList[i-4][2];
+        }
+        // containing element
+        if (nrLayerIndexes[0][0] != nrLayerIndexes[0][1]) {
+            nrList[4][0] = elemPart;
+            nrList[4][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][elemPart], uvnode[1][elemPart], depthUvnode[elemPart] * siglayers[nrLayerIndexes[0][1]], coordRef);
+            nrList[4][2] = nrLayerIndexes[0][1];
+        }
+        // 3 neighbours
+        for (int nbr = 0; nbr < 3; nbr++) {
+            if (nrLayerIndexes[nbr+1][0] != nrLayerIndexes[nbr+1][1]) {
+                nrList[nbr+5][0] = neighbours[nbr][elemPart];
+                nrList[nbr+5][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][neighbours[nbr][elemPart]], uvnode[1][neighbours[nbr][elemPart]], depthUvnode[neighbours[nbr][elemPart]] * siglayers[nrLayerIndexes[nbr+1][1]], coordRef);
+                nrList[nbr+5][2] = nrLayerIndexes[nbr+1][1];
             }
         }
+
         return nrList;
     }
 
@@ -1191,10 +1207,9 @@ public class Particle {
     public double[] rk4Step(List<HydroField> hydroFields, // velocities
                             List<Mesh> meshes,      // other mesh info
                             int hour, int step, double dt,           // locate particle in space and time
-                            int stepsPerStep, String coordRef, boolean verticalDynamics) {  // info on simulation length
+                            int stepsPerStep, String coordRef) {  // info on simulation length
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
-        int nDims = verticalDynamics ? 3 : 2;
         int depLayer = this.getDepthLayer();
         double[] advectStep = {0,0,0};
         float[][][] u = hydroFields.get(meshPart).getU();
@@ -1213,55 +1228,64 @@ public class Particle {
                 this.getLocation(), this.getDepth(),
                 elemPart, depLayer, 0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordRef, verticalDynamics
+                hour, step, dt, stepsPerStep, coordRef
         );
+        double[] k1Deg = new double[]{k1[0], k1[1]};
+        if (this.coordRef.equals("WGS84")) {
+            k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
+        }
+        double[] k1Loc = new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0};
+        double k1Depth = this.getDepth() + k1[2] / 2.0;  // k1[2] = 0 if fixDepth = true
+        int k1ElemPart = findContainingElement(k1Loc, elemPart, nodexy, trinodes, neighbours, false)[0];
+        elemPart = k1ElemPart == -1 ? elemPart : k1ElemPart; // particles can't exit mesh during substeps
+        depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
 
         // 2. Compute k_2 (spatial interpolation at half step, temporal interpolation at half step)
         // Estimated half-step location using Euler
         // NOTE that here, for the purposes of identifying the elements containing the part-step locations,
         // the steps in degrees are calculated. These are separate of the actual half-step values in metres
         // which are retained and summed at the end of the method to give a transport distance in metres
-        double[] k1Deg = new double[]{k1[0], k1[1]};
-        if (this.coordRef.equals("WGS84")) {
-            k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
-        }
-        double k1Depth = this.getDepth() + k1[2] / 2.0;  // k1[2] = 0 if verticalDynamics = false
-        depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
         double[] k2 = stepAhead(
-                new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0}, k1Depth,
+                k1Loc, k1Depth,
                 elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordRef, verticalDynamics);
-
-        // 3. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
+                hour, step, dt, stepsPerStep, coordRef);
         double[] k2Deg = new double[]{k2[0], k2[1]};
         if (this.coordRef.equals("WGS84")) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
         }
-        double k2Depth = this.getDepth() + k2[2] / 2.0;  // k2[2] = 0 if verticalDynamics = false
+        double[] k2Loc = new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0};
+        double k2Depth = this.getDepth() + k2[2] / 2.0;  // k2[2] = 0 if fixDepth = true
+        int k2ElemPart = findContainingElement(k1Loc, elemPart, nodexy, trinodes, neighbours, false)[0];
+        elemPart = k2ElemPart == -1 ? elemPart : k2ElemPart; // particles can't exit mesh during substeps
         depLayer = findLayerFromDepth(k2Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
+
+        // 3. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
         double[] k3 = stepAhead(
-                new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0}, k2Depth,
+                k2Loc, k2Depth,
                 elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordRef, verticalDynamics);
-
-        // 4. Compute k_4 (spatial interpolation at end step)
+                hour, step, dt, stepsPerStep, coordRef);
         double[] k3Deg = new double[]{k3[0], k3[1]};
         if (this.coordRef.equals("WGS84")) {
             k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
         }
-        double k3Depth = this.getDepth() + k3[2];  // k3[2] = 0 if verticalDynamics = false
+        double[] k3Loc = new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]};
+        double k3Depth = this.getDepth() + k3[2];  // k3[2] = 0 if fixDepth = true
+        int k3ElemPart = findContainingElement(k3Loc, elemPart, nodexy, trinodes, neighbours, false)[0];
+        elemPart = k3ElemPart == -1 ? elemPart : k3ElemPart; // particles can't exit mesh during substeps
         depLayer = findLayerFromDepth(k3Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
+
+        // 4. Compute k_4 (spatial interpolation at end step)
         double[] k4 = stepAhead(
-                new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]}, k3Depth,
+                k3Loc, k3Depth,
                 elemPart, depLayer, 1.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordRef, verticalDynamics);
+                hour, step, dt, stepsPerStep, coordRef);
 
         // 5. Add it all together
         if(k1[0] != 0 && k2[0] != 0 && k3[0] != 0 && k4[0] != 0) {
-            for (int i = 0; i < nDims; i++) {
+            for (int i = 0; i < 3; i++) {
                 advectStep[i] = (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6.0;
             }
         }
@@ -1278,25 +1302,20 @@ public class Particle {
                                      float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes, float[] siglayers, int[][] neighbours, String meshType,
                                      float[][][] u, float[][][] v, float[][][] w,
                                      int hour, int step, double dt,
-                                     int stepsPerStep, String coordRef, boolean verticalDynamics) {
-        int nDims = verticalDynamics ? 3 : 2;
+                                     int stepsPerStep, String coordRef) {
         double[] xyz_step = {0,0,0};
         double[] vel = {0,0,0};
         double[] velplus1 = {0,0,0};
 
         if (meshType.equals("FVCOM") || meshType.equals("ROMS_TRI")) {
             double[][] xNrList;
-            if (verticalDynamics) {
-                xNrList = neighbourCellsList3D(xy, elemPart, uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, depth, coordRef);
-            } else {
-                xNrList = neighbourCellsList(xy, elemPart, uvnode, nodexy, trinodes, neighbours, coordRef);
-            }
+            xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, depth, coordRef);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of time step
-            vel = velocityFromNearestList(xNrList, hour, u, v, w, depLayer, verticalDynamics);
+            vel = velocityFromNearestList(xNrList, hour, u, v, w);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-            velplus1 = velocityFromNearestList(xNrList, hour + 1, u, v, w, depLayer, verticalDynamics);
+            velplus1 = velocityFromNearestList(xNrList, hour + 1, u, v, w);
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {
@@ -1320,7 +1339,7 @@ public class Particle {
         }
 
         // Do the relevant temporal interpolation for this part of the step
-        for (int i = 0; i < nDims; i++) {
+        for (int i = 0; i < 3; i++) {
             xyz_step[i] = dt * (vel[i] + ((step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
 
@@ -1334,8 +1353,8 @@ public class Particle {
     public double[] eulerStep(List<HydroField> hydroFields, // velocities
                               List<Mesh> meshes,     // other mesh info
                               int hour, int step, double dt,                                  // locate particle in space and time
-                              int stepsPerStep, String coordRef, boolean verticalDynamics) {
-        if(verticalDynamics) {
+                              int stepsPerStep, String coordRef, boolean fixDepth) {
+        if(!fixDepth) {
             System.err.println("Error: vertical dynamics not implemented with Particle.eulerStep()");
             System.exit(1);
         }
@@ -1361,10 +1380,10 @@ public class Particle {
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of time step
             vel = velocityFromNearestList(xNrList, hour,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), dep, verticalDynamics);
+                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW());
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
             velplus1 = velocityFromNearestList(xNrList, hour + 1,
-                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW(), dep, verticalDynamics);
+                    hydroFields.get(meshPart).getU(), hydroFields.get(meshPart).getV(), hydroFields.get(meshPart).getW());
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {

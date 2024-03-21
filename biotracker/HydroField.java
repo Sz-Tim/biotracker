@@ -63,7 +63,10 @@ public class HydroField {
         if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI")) {
             u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
             v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            if(rp.needW) {
+            if (rp.fixDepth) {
+                w = new float[u.length][u[0].length][u[0][0].length];
+                System.out.println("w" + " (" + u.length + "," + u[0].length + "," + u[0][0].length + ") -- all zeros");
+            } else {
                 w = IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape);
             }
             if(rp.needS) {
@@ -127,12 +130,10 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename1);
             u1 = IOUtils.readNetcdfFloat3D(filename1, varNames[0], origin, shape);
             v1 = IOUtils.readNetcdfFloat3D(filename1, varNames[1], origin, shape);
+            w1 = IOUtils.readNetcdfFloat3D(filename1, varNames[2], origin, shape);
             nHour = u1.length;
             nDep = u1[0].length;
             nElem = u1[0][0].length;
-            if (rp.needW) {
-                w1 = IOUtils.readNetcdfFloat3D(filename1, varNames[2], origin, shape);
-            }
             if (rp.needS) {
                 s1 = IOUtils.readNetcdfFloat3D(filename1, varNames[3], origin, shapeST);
                 nNode = s1[0][0].length;
@@ -160,9 +161,7 @@ public class HydroField {
             System.out.println("Reading hydro file: " + filename2);
             u2 = IOUtils.readNetcdfFloat3D(filename2, varNames[0], origin, shape);
             v2 = IOUtils.readNetcdfFloat3D(filename2, varNames[1], origin, shape);
-            if (rp.needW) {
-                w2 = IOUtils.readNetcdfFloat3D(filename2, varNames[2], origin, shape);
-            }
+            w2 = IOUtils.readNetcdfFloat3D(filename2, varNames[2], origin, shape);
             if (rp.needS) {
                 s2 = IOUtils.readNetcdfFloat3D(filename2, varNames[3], origin, shapeST);
             }
@@ -268,7 +267,6 @@ public class HydroField {
                     for (int elem = 0; elem < nElem; elem++) {
                         u[hour][dep][elem] = u1[hour][dep][elem];
                         v[hour][dep][elem] = v1[hour][dep][elem];
-                        assert w1 != null;
                         w[hour][dep][elem] = w1[hour][dep][elem];
                         sumU += u[hour][dep][elem];
                     }

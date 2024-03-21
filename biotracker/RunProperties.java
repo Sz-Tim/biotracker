@@ -30,8 +30,8 @@ public class RunProperties {
             diffusion, variableDiffusion, // include random walk, use diffusion parameter from hydro output?
             salinityMort, // mortality calculated based on local salinity
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
-            setStartDepth, fixDepth, // set particle depth at initiation?
-            verticalDynamics, // should vertical dynamics be included? Turns on velocities, diffusion, and swimming behaviour; ONLY implemented for FVCOM
+            setStartDepth, // set particle depth at initiation?
+            fixDepth,
             swimLightLevel,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
@@ -41,7 +41,7 @@ public class RunProperties {
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp,
-            needW, needS, needT, needZeta, needK, needLight, // Internal use: which hydrodynamic variables need to be loaded?
+            needS, needT, needZeta, needK, needLight, // Internal use: which hydrodynamic variables need to be loaded?
             FVCOM; // Is mesh FVCOM? If not, not all functions are supported
 
     ISO_datestr start_ymd, end_ymd;
@@ -142,7 +142,6 @@ public class RunProperties {
         readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly", "false"));
         duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
         dt = Double.parseDouble(properties.getProperty("dt", "3600"));
-        verticalDynamics = Boolean.parseBoolean(properties.getProperty("verticalDynamics", "false"));
         fixDepth = Boolean.parseBoolean(properties.getProperty("fixDepth", "false"));
         maxDepth = Double.parseDouble(properties.getProperty("maxDepth", "10000"));
 
@@ -169,6 +168,11 @@ public class RunProperties {
         variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
+        if (fixDepth) {
+            D_hVert = 0;
+            variableDiffusion = false;
+            System.out.println("fixDepth = true; Setting D_hVert = 0 and variableDiffusion = false.");
+        }
 
         // Behaviour
         species = properties.getProperty("species", "none");
@@ -224,12 +228,11 @@ public class RunProperties {
         vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
 
         // hydrodynamic file requirements
-        needW = verticalDynamics;
-        needS = verticalDynamics || salinityMort;
+        needS = !fixDepth || salinityMort;
         needT = viableDegreeDays > -1;
         needZeta = false;
-        needK = verticalDynamics && variableDiffusion;
-        needLight = verticalDynamics;
+        needK = !fixDepth && variableDiffusion;
+        needLight = !fixDepth;
 
         properties.list(System.out);
     }
@@ -238,10 +241,6 @@ public class RunProperties {
     public void checkForConflictingProperties() {
         boolean conflict = false;
         String conflictingProperties = "Error: Conflicting properties\n";
-        if (verticalDynamics && fixDepth) {
-            conflict = true;
-            conflictingProperties += "  verticalDynamics && fixDepth\n";
-        }
         if (variableDiffusion && !diffusion) {
             conflict = true;
             conflictingProperties += "  variableDiffusion && !diffusion\n";
@@ -250,7 +249,7 @@ public class RunProperties {
             conflict = true;
             conflictingProperties += "  start_ymd.isLaterThan(end_ymd)\n";
         }
-        if (verticalDynamics && !mesh1Type.equals("FVCOM")) {
+        if (!fixDepth && !mesh1Type.equals("FVCOM")) {
             conflict = true;
             conflictingProperties += "  verticalDynamics && !mesh1Type.equals(\"FVCOM\")\n";
         }

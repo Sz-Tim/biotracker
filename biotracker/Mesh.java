@@ -6,6 +6,8 @@
 package biotracker;
 
 import java.awt.geom.Path2D;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 
 //import extUtils.ConcaveHull;
 
@@ -25,6 +27,7 @@ public class Mesh {
     private int[][] trinodes; // the nodes at the corners of each element
     private int[][] neighbours;
     private int[] openBoundaryNodes;
+    private ArrayList<Integer> openBoundaryElems;
     private int[] boundaryNodes;
 
     // Variables used in the case of ROMS grid
@@ -138,6 +141,20 @@ public class Mesh {
                 for (int i = 0; i < openBoundaryNodes.length; i++) {
                     openBoundaryNodes[i]--;
                 }
+                // find elements with at least one trinode as an open boundary
+                System.out.println("Finding boundary elements...");
+                ArrayList<Integer> obElems = new ArrayList<>();
+                for (int i = 0; i < openBoundaryNodes.length; i++) {
+                    for (int j = 0; j < trinodes[0].length; j++) {
+                        if(!obElems.contains(j) &&
+                                (trinodes[0][j] == openBoundaryNodes[i] ||
+                                        trinodes[1][j] == openBoundaryNodes[i] ||
+                                        trinodes[2][j] == openBoundaryNodes[i])) {
+                            obElems.add(j);
+                        }
+                    }
+                }
+            openBoundaryElems = obElems;
             } else {
                 System.err.println("No openBoundaryNode information in mesh file");
             }
@@ -258,6 +275,18 @@ public class Mesh {
         return layerBelowAbove;
     }
 
+    public static int[] findNearestSigmaIndexes(int particleDepthLayer, int nSigmas) {
+        int[] layerBelowAbove = new int[]{particleDepthLayer+1, particleDepthLayer};
+        layerBelowAbove[1] = layerBelowAbove[0] - 1;
+        if (layerBelowAbove[1] < 0) {
+            layerBelowAbove[1] = 0;
+        }
+        if (layerBelowAbove[0] == nSigmas) {
+            layerBelowAbove[0] = layerBelowAbove[1];
+        }
+        return layerBelowAbove;
+    }
+
 
     public float[][] getNodexy() {
         return nodexy;
@@ -323,6 +352,10 @@ public class Mesh {
         return openBoundaryNodes;
     }
 
+    public ArrayList<Integer> getOpenBoundaryElems() {
+        return openBoundaryElems;
+    }
+
     public int[] getBoundaryNodes() {
         return boundaryNodes;
     }
@@ -371,7 +404,7 @@ public class Mesh {
      */
     public boolean isInMesh(double[] xy)//, boolean checkElements, int elemLoc)
     {
-        Path2D.Float cHull = Mesh.pointsToPath(this.getConvexHull());
+        Path2D.Float cHull = this.getConvexHullPath();
         return cHull.contains(xy[0], xy[1]);
     }
 
