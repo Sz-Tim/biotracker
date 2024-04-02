@@ -61,16 +61,16 @@ public class Particle_track {
         System.out.printf("Threshold distance = %d\n", rp.thresh);
         System.out.printf("Diffusion D_h      = %.3f (diffusion: %s)\n", rp.D_h, rp.diffusion);
         System.out.printf("Diffusion D_v      = %s\n", rp.variableDiffusion ? "variable" : "" + rp.D_hVert);
-        System.out.printf("Coord ref          = %s\n", rp.coordRef);
+        System.out.printf("EPSG:27700         = %b\n", rp.coordOS);
         System.out.println("-----------------------------------------------------------");
 
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
         // --------------------------------------------------------------------------------------       
         List<Mesh> meshes = new ArrayList<>();
-        meshes.add(new Mesh(rp.mesh1, rp.mesh1Type, rp.coordRef));
+        meshes.add(new Mesh(rp.mesh1, rp.mesh1Type, rp.coordOS));
         if (!rp.mesh2.equals("")) {
-            meshes.add(new Mesh(rp.mesh2, rp.mesh2Type, rp.coordRef));
+            meshes.add(new Mesh(rp.mesh2, rp.mesh2Type, rp.coordOS));
         }
         int[] allelems = IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length - 1).toArray();
 
@@ -479,7 +479,7 @@ public class Particle_track {
             double startDensity = habitat.get(startid).getScale();
 
             Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated + i,
-                    rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordRef, rp.species);
+                    rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordOS, rp.species);
             p.setMesh(meshStart);
             p.setElem(elemFVCOMStart);
             p.setROMSElemU(elemROMSStartU);

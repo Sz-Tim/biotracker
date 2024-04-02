@@ -20,7 +20,6 @@ public class RunProperties {
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
-            coordRef, // Coordinate reference system
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
@@ -42,6 +41,7 @@ public class RunProperties {
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp,
             needS, needT, needZeta, needK, needLight, // Internal use: which hydrodynamic variables need to be loaded?
+            coordOS, // Coordinate reference system
             FVCOM; // Is mesh FVCOM? If not, not all functions are supported
 
     ISO_datestr start_ymd, end_ymd;
@@ -101,7 +101,7 @@ public class RunProperties {
         datadir2Suffix = properties.getProperty("datadirSuffix", "_OLD");
 
         // Geography, hydrodynamic files, & mesh files
-        coordRef = properties.getProperty("coordRef", "WGS84");
+        coordOS = Boolean.parseBoolean(properties.getProperty("coordOS", "true"));
         location = properties.getProperty("location", "minch");
         location2 = properties.getProperty("location2", "minch");
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));

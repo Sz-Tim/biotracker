@@ -387,7 +387,7 @@ public class HydroField {
         double[] weights = new double[3];
         for (int i = 0; i < 3; i++) {
             particleNodes[i] = mesh.getTrinodes()[i][elem];
-            dist[i] = Particle.distanceEuclid2(location[0], location[1], mesh.getNodexy()[0][particleNodes[i]], mesh.getNodexy()[1][particleNodes[i]], rp.coordRef);
+            dist[i] = Particle.distanceEuclid2(location[0], location[1], mesh.getNodexy()[0][particleNodes[i]], mesh.getNodexy()[1][particleNodes[i]], rp.coordOS);
             weights[i] = 1.0 / (dist[i] * dist[i]);
             weightSum += weights[i];
             if (varName.equals("temp")) {

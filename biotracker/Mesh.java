@@ -51,12 +51,12 @@ public class Mesh {
      * Create a Mesh from a NetCDF file, and supplementary text files detailing
      * the open and closed boundary nodes.
      */
-    public Mesh(String meshFilename, String type, String coordRef) {
+    public Mesh(String meshFilename, String type, boolean coordOS) {
         System.out.println("Reading mesh file: " + meshFilename);
 
         meshType = type;
         if (type.equals("ROMS_TRI") || type.equals("FVCOM")) {
-            if (coordRef.equals("WGS84")) {
+            if (!coordOS) {
                 uvnode = IOUtils.readNetcdfFloat2D(meshFilename, "uvnode", null, null);
                 nodexy = IOUtils.readNetcdfFloat2D(meshFilename, "nodexy", null, null);
                 if (uvnode == null) {
@@ -257,10 +257,8 @@ public class Mesh {
     public static int[] findNearestSigmaIndexes(double particleDepth, float[] sigmas, float localDepth) {
         int[] layerBelowAbove = new int[2];
         layerBelowAbove[0] = sigmas.length;
-        float[] sigDepths = new float[sigmas.length];
         for (int i = 0; i < sigmas.length; i++) {
-            sigDepths[i] = sigmas[i] * localDepth;
-            if (particleDepth < sigDepths[i]) {
+            if (particleDepth < sigmas[i] * localDepth) {
                 layerBelowAbove[0] = i;
                 break;
             }
@@ -277,7 +275,6 @@ public class Mesh {
 
     public static int[] findNearestSigmaIndexes(int particleDepthLayer, int nSigmas) {
         int[] layerBelowAbove = new int[]{particleDepthLayer+1, particleDepthLayer};
-        layerBelowAbove[1] = layerBelowAbove[0] - 1;
         if (layerBelowAbove[1] < 0) {
             layerBelowAbove[1] = 0;
         }
@@ -414,14 +411,14 @@ public class Mesh {
         // Do the element check, if required. This will identify when a point is NOT in the mesh
         // when it has fallen inside the convex hull but is outside any element
         if (checkElements && inMesh) {
-            int[] c = new int[5];
+            int c = -1;
             if (this.getType().equals("FVCOM") || this.getType().equals("ROMS_TRI")) {
                 int eL = 0;
                 if (elemLoc != null) {
                     eL = elemLoc[0];
                 }
                 c = Particle.findContainingElement(xy, eL,
-                        this.getNodexy(), this.getTrinodes(), this.getNeighbours(), checkAllElems);
+                        this.getNodexy(), this.getTrinodes(), this.getNeighbours(), checkAllElems)[0];
             } else if (this.getType().equals("ROMS")) {
                 // Use the U grid to determine whether within the mesh or not.
                 // This leads to some particles that are outside the V grid being identified as in the mesh.
@@ -432,9 +429,9 @@ public class Mesh {
                 int[] cRomsU = Particle.whichROMSElement((float) xy[0], (float) xy[1], this.getLonU(), this.getLatU(), nearestPointU);
                 int[] nearestPointV = Particle.nearestROMSGridPoint((float) xy[0], (float) xy[1], this.getLonV(), this.getLatV(), elemLoc);
                 int[] cRomsV = Particle.whichROMSElement((float) xy[0], (float) xy[1], this.getLonV(), this.getLatV(), nearestPointV);
-                c[0] = Math.min(cRomsU[0], cRomsV[0]);
+                c = Math.min(cRomsU[0], cRomsV[0]);
             }
-            if (c[0] == -1) {
+            if (c == -1) {
                 inMesh = false;
             }
         }

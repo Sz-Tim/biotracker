@@ -145,7 +145,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[part.getElem()]);
                 part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
-            } else if (meshes.get(part.getMesh()).getType().equals("FVCOM") || meshes.get(part.getMesh()).getType().equals("ROMS_TRI")) {
+            } else if (rp.FVCOM || meshes.get(part.getMesh()).getType().equals("ROMS_TRI")) {
                 if (rp.variableDiffusion) {
                     K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "k", rp);
                     K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "k", rp);
@@ -202,9 +202,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // advection
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef);
+                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS);
             } else {
-                advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordRef, rp.fixDepth);
+                advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS, rp.fixDepth);
             }
             if (rp.backwards) {
                 for (int i = 0; i < advectStep.length; i++) {
@@ -221,7 +221,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
             }
 
-            if (rp.coordRef.equals("WGS84")) {
+            if (!rp.coordOS) {
                 double[] dXY2 = distanceMetresToDegrees2(new double[]{displacement[0], displacement[1]}, part.getLocation());
                 displacement[0] = dXY2[0];
                 displacement[1] = dXY2[1];
@@ -270,7 +270,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             if (part.isViable()) {
                 for (HabitatSite site : habitatEnd) {
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
-                            site.getLocation()[0], site.getLocation()[1], rp.coordRef);
+                            site.getLocation()[0], site.getLocation()[1], rp.coordOS);
                     if (dist < rp.thresh && !part.hasSettledThisHour()) {
                         if (rp.endOnArrival) {
                             part.setArrived(true);
@@ -377,7 +377,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double dist;
             for (int loc = nBNode; loc >= 0; loc--) {
                 dist = Particle.distanceEuclid2(x, y,
-                        m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordRef);
+                        m.getNodexy()[0][m.getOpenBoundaryNodes()[loc]], m.getNodexy()[1][m.getOpenBoundaryNodes()[loc]], rp.coordOS);
                 if (dist < rp.openBoundaryThresh) {
                     return loc;
                 }
@@ -387,7 +387,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double dist;
             for (int loc = 0; loc < nBNode; loc++) {
                dist = Particle.distanceEuclid2(x, y,
-                            m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordRef);
+                            m.getConvexHull()[loc][0], m.getConvexHull()[loc][1], rp.coordOS);
                 if (dist < rp.openBoundaryThresh) {
                     return loc;
                 }

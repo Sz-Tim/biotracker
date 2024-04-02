@@ -74,7 +74,7 @@ public class HabitatSite {
 
                 //noinspection ConstantConditions
                 if (!insideMesh) {
-                    double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordRef);
+                    double d1 = distanceEuclid2(xy[0], xy[1], meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid], meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid], rp.coordOS);
                     if(rp.verboseSetUp) {
                         System.out.println("Habitat site (" + xy[0] + "," + xy[1] + ") outside mesh. Nearest centroid: " + this.nearestFVCOMCentroid
                                 + " (" + meshes.get(this.containingMesh).getUvnode()[0][this.nearestFVCOMCentroid] + "," + meshes.get(this.containingMesh).getUvnode()[1][this.nearestFVCOMCentroid] + ")"

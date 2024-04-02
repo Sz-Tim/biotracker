@@ -938,7 +938,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
-                if (rp.coordRef.equalsIgnoreCase("WGS84")) {
+                if (!rp.coordOS) {
                     if (p.getID() % partSubset == 0){
                         out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
                                 currentHour,
