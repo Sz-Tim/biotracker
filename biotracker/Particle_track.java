@@ -516,7 +516,7 @@ public class Particle_track {
                 while (readAttempt < 5) {
                     try{
                         // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "short_wave"};
 
                         // Normal "forwards time"
                         if (!rp.backwards) {
@@ -608,7 +608,7 @@ public class Particle_track {
                 while (readAttempt < 5) {
                     try{
                         // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "km", "short_wave"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "short_wave"};
 
                         // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
                         String[] dirsT1 = new String[]{

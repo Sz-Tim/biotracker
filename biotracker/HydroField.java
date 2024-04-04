@@ -19,7 +19,7 @@ public class HydroField {
     private float[][][] s;  // salinity [time][sigLay][node]
     private float[][][] t;  // temperature [time][sigLay][node]
     private float[][] zeta;  // zeta = temporally varying sea surface height above geoid [time][node]
-    private float[][][] k;  // turbulent eddy viscosity for momentum [time][sigLev][node] -- Km in FVCOM
+    private float[][][] k;  // turbulent eddy viscosity for scalars [time][sigLev][node] -- kh in FVCOM
     private float[][] light;  // shortwave radiation at surface [time][node]
 
     public HydroField(float[][][] u, float[][][] v, float[][][] w, float[][][] s, float[][][] t, float[][] zeta, float[][][] k, float[][] light) {
@@ -394,12 +394,12 @@ public class HydroField {
                 sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
             } else if (varName.equals("salinity")) {
                 sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
+            } else if (varName.equals("short_wave")) {
+                sum += getLight()[hour][particleNodes[i]] * weights[i];
             } else if (varName.equals("k")) {
                 sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
             } else if (varName.equals("zeta")) {
                 sum += getZeta()[hour][particleNodes[i]] * weights[i];
-            } else if (varName.equals("short_wave")) {
-                sum += getLight()[hour][particleNodes[i]] * weights[i];
             }
         }
 
