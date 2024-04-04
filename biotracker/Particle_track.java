@@ -6,6 +6,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -23,7 +24,7 @@ public class Particle_track {
      */
     public static void main(String[] args) throws Exception {
 
-        System.out.println("Starting particle tracking program\n");
+        System.out.println("Starting biotracker\n");
         Date date = new Date();
         System.out.println(date);
 
@@ -69,7 +70,7 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------       
         List<Mesh> meshes = new ArrayList<>();
         meshes.add(new Mesh(rp.mesh1, rp.mesh1Type, rp.coordOS));
-        if (!rp.mesh2.equals("")) {
+        if (!rp.mesh2.isEmpty()) {
             meshes.add(new Mesh(rp.mesh2, rp.mesh2Type, rp.coordOS));
         }
         int[] allelems = IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length - 1).toArray();
@@ -128,7 +129,7 @@ public class Particle_track {
             }
             System.out.println("-- The previous day will be used for each instead!");
         } else {
-            System.out.println(": All found");
+            System.out.println("  All found");
         }
 
         // --------------------------------------------------------------------------------------
@@ -161,8 +162,8 @@ public class Particle_track {
 
         final Collection<Callable<List<Particle>>> callables = new ArrayList<>();
 
-        String particleRestartHeader = "hour ID startDate age startLocation x y elem status density mesh depth depthLayer degreeDays xTot yTot xyTot zTot";
-        String arrivalHeader = "ID startDate startTime startLocation endDate endTime endLocation age density";
+        String particleRestartHeader = "hour,ID,startDate,age,startLocation,x,y,elem,status,density,mesh,depth,depthLayer,degreeDays,xTot,yTot,xyTot,zTot";
+        String arrivalHeader = "ID,startDate,startTime,startLocation,endDate,endTime,endLocation,age,density";
 
         // Set up arrays to hold particle density*hour counts
         int pstepsInd2 = 1;
@@ -180,8 +181,8 @@ public class Particle_track {
         float[][] vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
         float[][] vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
         if (rp.recordMovement) {
-            IOUtils.writeMovementsHeader("ID date hour step startDate age density x y z layer status degreeDays sink swim temp salinity mortality tempSurface dX dY dZ",
-                    "movementFile.dat");
+            IOUtils.writeMovementsHeader("ID,date,hour,step,startDate,age,density,x,y,z,layer,status,degreeDays,sink,swim,temp,salinity,mortality,tempSurface,dX,dY,dZ",
+                    "movementFile.csv");
         }
 
         try {
@@ -203,10 +204,10 @@ public class Particle_track {
 
                 String today = currentIsoDate.getDateStr();
                 if (rp.recordLocations) {
-                    IOUtils.printFileHeader(particleRestartHeader, "locations_" + today + ".dat");
+                    IOUtils.printFileHeader(particleRestartHeader, "locations_" + today + ".csv");
                 }
                 if (rp.recordArrivals) {
-                    IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".dat");
+                    IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".csv");
                 }
 
                 // get new site start densities
@@ -333,7 +334,7 @@ public class Particle_track {
                     }
 
                     if (rp.recordLocations) {
-                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".dat", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
+                        IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".csv", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
                     }
 
 
@@ -344,11 +345,11 @@ public class Particle_track {
                             if (part.hasSettledThisHour()) {
                                 // Save arrival
                                 if (rp.recordArrivals) {
-                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".dat", true);
+                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".csv", true);
                                 }
                                 // Add arrival to connectivity file
                                 int destIndex = siteEndNames.indexOf(part.getLastArrival());
-                                connectivity[part.getStartIndex()][destIndex] += part.getDensity();
+                                connectivity[part.getStartIndex()][destIndex] += (float) part.getDensity();
 
                                 // Reset ability to settle
                                 part.setSettledThisHour(false);
@@ -364,51 +365,25 @@ public class Particle_track {
 
                     // Write Psteps
                     if (rp.recordPsteps && stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
-                        // Trim arrays to non-zero rows and write to file
-                        float[][] psImmTrim = null;
-                        try {
-                            psImmTrim = nonZeroRows(pstepsImmature);
-                        } catch (Exception ignored) {
-                        }
-                        float[][] psMatTrim = null;
-                        try {
-                            psMatTrim = nonZeroRows(pstepsMature);
-                        } catch (Exception ignored) {
-                        }
                         System.out.println("Writing psteps");
-                        if (psImmTrim != null) {
-                            IOUtils.writeFloatArrayToFile(psImmTrim, "pstepsImmature_" + today + "_" + stepcount + ".dat", false, true);
-                        }
-                        if (psMatTrim != null) {
-                            IOUtils.writeFloatArrayToFile(psMatTrim, "pstepsMature_" + today + "_" + stepcount + ".dat", false, true);
-                        }
+                        IOUtils.writeNonZeros2DArrayToCSV(pstepsImmature, "i,NA,value","%d,%d,%.4e" , "pstepsImmature_" + today + "_" + stepcount + ".csv");
+                        IOUtils.writeNonZeros2DArrayToCSV(pstepsMature, "i,NA,value","%d,%d,%.4e", "pstepsMature_" + today + "_" + stepcount + ".csv");
 
                         pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2];
                         pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
                     }
 
                     if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
-                        IOUtils.writeFloatArrayToFile(connectivity, "connectivity_" + today + "_" + stepcount + ".dat", false, false);
+                        IOUtils.writeNonZeros2DArrayToCSV(connectivity, "source,destination,value", "%d,%d,%.4e", "connectivity_" + today + "_" + stepcount + ".csv");
                         connectivity = new float[habitat.size()][habitatEnd.size()];
                     }
 
                     if (rp.recordVertDistr) {
                         IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
                         if (stepcount % (rp.vertDistrInterval * rp.stepsPerStep) == 0) {
-                            // Trim arrays to non-zero rows and write to file
-                            float[][] vertDistrMatureTrim = null, vertDistrImmatureTrim = null;
-                            try {
-                                vertDistrMatureTrim = nonZeroRows(vertDistrMature);
-                                vertDistrImmatureTrim = nonZeroRows(vertDistrImmature);
-                            } catch (Exception ignored) {
-                            }
                             System.out.println("Writing vertical distribution");
-                            if (vertDistrMatureTrim != null) {
-                                IOUtils.writeFloatArrayToFile(vertDistrMatureTrim, "vertDistrMature_" + today + "_" + stepcount + ".dat", false, true);
-                            }
-                            if (vertDistrImmatureTrim != null) {
-                                IOUtils.writeFloatArrayToFile(vertDistrImmatureTrim, "vertDistrImmature_" + today + "_" + stepcount + ".dat", false, true);
-                            }
+                            IOUtils.writeNonZeros2DArrayToCSV(vertDistrMature, "i,z,value", "%d,%d,%.4e", "vertDistrMature_" + today + "_" + stepcount + ".csv");
+                            IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e", "vertDistrImmature_" + today + "_" + stepcount + ".csv");
                             vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
                             vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
                         }
@@ -431,11 +406,11 @@ public class Particle_track {
             // to the day after the simulation finished.
             // So this is the location of the particles at t=0 on the day after the last simulated day, ready to 
             // start a new run on the next day.
-            IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat");
-            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".dat", true, rp, rp.nparts * rp.numberOfDays * 10);
+            IOUtils.printFileHeader(particleRestartHeader, "locationsEnd_" + currentIsoDate.getDateStr() + ".csv");
+            IOUtils.particlesToRestartFile(particles, 0, "locationsEnd_" + currentIsoDate.getDateStr() + ".csv", true, rp, 1);
             if (rp.recordActivity) {
-                IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.dat");
-                IOUtils.writeIntegerArrayToFile(hourActivity, "hourActivity.dat");
+                IOUtils.writeIntegerArrayToFile(elemActivity, "elementActivity.csv");
+                IOUtils.writeIntegerArrayToFile(hourActivity, "hourActivity.csv");
             }
 
             executorService.shutdownNow();
@@ -445,9 +420,9 @@ public class Particle_track {
             executorService.shutdownNow();
         }
 
-        FileWriter fstream = new FileWriter("startSitesUsed.dat", false);
+        FileWriter fstream = new FileWriter("startSitesUsed.csv", false);
         PrintWriter out = new PrintWriter(fstream);
-        out.println("site\tx\ty\tdepth\tmesh\tcentroid\telem\tMeshType\tu\tv\tw\tuv\tsalinity\ttemperature\tk");
+        out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u,v,w,uv,salinity,temperature,k");
         for (HabitatSite habitatSite : habitat) {
             out.println(habitatSite);
         }
@@ -527,11 +502,11 @@ public class Particle_track {
                             }
                             // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
                             String[] dirsT1 = new String[]{
-                                    rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
-                                    rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                                    rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
+                                    rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
                             String[] dirsT2 = new String[]{
-                                    rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
-                                    rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                                    rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
+                                    rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
                             String[] filesT1 = new String[]{
                                     rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
                                     rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
@@ -546,7 +521,7 @@ public class Particle_track {
                         // Instead read time backwards, so need yesterday instead
                         else {
                             List<File> files1 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
                                     new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
                                     null);
                             ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
@@ -555,7 +530,7 @@ public class Particle_track {
                                 yesterday = currentIsoDate;
                             }
                             List<File> files2 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
+                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
                                     new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
                                     null);
                             // Read both files and combine
@@ -569,10 +544,10 @@ public class Particle_track {
                         if (readAttempt == 5) {
                             System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
                             if (!rp.backwards) {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
                                         + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
                             } else {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
                                         + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
                             }
                             System.exit(1);
@@ -580,9 +555,9 @@ public class Particle_track {
                     }
                 }
             } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
-                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
+                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
                         + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
-                String filename2 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
+                String filename2 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
                         + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
                 String[] varNames1 = {"u", "v", "", "", ""};
                 // Read both files and combine
@@ -612,8 +587,8 @@ public class Particle_track {
 
                         // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
                         String[] dirsT1 = new String[]{
-                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator"),
-                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")};
+                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
+                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
                         String[] filesT1 = new String[]{
                                 rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
                                 rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
@@ -628,10 +603,10 @@ public class Particle_track {
                         if (readAttempt == 5) {
                             System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
                             if (!rp.backwards) {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
                                         + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
                             } else {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")
+                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
                                         + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
                             }
                             System.exit(1);
@@ -639,7 +614,7 @@ public class Particle_track {
                     }
                 }
             } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
-                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + System.getProperty("file.separator")
+                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
                         + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
                 String[] varNames1 = {"u", "v", "", "", ""};
                 // Read both files and combine

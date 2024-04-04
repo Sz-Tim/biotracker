@@ -10,6 +10,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.io.LineNumberReader;
 import java.io.File;
 import java.nio.file.Files;
@@ -80,11 +81,15 @@ public class IOUtils {
             BufferedReader in = new BufferedReader(new FileReader(file));    //reading files in specified directory
 
             String line;
-            //boolean printWarning=true;
+            boolean skipHeader = true;
             int count = 0, countNotCreated = 0;
 
             while ((line = in.readLine()) != null) {
-                String[] values = line.split("\t");
+                if(skipHeader) {
+                    skipHeader = false;
+                    continue;
+                }
+                String[] values = line.split(",");
                 String ID = values[0];
                 float x = (float) Double.parseDouble(values[1]);
                 float y = (float) Double.parseDouble(values[2]);
@@ -222,9 +227,14 @@ public class IOUtils {
         try {
             BufferedReader in = new BufferedReader(new FileReader(filename));    //reading files in specified directory
             String line;
+            boolean skipHeader = true;
 
             while ((line = in.readLine()) != null) {
-                String[] values = line.split("\t");
+                if(skipHeader) {
+                    skipHeader = false;
+                    continue;
+                }
+                String[] values = line.split(",");
                 String ID = values[0];
                 int site = siteStartNames.indexOf(ID);
                 for (int i=0; i < rp.numberOfDays; i++) {
@@ -241,7 +251,7 @@ public class IOUtils {
 
     public static int[] readFileInt1D(String fullFileName) {
         int nLines = countLines(new File(fullFileName));
-        int[][] vals = IOUtils.readFileIntArray(fullFileName, nLines, 1, " ", true);
+        int[][] vals = IOUtils.readFileIntArray(fullFileName, nLines, 1, ",", true);
         int[] valsOut = new int[nLines];
         for (int i = 0; i < nLines; i++) {
             valsOut[i] = vals[i][0];
@@ -252,7 +262,7 @@ public class IOUtils {
 
     public static double[] readFileDouble1D(String fullFileName) {
         int nLines = countLines(new File(fullFileName));
-        double[][] vals = IOUtils.readFileDoubleArray(fullFileName, nLines, 1, " ", false);
+        double[][] vals = IOUtils.readFileDoubleArray(fullFileName, nLines, 1, ",", false);
         double[] valsOut = new double[nLines];
         for (int i = 0; i < nLines; i++) {
             valsOut[i] = vals[i][0];
@@ -684,7 +694,7 @@ public class IOUtils {
                     System.out.println("WARNING: Number of entries on line = " + numEntries);
                     printWarning = false;
                 }
-                String[] values = line.split(" ");
+                String[] values = line.split(",");
                 ISO_datestr rowDate = new ISO_datestr(values[0]);
                 if (rowDate.getDateNum() >= startDate.getDateNum() && rowDate.getDateNum() <= endDate.getDateNum()) {
                     if (note) {
@@ -724,7 +734,7 @@ public class IOUtils {
             // Create file
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%d %s %d %d %s %.4f %.4f %.1f %.1f %.4f %d %d %.4f %d %d %.4f %.4f %.4f %.4f",
+            out.printf("%d,%s,%d,%d,%s,%.4f,%.4f,%.1f,%.1f,%.4f,%d,%d,%.4f,%d,%d,%.4f,%.4f,%.4f,%.4f",
                     part.getID(),
                     currentDate,
                     currentHour,
@@ -745,7 +755,7 @@ public class IOUtils {
                     temperatureSurface
                     );
             for (double dim: displacement) {
-                out.printf(" %.7f", dim);
+                out.printf(",%.7f", dim);
             }
             out.print("\n");
             //Close the output stream
@@ -789,7 +799,7 @@ public class IOUtils {
                         out.printf("%.4e", floats[j]);
                     }
                     if (j < variable[0].length - 1) {
-                        out.printf(" ");
+                        out.printf(",");
                     }
                 }
                 out.printf("\n");
@@ -809,7 +819,7 @@ public class IOUtils {
             PrintWriter out = new PrintWriter(fstream);
             for (int[] ints : variable) {
                 for (int j = 0; j < variable[0].length; j++) {
-                    out.printf("%d ", ints[j]);
+                    out.printf("%d,", ints[j]);
                 }
                 out.printf("\n");
             }
@@ -833,7 +843,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %.1f %d %d %d\n", tt, particles[i].getID(),
+                out.printf("%d,%d,%.1f,%.1f,%.1f,%d,%d,%d\n", tt, particles[i].getID(),
                         particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getDepth(), particles[i].getDepthLayer(),
                         particles[i].getElem(), particles[i].getStatus());
             }
@@ -850,7 +860,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < npartsSaved; i++) {
-                out.printf("%d %d %.1f %.1f %.1f %d %d %d\n", tt, particles.get(i).getID(),
+                out.printf("%d,%d,%.1f,%.1f,%.1f,%d,%d,%d\n", tt, particles.get(i).getID(),
                         particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(), particles.get(i).getDepthLayer(),
                         particles.get(i).getElem(), particles.get(i).getStatus());
             }
@@ -870,7 +880,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.length; i++) {
-                out.printf("%d %f %f %f %d %f %f\n", i,
+                out.printf("%d,%f,%f,%f,%d,%f,%f\n", i,
                         particles[i].getStartLocation()[0], particles[i].getStartLocation()[1], particles[i].getDepth(), particles[i].getDepthLayer(),
                         particles[i].getLocation()[0], particles[i].getLocation()[1]);
             }
@@ -887,7 +897,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (int i = 0; i < particles.size(); i++) {
-                out.printf("%d %f %f %f %f %f %d\n", i,
+                out.printf("%d,%f,%f,%f,%f,%f,%d\n", i,
                         particles.get(i).getStartLocation()[0], particles.get(i).getStartLocation()[1],
                         particles.get(i).getLocation()[0], particles.get(i).getLocation()[1], particles.get(i).getDepth(), particles.get(i).getDepthLayer());
             }
@@ -907,7 +917,7 @@ public class IOUtils {
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
             for (Particle p : particles) {
-                out.printf("%d %d %s %.1f %s %.1f %.1f %.1f %d %d %d %.4f %d\n",
+                out.printf("%d,%d,%s,%.1f,%s,%.1f,%.1f,%.1f,%d,%d,%d,%.4f,%d\n",
                         currentHour,
                         p.getID(),
                         p.getStartDate().getDateStr(),
@@ -940,7 +950,7 @@ public class IOUtils {
             for (Particle p : particles) {
                 if (!rp.coordOS) {
                     if (p.getID() % partSubset == 0){
-                        out.printf("%d %d %s %.1f %s %.7f %.7f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d,%d,%s,%.1f,%s,%.7f,%.7f,%d,%d,%.4f,%d,%.2f,%d,%.2f,%.2f,%.2f,%.2f,%.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -963,7 +973,7 @@ public class IOUtils {
                     }
                 } else {
                     if (p.getID() % partSubset == 0) {
-                        out.printf("%d %d %s %.1f %s %.1f %.1f %d %d %.4f %d %.2f %d %.2f %.2f %.2f %.2f %.2f\n",
+                        out.printf("%d,%d,%s,%.1f,%s,%.1f,%.1f,%d,%d,%.4f,%d,%.2f,%d,%.2f,%.2f,%.2f,%.2f,%.2f\n",
                                 currentHour,
                                 p.getID(),
                                 p.getStartDate().getDateStr(),
@@ -1007,7 +1017,7 @@ public class IOUtils {
             // Create file 
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%d %s %.2f %s %s %.2f %s %f %f\n",
+            out.printf("%d,%s,%.2f,%s,%s,%.2f,%s,%f,%f\n",
                     p.getID(),
                     p.getStartDate().getDateStr(),
                     p.getStartTime(),
@@ -1035,7 +1045,7 @@ public class IOUtils {
             // Create file 
             FileWriter fstream = new FileWriter(filename, true);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%f %f %f %d\n", time, particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getElem());
+            out.printf("%f,%f,%f,%d\n", time, particles[i].getLocation()[0], particles[i].getLocation()[1], particles[i].getElem());
             //Close the output stream
             out.close();
         } catch (Exception e) {//Catch exception if any
@@ -1103,10 +1113,24 @@ public class IOUtils {
         }
     }
 
+    public static void writeNonZeros2DArrayToCSV(float[][] data, String header, String rowFormat, String filename) throws IOException {
+        try (Writer writer = new FileWriter(filename)) {
+            writer.write(header + "\n"); // Header row
+            for (int row = 0; row < data.length; row++) {
+                for (int col = 0; col < data[row].length; col++) {
+                    if (data[row][col] != 0) {
+                        writer.write(String.format(rowFormat + "\n", row, col, data[row][col]));
+                    }
+                }
+            }
+        }
+    }
+
+
     public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());
-        System.out.print("Checking hydro files from " + startDate.getDateStr() + " to " + endDate.getDateStr());
+        System.out.println("Checking hydro files from " + startDate.getDateStr() + " to " + endDate.getDateStr() + "...");
         for (int i = 0; i < numberOfDays; i++) {
             List<File> checkFile = (List<File>) FileUtils.listFiles(
                     new File(rp.datadir + rp.datadirPrefix + checkDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),

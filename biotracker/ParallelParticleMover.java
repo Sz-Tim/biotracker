@@ -249,7 +249,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             part.addZ(Math.abs(dActual[2]));
 
             if (rp.recordMovement && (part.getID() % (rp.nparts * rp.numberOfDays / 3) == 0)) {  // * 10 = sample of ~485 particles
-                IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.dat", true);
+                IOUtils.writeMovements(part, currentDate, hour, step, sink, swim, localTemperature, tempSurface, localSalinity, dActual, "movementFile.csv", true);
             }
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
