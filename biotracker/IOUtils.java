@@ -1096,9 +1096,9 @@ public class IOUtils {
             int elemPart = p.getElem();
             int col = (int) Math.min(Math.floor(p.getDepth()), rp.vertDistrMax);
             if (p.isViable()) {
-                vertDistrMature[elemPart][col] += (float) d * (float) (dt / 3600);
+                vertDistrMature[elemPart][col] += (float) (d * dt / 3600);
             } else if (p.isFree()) {
-                vertDistrImmature[elemPart][col] += (float) d * (float) (dt / 3600);
+                vertDistrImmature[elemPart][col] += (float) (d * dt / 3600);
             }
         }
     }

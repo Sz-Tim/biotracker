@@ -13,10 +13,9 @@ import java.util.Properties;
  * @author sa01ta
  */
 public class RunProperties {
-    String basedir, sitedir, // Location of code and site data files
-            datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
+    String datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
             datadir2, datadir2Prefix, datadir2Suffix, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories 
-            mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data (
+            mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
@@ -91,23 +90,21 @@ public class RunProperties {
         }
 
         // Directories
-        basedir = properties.getProperty("basedir", "/home/sa01ta/particle_track/");
-        sitedir = properties.getProperty("sitedir", "/home/sa01ta/particle_track/minch_sites/");
-        datadir = properties.getProperty("datadir", "/home/sa01da/work/minch2/Archive/");
+        datadir = properties.getProperty("datadir", "/media/archiver/common/sa01da-work/WeStCOMS2/Archive/");
         datadirPrefix = properties.getProperty("datadirPrefix", "netcdf_");
         datadirSuffix = properties.getProperty("datadirSuffix", "");
-        datadir2 = properties.getProperty("datadir2", "/home/sa01da/data/oss/");
+        datadir2 = properties.getProperty("datadir2", "");
         datadir2Prefix = properties.getProperty("datadirPrefix", "");
-        datadir2Suffix = properties.getProperty("datadirSuffix", "_OLD");
+        datadir2Suffix = properties.getProperty("datadirSuffix", "");
 
         // Geography, hydrodynamic files, & mesh files
         coordOS = Boolean.parseBoolean(properties.getProperty("coordOS", "true"));
-        location = properties.getProperty("location", "minch");
-        location2 = properties.getProperty("location2", "minch");
+        location = properties.getProperty("location", "westcoms");
+        location2 = properties.getProperty("location2", "westcoms");
         minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
         minchVersion2 = Integer.parseInt(properties.getProperty("minchVersion2", "2"));
         recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
-        mesh1 = properties.getProperty("mesh1", "/home/sa01ta/particle_track/WestCOMS_mesh.nc");
+        mesh1 = properties.getProperty("mesh1", "/home/sa04ts/FVCOM_meshes/WeStCOMS2_mesh.nc");
         mesh2 = properties.getProperty("mesh2", "");
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
@@ -123,16 +120,16 @@ public class RunProperties {
         verboseSetUp = Boolean.parseBoolean(properties.getProperty("verboseSetUp", "true"));
 
         // Dates
-        start_ymd = new ISO_datestr(properties.getProperty("start_ymd", "20180101"));
+        start_ymd = new ISO_datestr(properties.getProperty("start_ymd", "2090401"));
         numberOfDays = Integer.parseInt(properties.getProperty("numberOfDays", "0"));
         if (numberOfDays > 0) {
-            ISO_datestr tempIsoDate = new ISO_datestr(properties.getProperty("start_ymd", "20180101"));
+            ISO_datestr tempIsoDate = new ISO_datestr(properties.getProperty("start_ymd", "20190401"));
             for (int i = 1; i < numberOfDays; i++) {
                 tempIsoDate.addDay();
             }
             end_ymd = new ISO_datestr(tempIsoDate);
         } else {
-            end_ymd = new ISO_datestr(properties.getProperty("end_ymd", "20180102"));
+            end_ymd = new ISO_datestr(properties.getProperty("end_ymd", "20190402"));
             numberOfDays = end_ymd.getDateNum() - start_ymd.getDateNum() + 1;
         }
 
@@ -163,9 +160,9 @@ public class RunProperties {
 
         // Advection & diffusion
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
-        stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep", "25"));
+        stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep", "30"));
         diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
-        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "false"));
+        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "true"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
         if (fixDepth) {
@@ -195,12 +192,12 @@ public class RunProperties {
         salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold));
 
         // Demographics
-        salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "false"));
+        salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "true"));
         mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate", "0.01"));
-        viabletime = Double.parseDouble(properties.getProperty("viabletime", "86"));
-        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge", "336"));
-        viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays", "-1"));
-        maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays", "-1"));
+        viabletime = Double.parseDouble(properties.getProperty("viabletime", "-1"));
+        maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge", "-1"));
+        viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays", "40"));
+        maxDegreeDays = Double.parseDouble(properties.getProperty("maxDegreeDays", "150"));
         if (viableDegreeDays != -1) {
             viabletime = -1;
             System.out.println("viableDegreeDays entered; set viabletime=" + viabletime + " so won't be used at 56N!");

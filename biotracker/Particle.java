@@ -1213,7 +1213,8 @@ public class Particle {
     public double[] rk4Step(List<HydroField> hydroFields, // velocities
                             List<Mesh> meshes,      // other mesh info
                             int hour, int step, double dt,           // locate particle in space and time
-                            int stepsPerStep, boolean coordOS) {  // info on simulation length
+                            int stepsPerStep,  // info on simulation length
+                            boolean coordOS, boolean FVCOM) {
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
         int depLayer = this.getDepthLayer();
@@ -1234,7 +1235,7 @@ public class Particle {
                 this.getLocation(), this.getDepth(),
                 elemPart, depLayer, 0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordOS
+                hour, step, dt, stepsPerStep, coordOS, FVCOM
         );
         double[] k1Deg = new double[]{k1[0], k1[1]};
         if (!this.coordOS) {
@@ -1255,7 +1256,7 @@ public class Particle {
                 k1Loc, k1Depth,
                 elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordOS);
+                hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k2Deg = new double[]{k2[0], k2[1]};
         if (!this.coordOS) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
@@ -1271,7 +1272,7 @@ public class Particle {
                 k2Loc, k2Depth,
                 elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordOS);
+                hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k3Deg = new double[]{k3[0], k3[1]};
         if (!this.coordOS) {
             k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
@@ -1287,7 +1288,7 @@ public class Particle {
                 k3Loc, k3Depth,
                 elemPart, depLayer, 1.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, meshType, u, v, w,
-                hour, step, dt, stepsPerStep, coordOS);
+                hour, step, dt, stepsPerStep, coordOS, FVCOM);
 
         // 5. Add it all together
         if(k1[0] != 0 && k2[0] != 0 && k3[0] != 0 && k4[0] != 0) {
@@ -1308,12 +1309,12 @@ public class Particle {
                                      float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes, float[] siglayers, int[][] neighbours, String meshType,
                                      float[][][] u, float[][][] v, float[][][] w,
                                      int hour, int step, double dt,
-                                     int stepsPerStep, boolean coordOS) {
+                                     int stepsPerStep, boolean coordOS, boolean FVCOM) {
         double[] xyz_step = {0,0,0};
         double[] vel = {0,0,0};
         double[] velplus1 = {0,0,0};
 
-        if (meshType.equals("FVCOM") || meshType.equals("ROMS_TRI")) {
+        if (FVCOM) {
             double[][] xNrList;
             xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, depth, coordOS);
 
@@ -1328,7 +1329,7 @@ public class Particle {
                 return xyz_step;
             }
 
-        } else if (meshType.equals("ROMS")) {
+        } else {
             // TODO: Update for removing 'meshes'
 //            if (verticalDynamics) {
 //                System.err.println("Error in rk4Step: vertical dynamics not implemented for ROMS");
