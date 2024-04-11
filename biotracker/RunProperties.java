@@ -73,6 +73,7 @@ public class RunProperties {
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sanvdik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
+            pstepsMaxDepth, // maximum depth for recording particle density in psteps output
             releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
 
@@ -214,6 +215,7 @@ public class RunProperties {
         recordPsteps = Boolean.parseBoolean(properties.getProperty("recordPsteps", "true"));
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps", "true"));
         pstepsInterval = Integer.parseInt(properties.getProperty("pstepsInterval", "24"));
+        pstepsMaxDepth = Double.parseDouble(properties.getProperty("pstepsMaxDepth", "10000"));
         recordConnectivity = Boolean.parseBoolean(properties.getProperty("recordConnectivity", "true"));
         connectivityInterval = Integer.parseInt(properties.getProperty("connectivityInterval", "24"));
         recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations", "true"));

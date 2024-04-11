@@ -1060,12 +1060,12 @@ public class IOUtils {
     public static void pstepsUpdater(List<Particle> particles, RunProperties rp,
                                      float[][] pstepsMature, float[][] pstepsImmature, double dt) {
         for (Particle p : particles) {
+            if(p.getDepth() > rp.pstepsMaxDepth) {
+                continue;
+            }
             double d = p.getDensity();
             int elemPart = p.getElem();
-            int col = 0;
-            if (rp.splitPsteps) {
-                col = p.getStartIndex();
-            }
+            int col = rp.splitPsteps ? p.getStartIndex() : 0;
             if (p.isViable()) {
                 pstepsMature[elemPart][col] += (float) d * (float) (dt / 3600);
             } else if (p.isFree()) {
@@ -1077,12 +1077,12 @@ public class IOUtils {
     public static void pstepsSparseUpdater(List<Particle> particles, RunProperties rp,
                                            List<SparseFloatArray> pstepsMature, List<SparseFloatArray> pstepsImmature, double subStepDt) {
         for (Particle p : particles) {
+            if(p.getDepth() > rp.pstepsMaxDepth) {
+                continue;
+            }
             double d = p.getDensity();
             int elemPart = p.getElem();
-            int col = 1;
-            if (rp.splitPsteps) {
-                col = p.getStartIndex() + 1;
-            }
+            int col = rp.splitPsteps ? p.getStartIndex() + 1 : 1;
             if (p.isViable()) {
                 SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
                 arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
