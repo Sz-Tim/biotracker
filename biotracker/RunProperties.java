@@ -25,7 +25,7 @@ public class RunProperties {
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             parallel, // use multiple cores to speed up run?
-            diffusion, variableDiffusion, // include random walk, use diffusion parameter from hydro output?
+            diffusion, variableDh, variableDhV, // include random walk, use diffusion parameter from hydro output?
             salinityMort, // mortality calculated based on local salinity
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, // set particle depth at initiation?
@@ -39,7 +39,7 @@ public class RunProperties {
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp,
-            needS, needT, needZeta, needK, needLight, // Internal use: which hydrodynamic variables need to be loaded?
+            needS, needT, needZeta, needK, needLight, needVh, // Internal use: which hydrodynamic variables need to be loaded?
             coordOS, // Coordinate reference system
             FVCOM; // Is mesh FVCOM? If not, not all functions are supported
 
@@ -163,12 +163,13 @@ public class RunProperties {
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
         stepsPerStep = Integer.parseInt(properties.getProperty("stepsPerStep", "30"));
         diffusion = Boolean.parseBoolean(properties.getProperty("diffusion", "true"));
-        variableDiffusion = Boolean.parseBoolean(properties.getProperty("variableDiffusion", "true"));
+        variableDh = Boolean.parseBoolean(properties.getProperty("variableDh", "false"));
+        variableDhV = Boolean.parseBoolean(properties.getProperty("variableDhV", "true"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
         if (fixDepth) {
             D_hVert = 0;
-            variableDiffusion = false;
+            variableDhV = false;
             System.out.println("fixDepth = true; Setting D_hVert = 0 and variableDiffusion = false.");
         }
 
@@ -230,8 +231,9 @@ public class RunProperties {
         needS = !fixDepth || salinityMort;
         needT = viableDegreeDays > -1;
         needZeta = false;
-        needK = !fixDepth && variableDiffusion;
+        needK = !fixDepth && variableDhV;
         needLight = !fixDepth;
+        needVh = variableDh;
 
         properties.list(System.out);
     }
@@ -240,9 +242,9 @@ public class RunProperties {
     public void checkForConflictingProperties() {
         boolean conflict = false;
         String conflictingProperties = "Error: Conflicting properties\n";
-        if (variableDiffusion && !diffusion) {
+        if (variableDhV && !diffusion) {
             conflict = true;
-            conflictingProperties += "  variableDiffusion && !diffusion\n";
+            conflictingProperties += "  variableDhV && !diffusion\n";
         }
         if (start_ymd.isLaterThan(end_ymd)) {
             conflict = true;

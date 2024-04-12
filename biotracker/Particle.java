@@ -491,7 +491,7 @@ public class Particle {
         }
     }
 
-    public double[] diffuse(RunProperties rp, double K_gradient, double K_zAdj, double dt, String distribution) {
+    public double[] diffuse(double D_h, double K_gradient, double K_zAdj, double dt, String distribution) {
         double[] diffusion = {0,0,0};
         double[] randoms = {0,0,0};
         double r = 0.0;
@@ -510,8 +510,8 @@ public class Particle {
             System.err.println("Diffusion distribution must be uniform or gaussian.");
             System.exit(1);
         }
-        diffusion[0] = randoms[0] * Math.sqrt(2 / r * rp.D_h * dt);
-        diffusion[1] = randoms[1] * Math.sqrt(2 / r * rp.D_h * dt);
+        diffusion[0] = randoms[0] * Math.sqrt(2 / r * D_h * dt);
+        diffusion[1] = randoms[1] * Math.sqrt(2 / r * D_h * dt);
 
         // following Visser 1997 (eq. 6):
         // dZ = K_gradient * dt + Rand * sqrt(2 * dt/r * K_zAdj), where K_zAdj = K(z + K_gradient/2 * dt)

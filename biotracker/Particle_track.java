@@ -60,8 +60,8 @@ public class Particle_track {
         System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
         System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
         System.out.printf("Threshold distance = %d\n", rp.thresh);
-        System.out.printf("Diffusion D_h      = %.3f (diffusion: %s)\n", rp.D_h, rp.diffusion);
-        System.out.printf("Diffusion D_v      = %s\n", rp.variableDiffusion ? "variable" : "" + rp.D_hVert);
+        System.out.printf("Diffusion D_h      = %s\n", rp.variableDh ? "variable" : "" + rp.D_h);
+        System.out.printf("Diffusion D_v      = %s\n", rp.variableDhV ? "variable" : "" + rp.D_hVert);
         System.out.printf("EPSG:27700         = %b\n", rp.coordOS);
         System.out.println("-----------------------------------------------------------");
 
@@ -491,7 +491,7 @@ public class Particle_track {
                 while (readAttempt < 5) {
                     try{
                         // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "short_wave"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave"};
 
                         // Normal "forwards time"
                         if (!rp.backwards) {
@@ -583,7 +583,7 @@ public class Particle_track {
                 while (readAttempt < 5) {
                     try{
                         // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "short_wave"};
+                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave"};
 
                         // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
                         String[] dirsT1 = new String[]{
@@ -640,7 +640,7 @@ public class Particle_track {
             int nElem = u1[0][0].length;
             int nNode = 0;
 
-            float[][][] w = null, w1 = null, w2 = null, s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null;
+            float[][][] w = null, w1 = null, w2 = null, s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null, vh = null, vh1 = null, vh2 = null;
             float[][] zeta = null, zeta1 = null, zeta2 = null, light = null, light1 = null, light2 = null;
             w1 = hf1.get(m).getW();
             w2 = hf2.get(m).getW();
@@ -672,6 +672,11 @@ public class Particle_track {
                 k1 = hf1.get(m).getK();
                 k2 = hf2.get(m).getK();
                 k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
+            }
+            if(rp.needVh) {
+                vh1 = hf1.get(m).getVh();
+                vh2 = hf2.get(m).getVh();
+                vh = new float[vh1.length + 1][vh1[0].length][vh1[0][0].length];
             }
 
             double sumU = 0;
@@ -706,6 +711,9 @@ public class Particle_track {
                                     if (dep == u[0].length - 1) {
                                         k[u.length - 1][dep + 1][node] = 0;
                                     }
+                                }
+                                if (vh2 != null) {
+                                    vh[u.length - 1][dep][node] = 0;
                                 }
                                 if (dep == 0) {
                                     zeta[u.length - 1][node] = 0;
@@ -748,6 +756,9 @@ public class Particle_track {
                                     k[hour][dep + 1][node] = k1[hour][dep + 1][node];
                                 }
                             }
+                            if (vh != null) {
+                                vh[hour][dep][node] = vh1[hour][dep][node];
+                            }
                         }
                     }
                 }
@@ -782,10 +793,13 @@ public class Particle_track {
                                 k[u.length - 1][dep + 1][node] = k2[0][dep + 1][node];
                             }
                         }
+                        if (vh != null) {
+                            vh[u.length - 1][dep][node] = vh2[0][dep][node];
+                        }
                     }
                 }
             }
-            hydroFields.add(new HydroField(u, v, w, s, t, zeta, k, light));
+            hydroFields.add(new HydroField(u, v, w, s, t, zeta, k, vh, light));
         }
         return hydroFields;
     }

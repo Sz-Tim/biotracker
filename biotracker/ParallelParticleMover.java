@@ -129,7 +129,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             part.incrementDegreeDays(localTemperature, rp);
 
-            // Vertical diffusion and salinity
+            // Diffusion
+            double D_h = rp.D_h;
             double K_below;
             double K_above;
             double K_gradient = 0; // positive gradient = more turbulent below = particle gets pushed deeper
@@ -142,11 +143,15 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setMortRateSalinity(localSalinity);
             }
 
+            if (rp.variableDh) {
+                D_h = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "vh", rp, nearestLayers);
+            }
+
             if (rp.fixDepth) {
                 part.setDepth(rp.startDepth, m.getDepthUvnode()[part.getElem()]);
                 part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
             } else if (rp.FVCOM || meshes.get(part.getMesh()).getType().equals("ROMS_TRI")) {
-                if (rp.variableDiffusion) {
+                if (rp.variableDhV) {
                     K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "k", rp);
                     K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "k", rp);
                     if (nearestLevels[0][1] == nearestLevels[1][1]) {
@@ -172,7 +177,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     // following Sandvik et al 2020, citing on Crosbie 2019
                     double prSink = part.calcSinkProb(localSalinity, rp);
                     if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
-                        (rp.variableDiffusion && Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean))) {
+                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean))) {
                         activeMovement[2] = part.sink(rp);
                         activity = 0;
                         sink++;
@@ -213,7 +218,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             if (rp.diffusion) {
-                diffusion = part.diffuse(rp, K_gradient, K_zAdj, subStepDt, "uniform");
+                diffusion = part.diffuse(D_h, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
 
