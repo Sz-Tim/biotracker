@@ -1076,23 +1076,33 @@ public class IOUtils {
 
     public static void pstepsSparseUpdater(List<Particle> particles, RunProperties rp,
                                            List<SparseFloatArray> pstepsMature, List<SparseFloatArray> pstepsImmature, double subStepDt) {
-        for (Particle p : particles) {
-            if(p.getDepth() > rp.pstepsMaxDepth) {
-                continue;
+        if(rp.pstepsMaxDepth > 1000) {
+            for (Particle p : particles) {
+                pstepsAddParticle(rp, pstepsMature, pstepsImmature, subStepDt, p);
             }
-            double d = p.getDensity();
-            int elemPart = p.getElem();
-            int col = rp.splitPsteps ? p.getStartIndex() + 1 : 1;
-            if (p.isViable()) {
-                SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
-                arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
-                pstepsMature.set(col, arr); // put the array back in the list
+        } else {
+            for (Particle p : particles) {
+                if (p.getDepth() > rp.pstepsMaxDepth) {
+                    continue;
+                }
+                pstepsAddParticle(rp, pstepsMature, pstepsImmature, subStepDt, p);
+            }
+        }
+    }
 
-            } else if (p.isFree()) {
-                SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
-                arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
-                pstepsImmature.set(col, arr); // put the array back in the list
-            }
+    public static void pstepsAddParticle(RunProperties rp, List<SparseFloatArray> pstepsMature, List<SparseFloatArray> pstepsImmature, double subStepDt, Particle p) {
+        double d = p.getDensity();
+        int elemPart = p.getElem();
+        int col = rp.splitPsteps ? p.getStartIndex() + 1 : 1;
+        if (p.isViable()) {
+            SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
+            arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
+            pstepsMature.set(col, arr); // put the array back in the list
+
+        } else if (p.isFree()) {
+            SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
+            arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
+            pstepsImmature.set(col, arr); // put the array back in the list
         }
     }
 
