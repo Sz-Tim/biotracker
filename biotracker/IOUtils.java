@@ -213,8 +213,8 @@ public class IOUtils {
     }
 
 
-    public static float[][] readDailyDensities(String filename, List<String> siteStartNames, RunProperties rp) {
-        float[][] dailyDensities = new float[siteStartNames.size()][rp.numberOfDays];
+    public static double[][] readDailyDensities(String filename, List<String> siteStartNames, RunProperties rp) {
+        double[][] dailyDensities = new double[siteStartNames.size()][rp.numberOfDays];
         int nLines;
         try {
             nLines = countLines(new File(filename));

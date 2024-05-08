@@ -449,6 +449,22 @@ public class HydroField {
         }
     }
 
+
+    public double getValueAtDepth(Mesh m, int elem, double[] location, double depth, int hour, String varName, RunProperties rp, float[][] nearestSigmas) {
+
+        float localDepth = m.getDepthUvnode()[elem]; // TODO: This ignores zeta -- use HydroField.getWaterDepthUvnode(), or just ignore
+        float sigmaHeight = nearestSigmas[0][1] - nearestSigmas[1][1];
+        double dzPartVsAbove = depth - nearestSigmas[1][1];
+
+        double varBelow = getAvgFromTrinodes(m, location, (int) nearestSigmas[0][0], elem, hour, varName, rp);
+        double varAbove = getAvgFromTrinodes(m, location, (int) nearestSigmas[1][0], elem, hour, varName, rp);
+        if (sigmaHeight != 0) {
+            return varAbove + dzPartVsAbove * (varBelow - varAbove) / sigmaHeight;
+        } else {
+            return varAbove;
+        }
+    }
+
     /**
      * Compute a sum of an array over a particular dimension, for a particular
      * index of that dimension - to assist in validation of data read in

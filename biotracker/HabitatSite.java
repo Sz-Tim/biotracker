@@ -17,7 +17,7 @@ public class HabitatSite {
     private final String ID; // A unique identifier for a site (string e.g. SEPA site IDs for fish farms
     private float[] xy; // Coordinate for site
     private float depth;
-    private float scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
+    private double scale; // A scale factor to be applied if required (e.g. site biomass for fish farms)
     private int containingMesh; // the mesh containing the habitat (possibly multiple in case of polygon?)
     private String containingMeshType;
     private int nearestFVCOMCentroid; // the mesh u,v point that is closest to this location
@@ -131,16 +131,16 @@ public class HabitatSite {
 
     @Override
     public String toString() {
-        String details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.containingMesh;
+        String details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI")) {
-            details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.depth + "\t"
-                    + this.containingMesh + "\t" + this.nearestFVCOMCentroid + "\t" + this.containingFVCOMElem
-                    + "\t" + this.containingMeshType
-                    + "\t" + this.getAvgEnvCondition()[0] + "\t" + this.getAvgEnvCondition()[1]
-                    + "\t" + this.getAvgEnvCondition()[2] + "\t" + this.getAvgEnvCondition()[3]
-                    + "\t" + this.getAvgEnvCondition()[4] + "\t" + this.getAvgEnvCondition()[5];
+            details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.depth + ","
+                    + this.containingMesh + "," + this.nearestFVCOMCentroid + "," + this.containingFVCOMElem
+                    + "," + this.containingMeshType
+                    + "," + this.getAvgEnvCondition()[0] + "," + this.getAvgEnvCondition()[1]
+                    + "," + this.getAvgEnvCondition()[2] + "," + this.getAvgEnvCondition()[3]
+                    + "," + this.getAvgEnvCondition()[4] + "," + this.getAvgEnvCondition()[5];
         } else if (this.containingMeshType.equalsIgnoreCase("ROMS")) {
-            details = this.ID + "\t" + this.xy[0] + "\t" + this.xy[1] + "\t" + this.containingMesh + " U_grid: ("
+            details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.containingMesh + " U_grid: ("
                     + this.nearestROMSGridPointU[0] + "," + this.nearestROMSGridPointU[1] + ") ("
                     + this.containingROMSElemU[0] + "," + this.nearestROMSGridPointU[1] + ")";
         }
@@ -163,7 +163,7 @@ public class HabitatSite {
         return this.scale;
     }
 
-    public void setScale(float scale) {
+    public void setScale(double scale) {
         this.scale = scale;
     }
 

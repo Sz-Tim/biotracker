@@ -169,7 +169,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     if (K_zAdj > 0.1) {
                         K_zAdj = 0.1;
                     }
-                    // TODO: Set mortality for HABS if turbulence / shear is to high
                 }
 
                 if (part.getStatus()<3) {

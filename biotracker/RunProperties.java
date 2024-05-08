@@ -70,7 +70,8 @@ public class RunProperties {
             sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
             sinkingRateCopepodidMean, sinkingRateCopepodidStd,
             sinkingRateNaupliusMean, sinkingRateNaupliusStd,
-            salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sanvdik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
+            salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
+            eggTemp_b0, eggTemp_b1, // temperature dependent egg production intercept and slope
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
             pstepsMaxDepth, // maximum depth for recording particle density in psteps output
@@ -192,6 +193,8 @@ public class RunProperties {
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
         salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold));
+        eggTemp_b0 = Double.parseDouble(properties.getProperty("eggTemp_b0", "" + 28.2));
+        eggTemp_b1 = Double.parseDouble(properties.getProperty("eggTemp_b1", "" + 0));
 
         // Demographics
         salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "true"));

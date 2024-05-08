@@ -145,9 +145,15 @@ public class Particle_track {
         // Final setup bits
         // --------------------------------------------------------------------------------------
         double startDensity = 1.0;
-        float[][] siteDensities = new float[0][0];
+        double[][] siteDensities = new double[habitat.size()][numberOfDays];
         if(!rp.siteDensityPath.isEmpty()) {
             siteDensities = IOUtils.readDailyDensities(rp.siteDensityPath, siteStartNames, rp);
+        } else {
+            for (int i = 0; i < habitat.size(); i++) {
+                for (int j = 0; j < numberOfDays; j++) {
+                    siteDensities[i][j] = (float) startDensity;
+                }
+            }
         }
 
         int stepcount = 0;
@@ -210,18 +216,6 @@ public class Particle_track {
                     IOUtils.printFileHeader(arrivalHeader, "arrivals_" + today + ".csv");
                 }
 
-                // get new site start densities
-                if(!rp.siteDensityPath.isEmpty()) {
-                    System.out.println("Density file read: " + rp.siteDensityPath + " " + today);
-                    for (int i=0; i < habitat.size(); i++) {
-                        habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts);
-                        if (rp.verboseSetUp) {
-                            System.out.println("  Start density for " + habitat.get(i).getID() + " = " + siteDensities[i][fnum]/rp.nparts);
-                        }
-                    }
-
-                }
-
                 long splitTime = System.currentTimeMillis();
                 System.out.printf("\n------ Day %d (%s) - Stepcount %d (%.1f hrs) ------ \n",
                         fnum + 1, currentIsoDate, stepcount, elapsedHours);
@@ -263,23 +257,27 @@ public class Particle_track {
                         }
                     }
 
-                    for (HabitatSite site: habitat) {
-                        int siteElem = site.getContainingFVCOMElem();
-                        int m = site.getContainingMesh();
-                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) site.getDepth())[0][0];
+                    for (int i=0; i < habitat.size(); i++) {
+                        int siteElem = habitat.get(i).getContainingFVCOMElem();
+                        int m = habitat.get(i).getContainingMesh();
+                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
                         double[][] currentConditions = new double[nLayers][6];
                         double[] siteLoc = new double[2];
-                        siteLoc[0] = site.getLocation()[0];
-                        siteLoc[1] = site.getLocation()[1];
-                        for (int i = 0; i < nLayers; i++) {
-                            currentConditions[i][0] = hydroFields.get(m).getU()[currentHour][i][siteElem];
-                            currentConditions[i][1] = hydroFields.get(m).getV()[currentHour][i][siteElem];
-                            currentConditions[i][2] = hydroFields.get(m).getW()[currentHour][i][siteElem];
-                            currentConditions[i][3] = Math.sqrt(currentConditions[i][0]*currentConditions[i][0] + currentConditions[i][1]*currentConditions[i][1]);
-                            currentConditions[i][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "salinity", rp) : -9999;
-                            currentConditions[i][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, i, siteElem, currentHour, "temp", rp) : -9999;
-                            site.addEnvCondition(currentConditions[i]);
+                        siteLoc[0] = habitat.get(i).getLocation()[0];
+                        siteLoc[1] = habitat.get(i).getLocation()[1];
+                        for (int j = 0; j < nLayers; j++) {
+                            currentConditions[j][0] = hydroFields.get(m).getU()[currentHour][j][siteElem];
+                            currentConditions[j][1] = hydroFields.get(m).getV()[currentHour][j][siteElem];
+                            currentConditions[j][2] = hydroFields.get(m).getW()[currentHour][j][siteElem];
+                            currentConditions[j][3] = Math.sqrt(currentConditions[j][0]*currentConditions[j][0] + currentConditions[j][1]*currentConditions[j][1]);
+                            currentConditions[j][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "salinity", rp) : -9999;
+                            currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
+                            habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
+                        float[][] eggSigmas = Mesh.findNearestSigmas(2, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
+                        double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
+                        double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature);
+                        habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);
                     }
 
                     // Create new particles, if releases are scheduled hourly, or if release is scheduled for this hour
