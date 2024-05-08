@@ -19,6 +19,8 @@ import java.nio.file.Paths;
 import java.util.*;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import ucar.ma2.*;
 import ucar.nc2.NetcdfFile;
@@ -1139,18 +1141,24 @@ public class IOUtils {
 
     public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
+        String filePathPrefix = rp.location + rp.minchVersion;
+
+        File file1 = new File(rp.datadir + System.getProperty("file.separator"));
+        List<File> allMatchingFiles = (List<File>) FileUtils.listFiles(
+                file1,
+                new RegexFileFilter(rp.location + rp.minchVersion + ".*nc"),
+                DirectoryFileFilter.DIRECTORY); // Optional directory filter
+
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());
-        System.out.println("Checking hydro files from " + startDate.getDateStr() + " to " + endDate.getDateStr() + "...");
         for (int i = 0; i < numberOfDays; i++) {
-            List<File> checkFile = (List<File>) FileUtils.listFiles(
-                    new File(rp.datadir + rp.datadirPrefix + checkDate.getYear() + rp.datadirSuffix + System.getProperty("file.separator")),
-                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + checkDate.getYear() + String.format("%02d", checkDate.getMonth()) + String.format("%02d", checkDate.getDay()) + "*.nc"),
-                    null);
-            if (checkFile.isEmpty()) {
+            String filename = String.format("%s_%04d%02d%02d", filePathPrefix, checkDate.getYear(), checkDate.getMonth(), checkDate.getDay());
+            if (!allMatchingFiles.stream().anyMatch(f -> f.getName().contains(filename))) {
                 missingHydroFiles.add(checkDate.getDateStr());
             }
             checkDate.addDay();
         }
         return missingHydroFiles;
     }
+
+
 }
