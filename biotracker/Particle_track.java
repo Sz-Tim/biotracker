@@ -151,7 +151,7 @@ public class Particle_track {
         } else {
             for (int i = 0; i < habitat.size(); i++) {
                 for (int j = 0; j < numberOfDays; j++) {
-                    siteDensities[i][j] = (float) startDensity;
+                    siteDensities[i][j] = startDensity;
                 }
             }
         }
@@ -274,9 +274,10 @@ public class Particle_track {
                             currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
                             habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
+                        // calculate eggs per female per timestep based on temperature and scale initial particle densities
                         float[][] eggSigmas = Mesh.findNearestSigmas(2, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
-                        double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature);
+                        double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (86400/rp.dt);
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);
                     }
 
