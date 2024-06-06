@@ -365,10 +365,11 @@ public class Particle_track {
                     // Write Psteps
                     if (rp.recordPsteps && stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
                         System.out.println("Writing psteps");
-                        IOUtils.writeNonZeros2DArrayToCSV(pstepsImmature, "i,NA,value","%d,%d,%.4e" , "pstepsImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                        if (rp.recordImmature) {
+                            IOUtils.writeNonZeros2DArrayToCSV(pstepsImmature, "i,NA,value","%d,%d,%.4e" , "pstepsImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                            pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2];
+                        }
                         IOUtils.writeNonZeros2DArrayToCSV(pstepsMature, "i,NA,value","%d,%d,%.4e", "pstepsMature_" + today + "_" + Math.round(elapsedHours) + ".csv");
-
-                        pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2];
                         pstepsMature = new float[meshes.get(0).getNElems()][pstepsInd2];
                     }
 
@@ -381,10 +382,12 @@ public class Particle_track {
                         IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
                         if (stepcount % (rp.vertDistrInterval * rp.stepsPerStep) == 0) {
                             System.out.println("Writing vertical distribution");
+                            if (rp.recordImmature) {
+                                IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e", "vertDistrImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
+                            }
                             IOUtils.writeNonZeros2DArrayToCSV(vertDistrMature, "i,z,value", "%d,%d,%.4e", "vertDistrMature_" + today + "_" + Math.round(elapsedHours) + ".csv");
-                            IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e", "vertDistrImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
                             vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
-                            vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
                         }
                     }
 

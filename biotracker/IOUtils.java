@@ -1070,7 +1070,7 @@ public class IOUtils {
             int col = rp.splitPsteps ? p.getStartIndex() : 0;
             if (p.isViable()) {
                 pstepsMature[elemPart][col] += (float) d * (float) (dt / 3600);
-            } else if (p.isFree()) {
+            } else if (rp.recordImmature && p.isFree()) {
                 pstepsImmature[elemPart][col] += (float) d * (float) (dt / 3600);
             }
         }
@@ -1101,7 +1101,7 @@ public class IOUtils {
             arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
             pstepsMature.set(col, arr); // put the array back in the list
 
-        } else if (p.isFree()) {
+        } else if (rp.recordImmature && p.isFree()) {
             SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
             arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
             pstepsImmature.set(col, arr); // put the array back in the list
@@ -1119,7 +1119,7 @@ public class IOUtils {
             int col = (int) Math.min(Math.floor(p.getDepth()), rp.vertDistrMax);
             if (p.isViable()) {
                 vertDistrMature[elemPart][col] += (float) (d * dt / 3600);
-            } else if (p.isFree()) {
+            } else if (rp.recordImmature && p.isFree()) {
                 vertDistrImmature[elemPart][col] += (float) (d * dt / 3600);
             }
         }

@@ -32,6 +32,7 @@ public class RunProperties {
             fixDepth,
             swimLightLevel,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
+            recordImmature,
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
             recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
@@ -216,6 +217,7 @@ public class RunProperties {
         }
 
         // Output
+        recordImmature = Boolean.parseBoolean(properties.getProperty("recordImmature", "false"));
         recordPsteps = Boolean.parseBoolean(properties.getProperty("recordPsteps", "true"));
         splitPsteps = Boolean.parseBoolean(properties.getProperty("splitPsteps", "true"));
         pstepsInterval = Integer.parseInt(properties.getProperty("pstepsInterval", "24"));
