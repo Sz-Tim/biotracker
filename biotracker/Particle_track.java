@@ -275,9 +275,13 @@ public class Particle_track {
                             habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
+                        // Note: Norwegian model uses Stien et al 2005: N_naup = N_fish * N_female * 0.17 * (temp+4.28)^2
+                        // Linear model comes from Kragesteen
+                        // These are nearly identical under the temperatures in Scotland (r = 0.998)
                         float[][] eggSigmas = Mesh.findNearestSigmas(2, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
-                        double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (86400/rp.dt);
+                        //double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (60*60*24/rp.dt);
+                        double eggsPerFemale = Math.pow(rp.eggTemp_b0 * (eggTemperature + rp.eggTemp_b1), 2) / (60*60*24 / rp.dt);
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);
                     }
 
