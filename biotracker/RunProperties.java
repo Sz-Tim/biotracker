@@ -237,7 +237,7 @@ public class RunProperties {
         needT = viableDegreeDays > -1;
         needZeta = false;
         needK = !fixDepth && variableDhV;
-        needLight = !fixDepth;
+        needLight = !fixDepth && swimLightLevel;
         needVh = variableDh;
 
         properties.list(System.out);
