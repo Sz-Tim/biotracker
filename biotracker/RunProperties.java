@@ -233,11 +233,11 @@ public class RunProperties {
         vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
 
         // hydrodynamic file requirements
-        needS = !fixDepth || salinityMort;
+        needS = (!fixDepth) || salinityMort;
         needT = viableDegreeDays > -1;
         needZeta = false;
-        needK = !fixDepth && variableDhV;
-        needLight = !fixDepth && swimLightLevel;
+        needK = (!fixDepth) && variableDhV;
+        needLight = (!fixDepth) && swimLightLevel;
         needVh = variableDh;
 
         properties.list(System.out);

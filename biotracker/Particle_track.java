@@ -280,8 +280,11 @@ public class Particle_track {
                         // These are nearly identical under the temperatures in Scotland (r = 0.998)
                         float[][] eggSigmas = Mesh.findNearestSigmas(2, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
-                        //double eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (60*60*24/rp.dt);
-                        double eggsPerFemale = Math.pow(rp.eggTemp_b0 * (eggTemperature + rp.eggTemp_b1), 2) / (60*60*24 / rp.dt);
+                        double eggsPerFemale = 28.2 * (rp.dt / (60*60*24));
+                        if (rp.eggTemp_b1 > 0.001) {
+                            // eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (60*60*24/rp.dt);
+                            eggsPerFemale = rp.eggTemp_b0 * Math.pow((eggTemperature + rp.eggTemp_b1), 2) * (rp.dt / (60*60*24));
+                        }
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);
                     }
 
