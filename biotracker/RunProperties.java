@@ -194,8 +194,8 @@ public class RunProperties {
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
         salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold));
-        eggTemp_b0 = Double.parseDouble(properties.getProperty("eggTemp_b0", "" + 28.2));
-        eggTemp_b1 = Double.parseDouble(properties.getProperty("eggTemp_b1", "" + 0));
+        eggTemp_b0 = Double.parseDouble(properties.getProperty("eggTemp_b0", "28.2"));
+        eggTemp_b1 = Double.parseDouble(properties.getProperty("eggTemp_b1", "0"));
 
         // Demographics
         salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "true"));
