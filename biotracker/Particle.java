@@ -455,7 +455,7 @@ public class Particle {
     public double calcSinkProb(double salinity, RunProperties rp) {
         double prSink = 0;
         if (salinity < rp.salinityThreshMax) {
-            prSink = 0.125 * (31 - salinity);
+            prSink =  (rp.salinityThreshMax - salinity) / (rp.salinityThreshMax - rp.salinityThreshMin);
         }
         if (salinity < rp.salinityThreshMin) {
             prSink = 1;
