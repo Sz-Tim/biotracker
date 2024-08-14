@@ -483,8 +483,8 @@ public class Particle {
         double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
         double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
 
-        if ((this.isViable() && lightAtDepth > 2.06e-5) ||
-                (!this.isViable() && lightAtDepth > 0.392)) {
+        if ((this.isViable() && lightAtDepth > rp.lightThreshCopepodid) ||
+                (!this.isViable() && lightAtDepth > rp.lightThreshNauplius)) {
             return swim(rp);
         } else {
             return 0.0;

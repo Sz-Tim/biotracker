@@ -65,6 +65,7 @@ public class RunProperties {
             mortalityRate, // Hourly mortality rate of particles
             maxParticleAge, // Maximum age for particles. Set to <=0 to ignore.
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
+            lightThreshCopepodid, lightThreshNauplius,
             vertSwimSpeedMean, vertSwimSpeedStd,
             vertSwimSpeedCopepodidMean, vertSwimSpeedCopepodidStd,
             vertSwimSpeedNaupliusMean, vertSwimSpeedNaupliusStd,
@@ -179,6 +180,8 @@ public class RunProperties {
         species = properties.getProperty("species", "none");
         daylightPath = properties.getProperty("daylightPath", "");
         swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
+        lightThreshCopepodid = Double.parseDouble(properties.getProperty("lightThreshCopepodid", "2.06e-5"));
+        lightThreshNauplius = Double.parseDouble(properties.getProperty("lightThreshNauplius", "0.392"));
         vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean", "0"));
         vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd", "0"));
         vertSwimSpeedCopepodidMean = Double.parseDouble(properties.getProperty("vertSwimSpeedCopepodidMean", "" + vertSwimSpeedMean));
