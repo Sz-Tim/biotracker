@@ -452,27 +452,27 @@ public class Particle {
         return this.degreeDays;
     }
 
-    public double calcSinkProb(double salinity, RunProperties rp) {
-        double prSink = 0;
-        if (salinity < rp.salinityThreshMax) {
-            prSink =  (rp.salinityThreshMax - salinity) / (rp.salinityThreshMax - rp.salinityThreshMin);
+    public double calcSwimDownProb(double salinity, RunProperties rp) {
+        double prSwimDown = 0;
+        if (salinity < rp.salinityThreshMax & salinity > rp.salinityThreshMin) {
+            prSwimDown =  (rp.salinityThreshMax - salinity) / (rp.salinityThreshMax - rp.salinityThreshMin);
         }
-        if (salinity < rp.salinityThreshMin) {
-            prSink = 1;
+        if (salinity <= rp.salinityThreshMin) {
+            prSwimDown = 1;
         }
-        return prSink;
+        return prSwimDown;
     }
 
     public double sink(RunProperties rp) {
-        double sinkSpeedMean = this.isViable() ? rp.sinkingRateCopepodidMean : rp.sinkingRateNaupliusMean;
-        double sinkSpeedStd = this.isViable() ? rp.sinkingRateCopepodidStd : rp.sinkingRateNaupliusStd;
-        int forceDownward = rp.sinkingRateMean < 0 ? -1 : 1;
-        return forceDownward * sinkSpeedMean + sinkSpeedStd * ThreadLocalRandom.current().nextGaussian();
+        double swimDownSpeedMean = this.isViable() ? rp.swimDownSpeedCopepodidMean : rp.swimDownSpeedNaupliusMean;
+        double swimDownSpeedStd = this.isViable() ? rp.swimDownSpeedCopepodidStd : rp.swimDownSpeedNaupliusStd;
+        int forceDownward = rp.swimDownSpeedMean < 0 ? -1 : 1;
+        return forceDownward * swimDownSpeedMean + swimDownSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
 
     public double swim(RunProperties rp) {
-        double swimSpeedMean = this.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean;
-        double swimSpeedStd = this.isViable() ? rp.vertSwimSpeedCopepodidStd : rp.vertSwimSpeedNaupliusStd;
+        double swimSpeedMean = this.isViable() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean;
+        double swimSpeedStd = this.isViable() ? rp.swimUpSpeedCopepodidStd : rp.swimUpSpeedNaupliusStd;
         int forceUpward = swimSpeedMean > 0 ? -1 : 1;
         return forceUpward * swimSpeedMean + swimSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
@@ -489,6 +489,11 @@ public class Particle {
         } else {
             return 0.0;
         }
+    }
+
+    public double passive(RunProperties rp, double localSalinity) {
+        // based on Bricknell 2006 Fig. 3, assuming buoyancy is identical for copepodid & nauplius
+        return rp.passiveSinkingIntercept + rp.passiveSinkingSlope * localSalinity + rp.passiveSinkingSlope * ThreadLocalRandom.current().nextGaussian();
     }
 
     public double[] diffuse(double D_h, double K_gradient, double K_zAdj, double dt, String distribution) {

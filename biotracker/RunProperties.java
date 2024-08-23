@@ -66,13 +66,14 @@ public class RunProperties {
             maxParticleAge, // Maximum age for particles. Set to <=0 to ignore.
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
             lightThreshCopepodid, lightThreshNauplius,
-            vertSwimSpeedMean, vertSwimSpeedStd,
-            vertSwimSpeedCopepodidMean, vertSwimSpeedCopepodidStd,
-            vertSwimSpeedNaupliusMean, vertSwimSpeedNaupliusStd,
-            sinkingRateMean, sinkingRateStd, // Particle sinking distribution parameters
-            sinkingRateCopepodidMean, sinkingRateCopepodidStd,
-            sinkingRateNaupliusMean, sinkingRateNaupliusStd,
+            swimUpSpeedMean, swimUpSpeedStd,
+            swimUpSpeedCopepodidMean, swimUpSpeedCopepodidStd,
+            swimUpSpeedNaupliusMean, swimUpSpeedNaupliusStd,
+            swimDownSpeedMean, SwimDownSpeedStd, // Particle sinking distribution parameters
+            swimDownSpeedCopepodidMean, swimDownSpeedCopepodidStd,
+            swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
+            passiveSinkingIntercept, passiveSinkingSlope,
             eggTemp_b0, eggTemp_b1, // temperature dependent egg production intercept and slope
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
@@ -182,21 +183,23 @@ public class RunProperties {
         swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
         lightThreshCopepodid = Double.parseDouble(properties.getProperty("lightThreshCopepodid", "2.06e-5"));
         lightThreshNauplius = Double.parseDouble(properties.getProperty("lightThreshNauplius", "0.392"));
-        vertSwimSpeedMean = Double.parseDouble(properties.getProperty("vertSwimSpeedMean", "0"));
-        vertSwimSpeedStd = Double.parseDouble(properties.getProperty("vertSwimSpeedStd", "0"));
-        vertSwimSpeedCopepodidMean = Double.parseDouble(properties.getProperty("vertSwimSpeedCopepodidMean", "" + vertSwimSpeedMean));
-        vertSwimSpeedCopepodidStd = Double.parseDouble(properties.getProperty("vertSwimSpeedCopepodidStd", "" + vertSwimSpeedStd));
-        vertSwimSpeedNaupliusMean = Double.parseDouble(properties.getProperty("vertSwimSpeedNaupliusMean", "" + vertSwimSpeedMean));
-        vertSwimSpeedNaupliusStd = Double.parseDouble(properties.getProperty("vertSwimSpeedNaupliusStd", "" + vertSwimSpeedStd));
-        sinkingRateMean = Double.parseDouble(properties.getProperty("sinkingRateMean", "0"));
-        sinkingRateStd = Double.parseDouble(properties.getProperty("sinkingRateStd", "0"));
-        sinkingRateCopepodidMean = Double.parseDouble(properties.getProperty("sinkingRateCopepodidMean", "" + sinkingRateMean));
-        sinkingRateCopepodidStd = Double.parseDouble(properties.getProperty("sinkingRateCopepodidStd", "" + sinkingRateStd));
-        sinkingRateNaupliusMean = Double.parseDouble(properties.getProperty("sinkingRateNaupliusMean", "" + sinkingRateMean));
-        sinkingRateNaupliusStd = Double.parseDouble(properties.getProperty("sinkingRateNaupliusStd", "" + sinkingRateStd));
-        salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "0"));
+        swimUpSpeedMean = Double.parseDouble(properties.getProperty("swimUpSpeedMean", "0"));
+        swimUpSpeedStd = Double.parseDouble(properties.getProperty("swimUpSpeedStd", "0"));
+        swimUpSpeedCopepodidMean = Double.parseDouble(properties.getProperty("swimUpSpeedCopepodidMean", "" + swimUpSpeedMean));
+        swimUpSpeedCopepodidStd = Double.parseDouble(properties.getProperty("swimUpSpeedCopepodidStd", "" + swimUpSpeedStd));
+        swimUpSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimUpSpeedNaupliusMean", "" + swimUpSpeedMean));
+        swimUpSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimUpSpeedNaupliusStd", "" + swimUpSpeedStd));
+        swimDownSpeedMean = Double.parseDouble(properties.getProperty("swimDownSpeedMean", "0"));
+        SwimDownSpeedStd = Double.parseDouble(properties.getProperty("swimDownSpeedStd", "0"));
+        swimDownSpeedCopepodidMean = Double.parseDouble(properties.getProperty("swimDownSpeedCopepodidMean", "" + swimDownSpeedMean));
+        swimDownSpeedCopepodidStd = Double.parseDouble(properties.getProperty("swimDownSpeedCopepodidStd", "" + SwimDownSpeedStd));
+        swimDownSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusMean", "" + swimDownSpeedMean));
+        swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + SwimDownSpeedStd));
+        salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
-        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold));
+        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
+        passiveSinkingIntercept = Double.parseDouble(properties.getProperty("passiveSinkingIntercept", "0.001527"));
+        passiveSinkingSlope = Double.parseDouble(properties.getProperty("passiveSinkingSlope", "-0.0000168"));
         eggTemp_b0 = Double.parseDouble(properties.getProperty("eggTemp_b0", "28.2"));
         eggTemp_b1 = Double.parseDouble(properties.getProperty("eggTemp_b1", "0"));
 

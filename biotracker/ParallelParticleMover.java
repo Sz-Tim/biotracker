@@ -174,10 +174,10 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 if (part.getStatus()<3) {
                     int activity = 2; // 0 = sink; 1 = swim; 2 = float
                     // following Sandvik et al 2020, citing on Crosbie 2019
-                    double prSink = part.calcSinkProb(localSalinity, rp);
+                    double prSink = part.calcSwimDownProb(localSalinity, rp);
                     if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
-                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isViable() ? rp.vertSwimSpeedCopepodidMean : rp.vertSwimSpeedNaupliusMean))) {
-                        activeMovement[2] = part.sink(rp);
+                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isViable() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
+                        activeMovement[2] = Math.max(part.sink(rp), part.passive(rp, localSalinity));
                         activity = 0;
                         sink++;
                     } else if (rp.swimLightLevel) {
@@ -190,6 +190,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activeMovement[2] = part.swim(rp);
                         activity = 1;
                         swim++;
+                    } else {
+                        activeMovement[2] = part.passive(rp, localSalinity);
                     }
                     if (rp.recordActivity && part.getMesh()==0) {
                         elemActivity[part.getElem()][activity]++;
