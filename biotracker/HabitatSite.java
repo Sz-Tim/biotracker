@@ -26,15 +26,19 @@ public class HabitatSite {
     private int[] containingROMSElemU;
     private int[] nearestROMSGridPointV;
     private int[] containingROMSElemV;
+    private double[] envConditionDay;
     private double[] envConditionSum;
     private int[] envConditionCount;
+    private int[] envConditionCountDay;
 
     public HabitatSite(String ID, float x, float y, float depth, float scale, List<Mesh> meshes, RunProperties rp) {
         this.ID = ID;
         this.xy = new float[]{x, y};
         this.scale = scale;
-        this.envConditionSum = new double[6]; // [u, v, w, uv, salinity, temp, km]
-        this.envConditionCount = new int[6]; // [u, v, w, uv, salinity, temp, km]
+        this.envConditionDay = new double[7]; // [u, v, w, uv, salinity, temp, km]
+        this.envConditionSum = new double[7]; // [u, v, w, uv, salinity, temp, km]
+        this.envConditionCount = new int[7]; // [u, v, w, uv, salinity, temp, km]
+        this.envConditionCountDay = new int[7]; // [u, v, w, uv, salinity, temp, km]
 
         double[] xy2 = new double[]{this.xy[0], this.xy[1]};
 
@@ -138,7 +142,12 @@ public class HabitatSite {
                     + "," + this.containingMeshType
                     + "," + this.getAvgEnvCondition()[0] + "," + this.getAvgEnvCondition()[1]
                     + "," + this.getAvgEnvCondition()[2] + "," + this.getAvgEnvCondition()[3]
-                    + "," + this.getAvgEnvCondition()[4] + "," + this.getAvgEnvCondition()[5];
+                    + "," + this.getAvgEnvCondition()[4] + "," + this.getAvgEnvCondition()[5]
+                    + "," + this.getAvgEnvCondition()[6]
+                    + "," + this.getAvgEnvConditionDay()[0] + "," + this.getAvgEnvConditionDay()[1]
+                    + "," + this.getAvgEnvConditionDay()[2] + "," + this.getAvgEnvConditionDay()[3]
+                    + "," + this.getAvgEnvConditionDay()[4] + "," + this.getAvgEnvConditionDay()[5]
+                    + "," + this.getAvgEnvConditionDay()[6];
         } else if (this.containingMeshType.equalsIgnoreCase("ROMS")) {
             details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.containingMesh + " U_grid: ("
                     + this.nearestROMSGridPointU[0] + "," + this.nearestROMSGridPointU[1] + ") ("
@@ -175,10 +184,26 @@ public class HabitatSite {
         return this.envConditionCount;
     }
 
+    public double[] getEnvConditionDay() {
+        return this.envConditionDay;
+    }
+
+    public int[] getEnvConditionCountDay() { return this.envConditionCountDay; }
+
+    public void setEnvConditionDay(double[] envConditionDay) {
+        this.envConditionDay = envConditionDay;
+    }
+
+    public void setEnvConditionCountDay(int[] envConditionCountDay) {
+        this.envConditionCountDay = envConditionCountDay;
+    }
+
     public void addEnvCondition(double[] currentConditions) {
         for (int i=0; i < this.envConditionSum.length; i++) {
             this.envConditionSum[i] += currentConditions[i];
+            this.envConditionDay[i] += currentConditions[i];
             this.envConditionCount[i] ++;
+            this.envConditionCountDay[i] ++;
         }
     }
 
@@ -186,6 +211,14 @@ public class HabitatSite {
         double[] avgCondition = new double[this.envConditionSum.length];
         for (int i=0; i < this.envConditionSum.length; i++) {
             avgCondition[i] = this.getEnvConditionSum()[i] / this.envConditionCount[i];
+        }
+        return avgCondition;
+    }
+
+    public double[] getAvgEnvConditionDay() {
+        double[] avgCondition = new double[this.envConditionDay.length];
+        for (int i=0; i < this.envConditionDay.length; i++) {
+            avgCondition[i] = this.getEnvConditionDay()[i] / this.envConditionCountDay[i];
         }
         return avgCondition;
     }

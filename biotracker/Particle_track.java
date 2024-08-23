@@ -261,7 +261,7 @@ public class Particle_track {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
                         int m = habitat.get(i).getContainingMesh();
                         int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
-                        double[][] currentConditions = new double[nLayers][6];
+                        double[][] currentConditions = new double[nLayers][7];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
                         siteLoc[1] = habitat.get(i).getLocation()[1];
@@ -272,13 +272,14 @@ public class Particle_track {
                             currentConditions[j][3] = Math.sqrt(currentConditions[j][0]*currentConditions[j][0] + currentConditions[j][1]*currentConditions[j][1]);
                             currentConditions[j][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "salinity", rp) : -9999;
                             currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
+                            currentConditions[j][6] = rp.needK ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "km", rp) : -9999;
                             habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
                         // Note: Norwegian model uses Stien et al 2005: N_naup = N_fish * N_female * 0.17 * (temp+4.28)^2
                         // Linear model comes from Kragesteen
                         // These are nearly identical under the temperatures in Scotland (r = 0.998)
-                        float[][] eggSigmas = Mesh.findNearestSigmas(2, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
+                        float[][] eggSigmas = Mesh.findNearestSigmas(10, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
                         double eggsPerFemale = rp.eggTemp_b0 * (rp.dt / (60*60*24));
                         if (rp.eggTemp_b1 > 0.001) {
@@ -401,6 +402,17 @@ public class Particle_track {
                     // Clean up "dead" (666) and "exited" (66) particles
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
                 }
+
+                FileWriter fstream = new FileWriter("siteConditions_" + today + "_" + Math.round(elapsedHours) + ".csv", false);
+                PrintWriter out = new PrintWriter(fstream);
+                out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,u,v,w,uv,salinity,temperature,k");
+                for (HabitatSite habitatSite : habitat) {
+                    out.println(habitatSite);
+                    habitatSite.setEnvConditionDay(new double[7]);
+                    habitatSite.setEnvConditionCountDay(new int[7]);
+                }
+                out.close();
+
                 System.out.println();
 
                 if (rp.backwards) {
@@ -431,7 +443,7 @@ public class Particle_track {
 
         FileWriter fstream = new FileWriter("startSitesUsed.csv", false);
         PrintWriter out = new PrintWriter(fstream);
-        out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u,v,w,uv,salinity,temperature,k");
+        out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,u,v,w,uv,salinity,temperature,k");
         for (HabitatSite habitatSite : habitat) {
             out.println(habitatSite);
         }
