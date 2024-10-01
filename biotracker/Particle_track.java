@@ -833,7 +833,7 @@ public class Particle_track {
         int[] freeViableSettleExit = new int[4];
         for (Particle p : parts) {
             freeViableSettleExit[0] += p.isFree() ? 1 : 0;
-            freeViableSettleExit[1] += p.isViable() ? 1 : 0;
+            freeViableSettleExit[1] += p.isInfectious() ? 1 : 0;
             freeViableSettleExit[2] += p.hasArrived() ? 1 : 0;
             freeViableSettleExit[3] += p.hasExited() ? 1 : 0;
         }

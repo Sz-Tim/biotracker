@@ -364,7 +364,7 @@ public class Particle {
         return depNearest;
     }
 
-    public void setViable(boolean viable) {
+    public void setInfectious(boolean viable) {
         this.viable = viable;
     }
 
@@ -392,7 +392,7 @@ public class Particle {
         this.boundaryExit = exit;
     }
 
-    public boolean isViable() {
+    public boolean isInfectious() {
         return this.viable;
     }
 
@@ -412,10 +412,10 @@ public class Particle {
         return this.boundaryExit;
     }
 
-    public boolean canBecomeViable(RunProperties rp) {
+    public boolean canBecomeInfectious(RunProperties rp) {
         boolean byAge = getAge() > rp.viabletime && rp.viabletime > 0;
         boolean byDegreeDays = getDegreeDays() > rp.viableDegreeDays && rp.viableDegreeDays > 0;
-        boolean byPrevious = isViable();
+        boolean byPrevious = isInfectious();
         return byAge || byDegreeDays || byPrevious;
     }
 
@@ -464,15 +464,15 @@ public class Particle {
     }
 
     public double sink(RunProperties rp) {
-        double swimDownSpeedMean = this.isViable() ? rp.swimDownSpeedCopepodidMean : rp.swimDownSpeedNaupliusMean;
-        double swimDownSpeedStd = this.isViable() ? rp.swimDownSpeedCopepodidStd : rp.swimDownSpeedNaupliusStd;
+        double swimDownSpeedMean = this.isInfectious() ? rp.swimDownSpeedCopepodidMean : rp.swimDownSpeedNaupliusMean;
+        double swimDownSpeedStd = this.isInfectious() ? rp.swimDownSpeedCopepodidStd : rp.swimDownSpeedNaupliusStd;
         int forceDownward = rp.swimDownSpeedMean < 0 ? -1 : 1;
         return forceDownward * swimDownSpeedMean + swimDownSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
 
     public double swim(RunProperties rp) {
-        double swimSpeedMean = this.isViable() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean;
-        double swimSpeedStd = this.isViable() ? rp.swimUpSpeedCopepodidStd : rp.swimUpSpeedNaupliusStd;
+        double swimSpeedMean = this.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean;
+        double swimSpeedStd = this.isInfectious() ? rp.swimUpSpeedCopepodidStd : rp.swimUpSpeedNaupliusStd;
         int forceUpward = swimSpeedMean > 0 ? -1 : 1;
         return forceUpward * swimSpeedMean + swimSpeedStd * ThreadLocalRandom.current().nextGaussian();
     }
@@ -483,8 +483,8 @@ public class Particle {
         double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
         double lightAtDepth = lightAtSurface * Math.exp(-0.2 * this.depth);
 
-        if ((this.isViable() && lightAtDepth > rp.lightThreshCopepodid) ||
-                (!this.isViable() && lightAtDepth > rp.lightThreshNauplius)) {
+        if ((this.isInfectious() && lightAtDepth > rp.lightThreshCopepodid) ||
+                (!this.isInfectious() && lightAtDepth > rp.lightThreshNauplius)) {
             return swim(rp);
         } else {
             return 0.0;

@@ -34,7 +34,8 @@ public class RunProperties {
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             recordImmature,
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
-            recordConnectivity, recordLocations, recordArrivals, // record connectivity? particle locations? arrivals at sites?
+            recordConnectivity, // record connectivity?
+            recordLocations, recordArrivals, // record particle locations? arrivals at sites?
             recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
             recordVertDistr, // record vertical distributions?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)

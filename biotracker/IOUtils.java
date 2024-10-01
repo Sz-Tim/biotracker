@@ -21,7 +21,6 @@ import java.util.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
-import org.apache.commons.io.filefilter.WildcardFileFilter;
 import ucar.ma2.*;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
@@ -1068,7 +1067,7 @@ public class IOUtils {
             double d = p.getDensity();
             int elemPart = p.getElem();
             int col = rp.splitPsteps ? p.getStartIndex() : 0;
-            if (p.isViable()) {
+            if (p.isInfectious()) {
                 pstepsMature[elemPart][col] += (float) d * (float) (dt / 3600);
             } else if (rp.recordImmature && p.isFree()) {
                 pstepsImmature[elemPart][col] += (float) d * (float) (dt / 3600);
@@ -1096,7 +1095,7 @@ public class IOUtils {
         double d = p.getDensity();
         int elemPart = p.getElem();
         int col = rp.splitPsteps ? p.getStartIndex() + 1 : 1;
-        if (p.isViable()) {
+        if (p.isInfectious()) {
             SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
             arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
             pstepsMature.set(col, arr); // put the array back in the list
@@ -1117,7 +1116,7 @@ public class IOUtils {
             double d = p.getDensity();
             int elemPart = p.getElem();
             int col = (int) Math.min(Math.floor(p.getDepth()), rp.vertDistrMax);
-            if (p.isViable()) {
+            if (p.isInfectious()) {
                 vertDistrMature[elemPart][col] += (float) (d * dt / 3600);
             } else if (rp.recordImmature && p.isFree()) {
                 vertDistrImmature[elemPart][col] += (float) (d * dt / 3600);

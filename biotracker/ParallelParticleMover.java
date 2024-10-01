@@ -176,7 +176,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     // following Sandvik et al 2020, citing on Crosbie 2019
                     double prSink = part.calcSwimDownProb(localSalinity, rp);
                     if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
-                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isViable() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
+                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
                         activeMovement[2] = Math.max(part.sink(rp), part.passive(rp, localSalinity));
                         activity = 0;
                         sink++;
@@ -260,9 +260,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // ***************************** By this point, the particle has been allocated to a mesh and new locations set etc ***********************
             // set particle to become able to settle after a predefined time
-            if (!part.isViable()) {
-                if (part.canBecomeViable(rp)) {
-                    part.setViable(true);
+            if (!part.isInfectious()) {
+                if (part.canBecomeInfectious(rp)) {
+                    part.setInfectious(true);
                     part.setStatus(2);
                 }
             }
@@ -273,7 +273,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             }
 
             // **************** if able to settle, is it close to a possible settlement location? ******************************
-            if (part.isViable()) {
+            if (part.isInfectious()) {
                 for (HabitatSite site : habitatEnd) {
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
                             site.getLocation()[0], site.getLocation()[1], rp.coordOS);
