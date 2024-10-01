@@ -493,7 +493,7 @@ public class Particle {
 
     public double passive(RunProperties rp, double localSalinity) {
         // based on Bricknell 2006 Fig. 3, assuming buoyancy is identical for copepodid & nauplius
-        return rp.passiveSinkingIntercept + rp.passiveSinkingSlope * localSalinity + rp.passiveSinkingSlope * ThreadLocalRandom.current().nextGaussian();
+        return rp.passiveSinkingIntercept + rp.passiveSinkingSlope * localSalinity;
     }
 
     public double[] diffuse(double D_h, double K_gradient, double K_zAdj, double dt, String distribution) {
