@@ -181,6 +181,9 @@ public class Particle_track {
 
         // Set up array to hold connectivity counts
         float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
+        float[][] connectivityDepth2 = new float[habitat.size()][habitatEnd.size()];
+        float[][] connectivityImmature = new float[habitat.size()][habitatEnd.size()];
+        float[][] connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         int[][] hourActivity = new int[numberOfDays*24+1][3]; // count of sink, swim, float within each hour
@@ -350,13 +353,31 @@ public class Particle_track {
                         // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
                         for (Particle part : particles) {
                             if (part.hasSettledThisHour()) {
-                                // Save arrival
-                                if (rp.recordArrivals) {
-                                    IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".csv", true);
+                                if (part.isInfectious()) { // copepodids
+                                    // Save arrival
+                                    if (rp.recordArrivals) {
+                                        IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".csv", true);
+                                    }
+                                    // Add arrival to connectivity file
+                                    int destIndex = siteEndNames.indexOf(part.getLastArrival());
+                                    double pDepth = part.getDepth();
+                                    if (pDepth >= rp.connectDepth1_min && pDepth <= rp.connectDepth1_max) {
+                                        connectivity[part.getStartIndex()][destIndex] += (float) part.getDensity();
+                                    }
+                                    if (rp.recordConnectivityDepth2 && pDepth >= rp.connectDepth2_min && pDepth <= rp.connectDepth2_max) {
+                                        connectivityDepth2[part.getStartIndex()][destIndex] += (float) part.getDensity();
+                                    }
+                                } else if (rp.connectImmature & part.getStatus()==1) { // nauplii
+                                    // Add arrival to connectivity file
+                                    int destIndex = siteEndNames.indexOf(part.getLastArrival());
+                                    double pDepth = part.getDepth();
+                                    if (pDepth >= rp.connectDepth1_min && pDepth <= rp.connectDepth1_max) {
+                                        connectivityImmature[part.getStartIndex()][destIndex] += (float) part.getDensity();
+                                    }
+                                    if (rp.recordConnectivityDepth2 && pDepth >= rp.connectDepth2_min && pDepth <= rp.connectDepth2_max) {
+                                        connectivityImmatureDepth2[part.getStartIndex()][destIndex] += (float) part.getDensity();
+                                    }
                                 }
-                                // Add arrival to connectivity file
-                                int destIndex = siteEndNames.indexOf(part.getLastArrival());
-                                connectivity[part.getStartIndex()][destIndex] += (float) part.getDensity();
 
                                 // Reset ability to settle
                                 part.setSettledThisHour(false);
@@ -382,8 +403,24 @@ public class Particle_track {
                     }
 
                     if (rp.recordConnectivity && stepcount % (rp.connectivityInterval * rp.stepsPerStep) == 0) {
-                        IOUtils.writeNonZeros2DArrayToCSV(connectivity, "source,destination,value", "%d,%d,%.4e", "connectivity_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                        IOUtils.writeNonZeros2DArrayToCSV(connectivity, "source,destination,value", "%d,%d,%.4e",
+                                "connectivity_" + rp.connectDepth1_min + "-" + rp.connectDepth1_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                         connectivity = new float[habitat.size()][habitatEnd.size()];
+                        if (rp.recordConnectivityDepth2) {
+                            IOUtils.writeNonZeros2DArrayToCSV(connectivityDepth2, "source,destination,value", "%d,%d,%.4e",
+                                    "connectivity_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                            connectivityDepth2 = new float[habitat.size()][habitatEnd.size()];
+                        }
+                        if (rp.connectImmature) {
+                            IOUtils.writeNonZeros2DArrayToCSV(connectivityImmature, "source,destination,value", "%d,%d,%.4e",
+                                    "connectivityImm_" + rp.connectDepth1_min + "-" + rp.connectDepth1_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                            connectivityImmature = new float[habitat.size()][habitatEnd.size()];
+                            if (rp.recordConnectivityDepth2) {
+                                IOUtils.writeNonZeros2DArrayToCSV(connectivityImmatureDepth2, "source,destination,value", "%d,%d,%.4e",
+                                        "connectivityImm_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
+                            }
+                        }
                     }
 
                     if (rp.recordVertDistr) {
