@@ -277,7 +277,7 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 for (HabitatSite site : habitatEnd) {
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
                             site.getLocation()[0], site.getLocation()[1], rp.coordOS);
-                    if (dist < rp.thresh && !part.hasSettledThisHour()) {  // TODO: I think this doesn't make sense? Necessary for part.setLastArrival(site.getID()) for connectivity though.
+                    if (dist < rp.connectivityThresh && !part.hasSettledThisHour()) {  // TODO: I think this doesn't make sense? Necessary for part.setLastArrival(site.getID()) for connectivity though.
                         if (rp.endOnArrival && part.isInfectious()) {
                             part.setArrived(true);
                             part.setStatus(3);

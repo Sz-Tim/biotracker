@@ -54,7 +54,7 @@ public class RunProperties {
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
-            thresh, // Threshold distance for "settlement" (m)
+            connectivityThresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
             minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
@@ -168,7 +168,7 @@ public class RunProperties {
 
         // Arrival
         endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival", "false"));
-        thresh = Integer.parseInt(properties.getProperty("thresh", "500"));
+        connectivityThresh = Integer.parseInt(properties.getProperty("connectivityThresh", "100"));
 
         // Advection & diffusion
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));

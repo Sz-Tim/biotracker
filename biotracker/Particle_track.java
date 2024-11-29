@@ -59,7 +59,7 @@ public class Particle_track {
         System.out.printf("Fixed depth        = %b\n", rp.fixDepth);
         System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
         System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
-        System.out.printf("Threshold distance = %d\n", rp.thresh);
+        System.out.printf("Threshold distance = %d\n", rp.connectivityThresh);
         System.out.printf("Diffusion D_h      = %s\n", rp.variableDh ? "variable" : "" + rp.D_h);
         System.out.printf("Diffusion D_v      = %s\n", rp.variableDhV ? "variable" : "" + rp.D_hVert);
         System.out.printf("EPSG:27700         = %b\n", rp.coordOS);
