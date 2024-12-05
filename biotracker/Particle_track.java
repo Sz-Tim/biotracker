@@ -286,7 +286,7 @@ public class Particle_track {
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
                         double eggsPerFemale = rp.eggTemp_b0 * (rp.dt / (60*60*24));
                         if (rp.eggTemp_b1 > 0.001) {
-                            // eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) / (60*60*24/rp.dt);
+                            // eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) * (rp.dt/(60*60*24));
                             eggsPerFemale = rp.eggTemp_b0 * Math.pow((eggTemperature + rp.eggTemp_b1), 2) * (rp.dt / (60*60*24));
                         }
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);

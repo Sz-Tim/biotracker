@@ -6,6 +6,9 @@
 package biotracker;
 
 import java.util.stream.IntStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 /**
@@ -45,63 +48,38 @@ public class HydroField {
      * @param type    type of hydro field (FVCOM/ROMS)
      */
     public HydroField(String filename, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, RunProperties rp) {
-
         System.out.println("Reading hydro file: " + filename);
 
         // Create additional shape matrices for the 2D variables (elevation)
-        int[] origin2 = null;
-        if (origin != null) {
-            origin2 = new int[origin.length - 1];
-            origin2[0] = origin[0];
-            origin2[1] = origin[2];
-        }
-        int[] shapeST2 = null;
-        if (shapeST != null) {
-            shapeST2 = new int[shapeST.length - 1];
-            shapeST2[0] = shapeST[0];
-            shapeST2[1] = shapeST[2];
-        }
+        final int[] origin2 = origin != null ? new int[]{origin[0], origin[2]} : null;
+        final int[] shapeST2 = shapeST != null ? new int[]{shapeST[0], shapeST[2]} : null;
 
-        if (type.equalsIgnoreCase("FVCOM") || type.equalsIgnoreCase("ROMS_TRI")) {
-            u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
-            v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            if (rp.fixDepth) {
-                w = new float[u.length][u[0].length][u[0][0].length];
-                System.out.println("w" + " (" + u.length + "," + u[0].length + "," + u[0][0].length + ") -- all zeros");
-            } else {
-                w = IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape);
-            }
-            if(rp.needS) {
-                s = IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST);
-            }
-            if(rp.needT) {
-                t = IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST);
-            }
-            if(rp.needZeta) {
-                zeta = IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2);
-            }
-            if(rp.needK) {
-                k = IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2);
-            }
-            if(rp.needVh) {
-                vh = IOUtils.readNetcdfFloat3D(filename, varNames[7], origin, shapeST);
-            }
-            if(rp.needLight) {
-                light = IOUtils.readNetcdfFloat2D(filename, varNames[8], origin2, shapeST2);
-            }
-        } else if (type.equalsIgnoreCase("ROMS")) {
-            u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
-            v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
-            if (!rp.readHydroVelocityOnly) {
-                float[][][] elTmp = IOUtils.readNetcdfFloat3D(filename, varNames[5], origin, shape);
-                System.out.println("elTmp (" + elTmp.length + "," + elTmp[0].length + "," + elTmp[0][0].length + ")");
-                zeta = new float[elTmp[0].length][elTmp[0][0].length];
-                for (int xInd = 0; xInd < elTmp[0].length; xInd++) {
-                    System.arraycopy(elTmp[0][xInd], 0, zeta[xInd], 0, elTmp[0][0].length);
-                }
-            }
-        }
+        ExecutorService executor = Executors.newFixedThreadPool(varNames.length);
+        try {
+            Future<float[][][]> uFuture = executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape));
+            Future<float[][][]> vFuture = executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape));
+            Future<float[][][]> wFuture = rp.fixDepth ? null : executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape));
+            Future<float[][][]> sFuture = rp.needS ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST)) : null;
+            Future<float[][][]> tFuture = rp.needT ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST)) : null;
+            Future<float[][]> zetaFuture = rp.needZeta ? executor.submit(() -> IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2)) : null;
+            Future<float[][][]> kFuture = rp.needK ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2)) : null;
+            Future<float[][][]> vhFuture = rp.needVh ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[7], origin, shapeST)) : null;
+            Future<float[][]> lightFuture = rp.needLight ? executor.submit(() -> IOUtils.readNetcdfFloat2D(filename, varNames[8], origin2, shapeST2)) : null;
 
+            u = uFuture.get();
+            v = vFuture.get();
+            w = rp.fixDepth ? new float[u.length][u[0].length][u[0][0].length] : wFuture.get();
+            s = rp.needS ? sFuture.get() : null;
+            t = rp.needT ? tFuture.get() : null;
+            zeta = rp.needZeta ? zetaFuture.get() : null;
+            k = rp.needK ? kFuture.get() : null;
+            vh = rp.needVh ? vhFuture.get() : null;
+            light = rp.needLight ? lightFuture.get() : null;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            executor.shutdown();
+        }
     }
 
     /**
@@ -279,39 +257,90 @@ public class HydroField {
                 }
             }
         } else {
+//            for (int hour = 0; hour < nHour; hour++) {
+//                for (int dep = 0; dep < nDep; dep++) {
+//                    for (int elem = 0; elem < nElem; elem++) {
+//                        u[hour][dep][elem] = u1[hour][dep][elem];
+//                        v[hour][dep][elem] = v1[hour][dep][elem];
+//                        w[hour][dep][elem] = w1[hour][dep][elem];
+//                        sumU += u[hour][dep][elem];
+//                    }
+//                    for (int node = 0; node < nNode; node++) {
+//                        if (s1 != null) {
+//                            s[hour][dep][node] = s1[hour][dep][node];
+//                        }
+//                        if (t1 != null) {
+//                            t[hour][dep][node] = t1[hour][dep][node];
+//                        }
+//                        if (dep == 0) {
+//                            if (zeta != null) {
+//                                zeta[hour][node] = zeta1[hour][node];
+//                            }
+//                            if (light != null) {
+//                                light[hour][node] = light1[hour][node];
+//                            }
+//                        }
+//                        if (k1 != null) {
+//                            k[hour][dep][node] = k1[hour][dep][node];
+//                            // easiest way to adjust for extra sigma level
+//                            if (dep == nDep - 1) {
+//                                k[hour][dep + 1][node] = k1[hour][dep + 1][node];
+//                            }
+//                        }
+//                        if (vh1 != null) {
+//                            vh[hour][dep][node] = vh1[hour][dep][node];
+//                        }
+//                    }
+//                }
+//            }
             for (int hour = 0; hour < nHour; hour++) {
                 for (int dep = 0; dep < nDep; dep++) {
+                    System.arraycopy(u1[hour][dep], 0, u1[hour][dep], 0, nElem);
+                    System.arraycopy(v1[hour][dep], 0, v1[hour][dep], 0, nElem);
+                    System.arraycopy(w1[hour][dep], 0, w1[hour][dep], 0, nElem);
                     for (int elem = 0; elem < nElem; elem++) {
-                        u[hour][dep][elem] = u1[hour][dep][elem];
-                        v[hour][dep][elem] = v1[hour][dep][elem];
-                        w[hour][dep][elem] = w1[hour][dep][elem];
                         sumU += u[hour][dep][elem];
                     }
-                    for (int node = 0; node < nNode; node++) {
-                        if (s1 != null) {
-                            s[hour][dep][node] = s1[hour][dep][node];
+                }
+            }
+            if (s1 != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    for (int dep = 0; dep < nDep; dep++) {
+                        System.arraycopy(s1[hour][dep], 0, s[hour][dep], 0, nNode);
+                    }
+                }
+            }
+            if (t1 != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    for (int dep = 0; dep < nDep; dep++) {
+                        System.arraycopy(t1[hour][dep], 0, t[hour][dep], 0, nNode);
+                    }
+                }
+            }
+            if (zeta != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    System.arraycopy(zeta1[hour], 0, zeta[hour], 0, nNode);
+                }
+            }
+            if (light != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    System.arraycopy(light1[hour], 0, light[hour], 0, nNode);
+                }
+            }
+            if (k1 != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    for (int dep = 0; dep < nDep; dep++) {
+                        System.arraycopy(k1[hour][dep], 0, k[hour][dep], 0, nNode);
+                        if (dep == nDep - 1) {
+                            System.arraycopy(k1[hour][dep + 1], 0, k[hour][dep + 1], 0, nNode);
                         }
-                        if (t1 != null) {
-                            t[hour][dep][node] = t1[hour][dep][node];
-                        }
-                        if (dep == 0) {
-                            if (zeta != null) {
-                                zeta[hour][node] = zeta1[hour][node];
-                            }
-                            if (light != null) {
-                                light[hour][node] = light1[hour][node];
-                            }
-                        }
-                        if (k1 != null) {
-                            k[hour][dep][node] = k1[hour][dep][node];
-                            // easiest way to adjust for extra sigma level
-                            if (dep == nDep - 1) {
-                                k[hour][dep + 1][node] = k1[hour][dep + 1][node];
-                            }
-                        }
-                        if (vh1 != null) {
-                            vh[hour][dep][node] = vh1[hour][dep][node];
-                        }
+                    }
+                }
+            }
+            if (vh1 != null) {
+                for (int hour = 0; hour < nHour; hour++) {
+                    for (int dep = 0; dep < nDep; dep++) {
+                        System.arraycopy(vh1[hour][dep], 0, vh[hour][dep], 0, nNode);
                     }
                 }
             }
