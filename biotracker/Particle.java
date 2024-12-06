@@ -912,17 +912,16 @@ public class Particle {
 
     public static double[] velocityFromNearestList(double[][] nrList, int hour, float[][][] u, float[][][] v, float[][][] w) {
         double[] velocity = {0,0,0};
-        double[] weights = new double[nrList.length];
         double usum = 0, vsum = 0, wsum = 0, sum = 0;
         for (int i = 0; i < nrList.length; i++) {
             int elem = (int) nrList[i][0];
             double distance = nrList[i][1];
-            weights[i] = distance == 0 ? 1 : 1.0 / (distance * distance);
+            double weight = distance == 0 ? 1 : 1.0 / (distance * distance);
             int depLayer = (int) nrList[i][2];
-            wsum += weights[i] * w[hour][depLayer][elem];
-            usum += weights[i] * u[hour][depLayer][elem];
-            vsum += weights[i] * v[hour][depLayer][elem];
-            sum += weights[i];
+            wsum += weight * w[hour][depLayer][elem];
+            usum += weight * u[hour][depLayer][elem];
+            vsum += weight * v[hour][depLayer][elem];
+            sum += weight;
         }
         velocity[0] = usum / sum;
         velocity[1] = vsum / sum;
@@ -1208,7 +1207,6 @@ public class Particle {
                 nrList[nbr+5][2] = nrLayerIndexes[nbr+1][1];
             }
         }
-
         return nrList;
     }
 
