@@ -515,6 +515,7 @@ public class Particle_track {
                     rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordOS, rp.species);
             p.setMesh(meshStart);
             p.setElem(elemFVCOMStart);
+            p.setLayerFromDepth(meshes.get(0).getDepthUvnode()[p.getElem()], meshes.get(0).getSiglay());
             p.setROMSElemU(elemROMSStartU);
             p.setROMSElemV(elemROMSStartV);
             p.setROMSnearestPointU(nearestROMSGridPointU);
