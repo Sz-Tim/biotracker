@@ -45,25 +45,7 @@ public class Particle_track {
         int numberOfDays = endIsoDate.getDateNum() - currentIsoDate.getDateNum() + 1;
 
         // Print all main arguments
-        System.out.println("-----------------------------------------------------------");
-        System.out.printf("Location           = %s\n", rp.location);
-        System.out.printf("N_parts/site       = %d\n", rp.nparts);
-        System.out.printf("hydromod dt (s)    = %.3f\n", rp.dt);
-        System.out.printf("hydromod rec/file  = %d\n", rp.recordsPerFile1);
-        System.out.printf("stepsperstep       = %d\n", rp.stepsPerStep);
-        System.out.printf("firstfile          = %s\n", rp.start_ymd);
-        System.out.printf("lastfile           = %s\n", rp.end_ymd);
-        System.out.printf("Simulated dur. (d) = %d\n", numberOfDays);
-        System.out.printf("Simulated dur. (s) = %d\n", numberOfDays * 86400);
-        System.out.printf("RK4                = %s\n", rp.rk4);
-        System.out.printf("Fixed depth        = %b\n", rp.fixDepth);
-        System.out.printf("Max particle depth = %.3f\n", rp.maxDepth);
-        System.out.printf("Viable time (h)    = %.3f\n", rp.viabletime);
-        System.out.printf("Threshold distance = %d\n", rp.connectivityThresh);
-        System.out.printf("Diffusion D_h      = %s\n", rp.variableDh ? "variable" : "" + rp.D_h);
-        System.out.printf("Diffusion D_v      = %s\n", rp.variableDhV ? "variable" : "" + rp.D_hVert);
-        System.out.printf("EPSG:27700         = %b\n", rp.coordOS);
-        System.out.println("-----------------------------------------------------------");
+        System.out.println(rp);
 
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration

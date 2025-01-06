@@ -24,7 +24,6 @@ public class RunProperties {
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
-            parallel, // use multiple cores to speed up run?
             diffusion, variableDh, variableDhV, // include random walk, use diffusion parameter from hydro output?
             salinityMort, // mortality calculated based on local salinity
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
@@ -56,6 +55,7 @@ public class RunProperties {
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
             connectivityThresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
+            parallelThreadsHD, // Number of cores for reading HD files; Fails inexplicably on Salmon occasionally
             minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
             vertDistrInterval, vertDistrMax; // Interval in hours for recording vertDistr, max depth for bins (1 m bins from 0 to vertDistrMax)
@@ -72,7 +72,7 @@ public class RunProperties {
             swimUpSpeedMean, swimUpSpeedStd,
             swimUpSpeedCopepodidMean, swimUpSpeedCopepodidStd,
             swimUpSpeedNaupliusMean, swimUpSpeedNaupliusStd,
-            swimDownSpeedMean, SwimDownSpeedStd, // Particle sinking distribution parameters
+            swimDownSpeedMean, swimDownSpeedStd, // Particle sinking distribution parameters
             swimDownSpeedCopepodidMean, swimDownSpeedCopepodidStd,
             swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
@@ -95,10 +95,6 @@ public class RunProperties {
             properties.load(new FileInputStream(filename));
         } catch (IOException e) {
             System.err.println("--- Could not find properties file - check filename and working directory ---");
-        }
-        for (String key : properties.stringPropertyNames()) {
-            String value = properties.getProperty(key);
-            System.out.println(key + " => " + value);
         }
 
         // Directories
@@ -148,6 +144,7 @@ public class RunProperties {
         // Run parameters
         backwards = Boolean.parseBoolean(properties.getProperty("backwards", "false"));
         parallelThreads = Integer.parseInt(properties.getProperty("parallelThreads", "4"));
+        parallelThreadsHD = Integer.parseInt(properties.getProperty("parallelThreadsHD", "1"));
         readHydroVelocityOnly = Boolean.parseBoolean(properties.getProperty("readHydroVelocityOnly", "false"));
         duplicateLastDay = Boolean.parseBoolean(properties.getProperty("duplicateLastDay", "false"));
         dt = Double.parseDouble(properties.getProperty("dt", "3600"));
@@ -197,11 +194,11 @@ public class RunProperties {
         swimUpSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimUpSpeedNaupliusMean", "" + swimUpSpeedMean/2));
         swimUpSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimUpSpeedNaupliusStd", "" + swimUpSpeedStd/2));
         swimDownSpeedMean = Double.parseDouble(properties.getProperty("swimDownSpeedMean", "0"));
-        SwimDownSpeedStd = Double.parseDouble(properties.getProperty("swimDownSpeedStd", "0"));
+        swimDownSpeedStd = Double.parseDouble(properties.getProperty("swimDownSpeedStd", "0"));
         swimDownSpeedCopepodidMean = Double.parseDouble(properties.getProperty("swimDownSpeedCopepodidMean", "" + swimDownSpeedMean));
-        swimDownSpeedCopepodidStd = Double.parseDouble(properties.getProperty("swimDownSpeedCopepodidStd", "" + SwimDownSpeedStd));
+        swimDownSpeedCopepodidStd = Double.parseDouble(properties.getProperty("swimDownSpeedCopepodidStd", "" + swimDownSpeedStd));
         swimDownSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusMean", "" + swimDownSpeedMean/2));
-        swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + SwimDownSpeedStd/2));
+        swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + swimDownSpeedStd/2));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
         salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
@@ -261,7 +258,6 @@ public class RunProperties {
         needLight = (!fixDepth) && swimLightLevel;
         needVh = variableDh;
 
-        properties.list(System.out);
     }
 
 
@@ -285,6 +281,110 @@ public class RunProperties {
             System.err.println(conflictingProperties);
             System.exit(1);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "\n-------- biotracker properties --------\n" +
+                "\n" +
+                "-------- Run settings: \n" +
+                "Start ymd: " + this.start_ymd + "\n" +
+                "End ymd: " + this.end_ymd + "\n" +
+                "Number of days:" + this.numberOfDays + "\n" +
+                "Use EPSG:27700: " + this.coordOS + "\n" +
+                "Run backwards: " + this.backwards + "\n" +
+                "Number of cores: " + this.parallelThreads + "\n" +
+                "Number of cores to read HD.nc: " + this.parallelThreadsHD + "\n" +
+                "Duplicate last day of HD: " + this.duplicateLastDay + "\n" +
+                "Check open boundaries: " + this.checkOpenBoundaries + "\n" +
+                "Open boundary threshold (m): " + this.openBoundaryThresh + "\n" +
+                "Particles per site per release: " + this.nparts + "\n" +
+                "Release scenario: " + this.releaseScenario + "\n" +
+                "Release time start: " + this.releaseTime + "\n" +
+                "Release time end: " + this.releaseTimeEnd + "\n" +
+                "Release interval (h): " + this.releaseInterval + "\n" +
+                "Restart file: " + this.restartParticles + "\n" +
+                "Restart particles cutoff days: " + this.restartParticlesCutoffDays + "\n" +
+                "\n" +
+                "-------- Meshes & Environment: \n" +
+                "Records per HD file: " + this.recordsPerFile1 + "\n" +
+                "dt (s per HD record): " + this.dt + "\n" +
+                "Mesh 1: " + this.mesh1 + "\n" +
+                "Mesh 1 type: " + this.mesh1Type + "\n" +
+                "HD 1 path: " + this.datadir + this.datadirPrefix + "YYYY" + this.datadirSuffix + "/" + this.location + this.minchVersion + "_YYYYMMDD.*nc" + "\n" +
+                "Mesh 2: " + this.mesh2 + "\n" +
+                "Mesh 2 type: " + this.mesh2Type + "\n" +
+                "HD 2 path: " + this.datadir2 + this.datadir2Prefix + "YYYY" + this.datadir2Suffix + "/" + this.location2 + this.minchVersion2 + "_YYYYMMDD.*nc" + "\n" +
+                "Daily sunlight hours: " + this.daylightPath + "\n" +
+                "Read salinity: " + this.needS + "\n" +
+                "Read temperature: " + this.needT + "\n" +
+                "Read shortwave: " + this.needLight + "\n" +
+                "Read K: " + this.needK + "\n" +
+                "Read viscovh: " + this.needVh + "\n" +
+                "Read zeta: " + this.needZeta + "\n" +
+                "\n" +
+                "-------- Sites: \n" +
+                "Source site file: " + this.sitefile + "\n" +
+                "Destination site file: " + this.sitefileEnd + "\n" +
+                "Daily source lice counts: " + this.siteDensityPath + "\n" +
+                "Site habitat (unused): " + this.habitat + "\n" +
+                "Site suffix (unused): " + this.suffix + "\n" +
+                "\n" +
+                "-------- Dynamics: \n" +
+                "RK4: " + this.rk4 + "\n" +
+                "Interpolation steps per HD record: " + this.stepsPerStep + "\n" +
+                "Diffusion: " + this.diffusion + "\n" +
+                "Dh: " + (this.variableDh ? "variable" : this.D_h) + "\n" +
+                "DhV: " + (this.variableDhV ? "variable" : this.D_hVert) + "\n" +
+                "\n" +
+                "-------- Biology: \n" +
+                "End on arrival: " + this.endOnArrival + "\n" +
+                "Fixed depth: " + this.fixDepth + "\n" +
+                "Start depth: " + this.startDepth + "\n" +
+                "Maximum depth: " + this.maxDepth + "\n" +
+                "Viable time: " + this.viabletime + "\n" +
+                "Max particle age: " + this.maxParticleAge + "\n" +
+                "Viable degree days: " + this.viableDegreeDays + "\n" +
+                "Max degree days: " + this.maxDegreeDays + "\n" +
+                "Variable mortality: " + this.salinityMort + "\n" +
+                "Mortality rate (if constant): " + this.mortalityRate + "\n" +
+                "Passive sinking intercept: " + this.passiveSinkingIntercept + "\n" +
+                "Passive sinking slope: " + this.passiveSinkingSlope + "\n" +
+                "P(swim down) = 0-1: " + this.salinityThreshMax + " - " + salinityThreshMin + "\n" +
+                "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
+                "Nauplius swim down speed (m/s) ~ Norm(" + this.swimDownSpeedNaupliusMean + ", " + this.swimDownSpeedNaupliusStd + ")" + "\n" +
+                "Swim up based on shortwave: " + this.swimLightLevel + "\n" +
+                "Copepodid light threshold: " + this.lightThreshCopepodid + "\n" +
+                "Nauplius light threshold: " + this.lightThreshNauplius + "\n" +
+                "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
+                "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
+                "Egg production intercept: " + this.eggTemp_b0 + "\n" +
+                "Egg production slope: " + this.eggTemp_b1 + "\n" +
+                "\n" +
+                "-------- Recording: \n" +
+                "Psteps copepodid: " + this.recordPsteps + "\n" +
+                "Psteps nauplius: " + this.recordImmature + "\n" +
+                "Psteps split by source: " + this.splitPsteps + "\n" +
+                "Psteps recording interval (h): " + this.pstepsInterval + "\n" +
+                "Psteps max depth (m): " + this.pstepsMaxDepth + "\n" +
+                "Connectivity copepodid: " + this.recordConnectivity + "\n" +
+                "Connectivity nauplius: " + this.connectImmature + "\n" +
+                "Connectivity threshold (m): " + this.connectivityThresh + "\n" +
+                "Connectivity recording interval (h): " + this.connectivityInterval + "\n" +
+                "Connectivity at second depth range: " + this.recordConnectivityDepth2 + "\n" +
+                "Connectivity 1 min depth: " + this.connectDepth1_min + "\n" +
+                "Connectivity 1 max depth: " + this.connectDepth1_max + "\n" +
+                "Connectivity 2 min depth: " + this.connectDepth2_min + "\n" +
+                "Connectivity 2 max depth: " + this.connectDepth2_max + "\n" +
+                "Hourly particle locations: " + this.recordLocations + "\n" +
+                "Particle arrivals: " + this.recordArrivals + "\n" +
+                "Sub-hourly movement: " + this.recordMovement + "\n" +
+                "Total sink-swim-passive by element: " + this.recordActivity + "\n" +
+                "Vertical distributions: " + this.recordVertDistr + "\n" +
+                "Vertical distribution recording interval (h): " + this.vertDistrInterval + "\n" +
+                "Vertical distribution max depth (m): " + this.vertDistrMax +
+                "\n" +
+                "---------- end of properties ----------\n\n";
     }
 }
 
