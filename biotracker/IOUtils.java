@@ -369,20 +369,12 @@ public class IOUtils {
                 ArrayFloat.D2 dataArray = (ArrayFloat.D2) dataVar.read(origin, shape);
                 // Put the values into a native array
                 floatOut = new float[shape[0]][shape[1]];
-                for (int d1 = 0; d1 < shape[0]; d1++) {
-                    for (int d2 = 0; d2 < shape[1]; d2++) {
-                        floatOut[d1][d2] = dataArray.get(d1, d2);
-                    }
-                }
+                floatOut = (float[][]) dataArray.copyToNDJavaArray();
             } catch (ClassCastException e) {
                 ArrayDouble.D2 dataArray = (ArrayDouble.D2) dataVar.read(origin, shape);
                 // Put the values into a native array
                 floatOut = new float[shape[0]][shape[1]];
-                for (int d1 = 0; d1 < shape[0]; d1++) {
-                    for (int d2 = 0; d2 < shape[1]; d2++) {
-                        floatOut[d1][d2] = (float) dataArray.get(d1, d2);
-                    }
-                }
+                floatOut = (float[][]) dataArray.copyToNDJavaArray();
             }
 
         } catch (Exception ioe) {
@@ -479,24 +471,12 @@ public class IOUtils {
             try {
                 ArrayFloat.D3 dataArray = (ArrayFloat.D3) dataVar.read(origin, shape);
                 floatOut = new float[shape[0]][shape[1]][shape[2]];
-                for (int d1 = 0; d1 < shape[0]; d1++) {
-                    for (int d2 = 0; d2 < shape[1]; d2++) {
-                        for (int d3 = 0; d3 < shape[2]; d3++) {
-                            floatOut[d1][d2][d3] = dataArray.get(d1, d2, d3);
-                        }
-                    }
-                }
+                floatOut = (float[][][]) dataArray.copyToNDJavaArray();
             } catch (ClassCastException e) {
                 ArrayDouble.D3 dataArray = (ArrayDouble.D3) dataVar.read(origin, shape);
                 // Put the values into a native array
                 floatOut = new float[shape[0]][shape[1]][shape[2]];
-                for (int d1 = 0; d1 < shape[0]; d1++) {
-                    for (int d2 = 0; d2 < shape[1]; d2++) {
-                        for (int d3 = 0; d3 < shape[2]; d3++) {
-                            floatOut[d1][d2][d3] = (float) dataArray.get(d1, d2, d3);
-                        }
-                    }
-                }
+                floatOut = (float[][][]) dataArray.copyToNDJavaArray();
             }
 
         } catch (Exception ioe) {

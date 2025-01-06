@@ -6,9 +6,7 @@
 package biotracker;
 
 import java.util.stream.IntStream;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 
 /**
@@ -49,36 +47,69 @@ public class HydroField {
      */
     public HydroField(String filename, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, RunProperties rp) {
         System.out.println("Reading hydro file: " + filename);
+        final int MAX_RETRIES = 3;
+        final long RETRY_DELAY_MS = 5000;
 
         // Create additional shape matrices for the 2D variables (elevation)
         final int[] origin2 = origin != null ? new int[]{origin[0], origin[2]} : null;
         final int[] shapeST2 = shapeST != null ? new int[]{shapeST[0], shapeST[2]} : null;
 
-        ExecutorService executor = Executors.newFixedThreadPool(varNames.length);
-        try {
-            Future<float[][][]> uFuture = executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape));
-            Future<float[][][]> vFuture = executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape));
-            Future<float[][][]> wFuture = rp.fixDepth ? null : executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape));
-            Future<float[][][]> sFuture = rp.needS ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST)) : null;
-            Future<float[][][]> tFuture = rp.needT ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST)) : null;
-            Future<float[][]> zetaFuture = rp.needZeta ? executor.submit(() -> IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2)) : null;
-            Future<float[][][]> kFuture = rp.needK ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2)) : null;
-            Future<float[][][]> vhFuture = rp.needVh ? executor.submit(() -> IOUtils.readNetcdfFloat3D(filename, varNames[7], origin, shapeST)) : null;
-            Future<float[][]> lightFuture = rp.needLight ? executor.submit(() -> IOUtils.readNetcdfFloat2D(filename, varNames[8], origin2, shapeST2)) : null;
+        if (rp.parallelThreadsHD > 1) {
+            ExecutorService executor = Executors.newFixedThreadPool(rp.parallelThreadsHD);
+            try {
+                Future<float[][][]> uFuture = executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape), MAX_RETRIES, RETRY_DELAY_MS));
+                Future<float[][][]> vFuture = executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape), MAX_RETRIES, RETRY_DELAY_MS));
+                Future<float[][][]> wFuture = rp.fixDepth ? null : executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape), MAX_RETRIES, RETRY_DELAY_MS));
+                Future<float[][][]> sFuture = rp.needS ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST), MAX_RETRIES, RETRY_DELAY_MS)) : null;
+                Future<float[][][]> tFuture = rp.needT ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST), MAX_RETRIES, RETRY_DELAY_MS)) : null;
+                Future<float[][]> zetaFuture = rp.needZeta ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2), MAX_RETRIES, RETRY_DELAY_MS)) : null;
+                Future<float[][][]> kFuture = rp.needK ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2), MAX_RETRIES, RETRY_DELAY_MS)) : null;
+                Future<float[][][]> vhFuture = rp.needVh ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat3D(filename, varNames[7], origin, shapeST), MAX_RETRIES, RETRY_DELAY_MS)) : null;
+                Future<float[][]> lightFuture = rp.needLight ? executor.submit(() -> retry(() -> IOUtils.readNetcdfFloat2D(filename, varNames[8], origin2, shapeST2), MAX_RETRIES, RETRY_DELAY_MS)) : null;
 
-            u = uFuture.get();
-            v = vFuture.get();
-            w = rp.fixDepth ? new float[u.length][u[0].length][u[0][0].length] : wFuture.get();
-            s = rp.needS ? sFuture.get() : null;
-            t = rp.needT ? tFuture.get() : null;
-            zeta = rp.needZeta ? zetaFuture.get() : null;
-            k = rp.needK ? kFuture.get() : null;
-            vh = rp.needVh ? vhFuture.get() : null;
-            light = rp.needLight ? lightFuture.get() : null;
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            executor.shutdown();
+                u = uFuture.get();
+                v = vFuture.get();
+                w = rp.fixDepth ? new float[u.length][u[0].length][u[0][0].length] : wFuture.get();
+                s = rp.needS ? sFuture.get() : null;
+                t = rp.needT ? tFuture.get() : null;
+                zeta = rp.needZeta ? zetaFuture.get() : null;
+                k = rp.needK ? kFuture.get() : null;
+                vh = rp.needVh ? vhFuture.get() : null;
+                light = rp.needLight ? lightFuture.get() : null;
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                executor.shutdown();
+            }
+        } else {
+            try {
+                u = IOUtils.readNetcdfFloat3D(filename, varNames[0], origin, shape);
+                v = IOUtils.readNetcdfFloat3D(filename, varNames[1], origin, shape);
+                w = rp.fixDepth ? new float[u.length][u[0].length][u[0][0].length] : IOUtils.readNetcdfFloat3D(filename, varNames[2], origin, shape);
+                s = rp.needS ? IOUtils.readNetcdfFloat3D(filename, varNames[3], origin, shapeST) : null;
+                t = rp.needT ? IOUtils.readNetcdfFloat3D(filename, varNames[4], origin, shapeST) : null;
+                zeta = rp.needZeta ? IOUtils.readNetcdfFloat2D(filename, varNames[5], origin2, shapeST2) : null;
+                k = rp.needK ? IOUtils.readNetcdfFloat3D(filename, varNames[6], origin2, shapeST2) : null;
+                vh = rp.needVh ? IOUtils.readNetcdfFloat3D(filename, varNames[7], origin, shapeST) : null;
+                light = rp.needLight ? IOUtils.readNetcdfFloat2D(filename, varNames[8], origin2, shapeST2) : null;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static <T> T retry(Callable<T> task, int MAX_RETRIES, long RETRY_DELAY_MS) throws Exception {
+        int attempts = 0;
+        while (true) {
+            try {
+                return task.call();
+            } catch (Exception e) {
+                if (++attempts >= MAX_RETRIES) {
+                    throw e;
+                }
+                System.err.println("Attempt " + attempts + " failed, retrying in " + RETRY_DELAY_MS + "ms...");
+                Thread.sleep(RETRY_DELAY_MS);
+            }
         }
     }
 
