@@ -285,12 +285,12 @@ public class RunProperties {
 
     @Override
     public String toString() {
-        return "\n-------- biotracker properties --------\n" +
+        return "\n------------ biotracker properties ------------\n" +
                 "\n" +
                 "-------- Run settings: \n" +
                 "Start ymd: " + this.start_ymd + "\n" +
                 "End ymd: " + this.end_ymd + "\n" +
-                "Number of days:" + this.numberOfDays + "\n" +
+                "Number of days: " + this.numberOfDays + "\n" +
                 "Use EPSG:27700: " + this.coordOS + "\n" +
                 "Run backwards: " + this.backwards + "\n" +
                 "Number of cores: " + this.parallelThreads + "\n" +
@@ -332,7 +332,7 @@ public class RunProperties {
                 "\n" +
                 "-------- Dynamics: \n" +
                 "RK4: " + this.rk4 + "\n" +
-                "Interpolation steps per HD record: " + this.stepsPerStep + "\n" +
+                "Interpolation step (s): " + (this.dt / this.stepsPerStep) + " (" + this.stepsPerStep + " / HD timestep)" + "\n" +
                 "Diffusion: " + this.diffusion + "\n" +
                 "Dh: " + (this.variableDh ? "variable" : this.D_h) + "\n" +
                 "DhV: " + (this.variableDhV ? "variable" : this.D_hVert) + "\n" +
@@ -340,51 +340,55 @@ public class RunProperties {
                 "-------- Biology: \n" +
                 "End on arrival: " + this.endOnArrival + "\n" +
                 "Fixed depth: " + this.fixDepth + "\n" +
-                "Start depth: " + this.startDepth + "\n" +
-                "Maximum depth: " + this.maxDepth + "\n" +
-                "Viable time: " + this.viabletime + "\n" +
-                "Max particle age: " + this.maxParticleAge + "\n" +
+                "Start depth (m): " + this.startDepth + "\n" +
+                "Maximum depth (m): " + this.maxDepth + "\n" +
+                "Viable time (h): " + this.viabletime + "\n" +
+                "Max particle age (h): " + this.maxParticleAge + "\n" +
                 "Viable degree days: " + this.viableDegreeDays + "\n" +
                 "Max degree days: " + this.maxDegreeDays + "\n" +
-                "Variable mortality: " + this.salinityMort + "\n" +
-                "Mortality rate (if constant): " + this.mortalityRate + "\n" +
-                "Passive sinking intercept: " + this.passiveSinkingIntercept + "\n" +
-                "Passive sinking slope: " + this.passiveSinkingSlope + "\n" +
+                "Mortality rate (prop/h): " + (this.salinityMort ? "variable" : this.mortalityRate) + "\n" +
+                "Passive sinking intercept (m/s): " + this.passiveSinkingIntercept + "\n" +
+                "Passive sinking slope (m/s/psu): " + this.passiveSinkingSlope + "\n" +
                 "P(swim down) = 0-1: " + this.salinityThreshMax + " - " + salinityThreshMin + "\n" +
                 "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim down speed (m/s) ~ Norm(" + this.swimDownSpeedNaupliusMean + ", " + this.swimDownSpeedNaupliusStd + ")" + "\n" +
                 "Swim up based on shortwave: " + this.swimLightLevel + "\n" +
-                "Copepodid light threshold: " + this.lightThreshCopepodid + "\n" +
-                "Nauplius light threshold: " + this.lightThreshNauplius + "\n" +
+                "Copepodid light threshold (umol/m2/s): " + this.lightThreshCopepodid + "\n" +
+                "Nauplius light threshold (umol/m2/s): " + this.lightThreshNauplius + "\n" +
                 "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
-                "Egg production intercept: " + this.eggTemp_b0 + "\n" +
-                "Egg production slope: " + this.eggTemp_b1 + "\n" +
+                "Egg production intercept (eggs/AF/d): " + this.eggTemp_b0 + "\n" +
+                "Egg production slope (eggs/AF/d/C):" + this.eggTemp_b1 + "\n" +
                 "\n" +
                 "-------- Recording: \n" +
-                "Psteps copepodid: " + this.recordPsteps + "\n" +
-                "Psteps nauplius: " + this.recordImmature + "\n" +
-                "Psteps split by source: " + this.splitPsteps + "\n" +
-                "Psteps recording interval (h): " + this.pstepsInterval + "\n" +
-                "Psteps max depth (m): " + this.pstepsMaxDepth + "\n" +
-                "Connectivity copepodid: " + this.recordConnectivity + "\n" +
-                "Connectivity nauplius: " + this.connectImmature + "\n" +
-                "Connectivity threshold (m): " + this.connectivityThresh + "\n" +
-                "Connectivity recording interval (h): " + this.connectivityInterval + "\n" +
-                "Connectivity at second depth range: " + this.recordConnectivityDepth2 + "\n" +
-                "Connectivity 1 min depth: " + this.connectDepth1_min + "\n" +
-                "Connectivity 1 max depth: " + this.connectDepth1_max + "\n" +
-                "Connectivity 2 min depth: " + this.connectDepth2_min + "\n" +
-                "Connectivity 2 max depth: " + this.connectDepth2_max + "\n" +
+                "Psteps (lice/element/time): \n" +
+                "- Copepodid: " + this.recordPsteps + "\n" +
+                "- Nauplius: " + this.recordImmature + "\n" +
+                "- Split by source: " + this.splitPsteps + "\n" +
+                "- Recording interval (h): " + this.pstepsInterval + "\n" +
+                "- Max depth (m): " + this.pstepsMaxDepth + "\n" +
+                "Connectivity:\n" +
+                "- Copepodid: " + this.recordConnectivity + "\n" +
+                "- Nauplius: " + this.connectImmature + "\n" +
+                "- Threshold (m): " + this.connectivityThresh + "\n" +
+                "- Recording interval (h): " + this.connectivityInterval + "\n" +
+                "- Depth min 1 (m): " + this.connectDepth1_min + "\n" +
+                "- Depth max 1 (m): " + this.connectDepth1_max + "\n" +
+                (this.recordConnectivityDepth2 ? (
+                        "- Depth min 2 (m): " + this.connectDepth2_min + "\n" +
+                        "- Depth max 2 (m): " + this.connectDepth2_max + "\n"
+                        ) : "") +
+                "Vertical distributions:\n" +
+                "- Copepodid: " + this.recordVertDistr + "\n" +
+                "- Nauplius: " + this.recordImmature + "\n" +
+                "- Recording interval (h): " + this.vertDistrInterval + "\n" +
+                "- Max depth (m): " + this.vertDistrMax +
                 "Hourly particle locations: " + this.recordLocations + "\n" +
                 "Particle arrivals: " + this.recordArrivals + "\n" +
                 "Sub-hourly movement: " + this.recordMovement + "\n" +
                 "Total sink-swim-passive by element: " + this.recordActivity + "\n" +
-                "Vertical distributions: " + this.recordVertDistr + "\n" +
-                "Vertical distribution recording interval (h): " + this.vertDistrInterval + "\n" +
-                "Vertical distribution max depth (m): " + this.vertDistrMax +
                 "\n" +
-                "---------- end of properties ----------\n\n";
+                "-------------- end of properties --------------\n\n";
     }
 }
 
