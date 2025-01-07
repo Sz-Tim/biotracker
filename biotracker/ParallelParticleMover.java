@@ -177,21 +177,21 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     double prSink = part.calcSwimDownProb(localSalinity, rp);
                     if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
                         (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
-                        activeMovement[2] = Math.max(part.sink(rp), part.passive(rp, localSalinity));
+                        activeMovement[2] = Math.max(part.sink(rp, subStepDt), part.passive(rp, localSalinity, subStepDt));
                         activity = 0;
                         sink++;
                     } else if (rp.swimLightLevel) {
-                        activeMovement[2] = part.swim(rp, m, hf, hour);
+                        activeMovement[2] = part.swim(rp, m, hf, hour, subStepDt);
                         if (Math.abs(activeMovement[2]) > 1e-10) {
                             activity = 1;
                             swim++;
                         }
                     } else if (isDaytime) {
-                        activeMovement[2] = part.swim(rp);
+                        activeMovement[2] = part.swim(rp, subStepDt);
                         activity = 1;
                         swim++;
                     } else {
-                        activeMovement[2] = part.passive(rp, localSalinity);
+                        activeMovement[2] = part.passive(rp, localSalinity, subStepDt);
                     }
                     if (rp.recordActivity && part.getMesh()==0) {
                         elemActivity[part.getElem()][activity]++;
@@ -222,9 +222,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 diffusion = part.diffuse(D_h, K_gradient, K_zAdj, subStepDt, "uniform");
             }
 
-
             for (int i = 0; i < 3; i++) {
-                displacement[i] = advectStep[i] + subStepDt * activeMovement[i] + diffusion[i];
+                displacement[i] = advectStep[i] + activeMovement[i] + diffusion[i];
             }
 
             if (!rp.coordOS) {

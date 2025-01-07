@@ -463,21 +463,21 @@ public class Particle {
         return prSwimDown;
     }
 
-    public double sink(RunProperties rp) {
+    public double sink(RunProperties rp, double dt) {
         double swimDownSpeedMean = this.isInfectious() ? rp.swimDownSpeedCopepodidMean : rp.swimDownSpeedNaupliusMean;
         double swimDownSpeedStd = this.isInfectious() ? rp.swimDownSpeedCopepodidStd : rp.swimDownSpeedNaupliusStd;
         int forceDownward = rp.swimDownSpeedMean < 0 ? -1 : 1;
-        return forceDownward * swimDownSpeedMean + swimDownSpeedStd * ThreadLocalRandom.current().nextGaussian();
+        return (forceDownward * swimDownSpeedMean + swimDownSpeedStd * ThreadLocalRandom.current().nextGaussian()) * dt;
     }
 
-    public double swim(RunProperties rp) {
+    public double swim(RunProperties rp, double dt) {
         double swimSpeedMean = this.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean;
         double swimSpeedStd = this.isInfectious() ? rp.swimUpSpeedCopepodidStd : rp.swimUpSpeedNaupliusStd;
         int forceUpward = swimSpeedMean > 0 ? -1 : 1;
-        return forceUpward * swimSpeedMean + swimSpeedStd * ThreadLocalRandom.current().nextGaussian();
+        return (forceUpward * swimSpeedMean + swimSpeedStd * ThreadLocalRandom.current().nextGaussian()) * dt;
     }
 
-    public double swim(RunProperties rp, Mesh mesh, HydroField hydroField, int hour) {
+    public double swim(RunProperties rp, Mesh mesh, HydroField hydroField, int hour, double dt) {
         // following Johnsen et al. 2014, 2016, Myksvoll et al. 2018, Sandvik et al. 2020 for light attenuation and swimming thresholds
         // short_wave units = W m-2 ≈ 2.1 μmole m-2 s-1 (according to Tom Adams handover files)
         double lightAtSurface = 2.1 * hydroField.getAvgFromTrinodes(mesh, this.getLocation(), 0, this.elem, hour, "short_wave", rp);
@@ -485,15 +485,15 @@ public class Particle {
 
         if ((this.isInfectious() && lightAtDepth > rp.lightThreshCopepodid) ||
                 (!this.isInfectious() && lightAtDepth > rp.lightThreshNauplius)) {
-            return swim(rp);
+            return swim(rp, dt);
         } else {
             return 0.0;
         }
     }
 
-    public double passive(RunProperties rp, double localSalinity) {
+    public double passive(RunProperties rp, double localSalinity, double dt) {
         // based on Bricknell 2006 Fig. 3, assuming buoyancy is identical for copepodid & nauplius
-        return rp.passiveSinkingIntercept + rp.passiveSinkingSlope * localSalinity;
+        return (rp.passiveSinkingIntercept + rp.passiveSinkingSlope * localSalinity) * dt;
     }
 
     public double[] diffuse(double D_h, double K_gradient, double K_zAdj, double dt, String distribution) {
