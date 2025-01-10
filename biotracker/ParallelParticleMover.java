@@ -241,9 +241,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // Location actually updated here
             part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             double newDepth = part.getDepth() + displacement[2];
-            double maxAllowedDepth = m.getDepthUvnode()[part.getElem()] < rp.maxDepth ? m.getDepthUvnode()[part.getElem()] : rp.maxDepth;
+            double maxAllowedDepth = meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] < rp.maxDepth ? meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] : rp.maxDepth;
             part.setDepth(newDepth, maxAllowedDepth);
-            part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
+            part.setLayerFromDepth(meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()], meshes.get(part.getMesh()).getSiglay());
 
             dActual[0] = part.getLocation()[0] - posInit[0];
             dActual[1] = part.getLocation()[1] - posInit[1];

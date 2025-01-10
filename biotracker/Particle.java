@@ -271,8 +271,8 @@ public class Particle {
         return this.depLayer;
     }
 
-    public void setDepthLayer(int dep) {
-        this.depLayer = dep;
+    public void setDepthLayer(int depLayer) {
+        this.depLayer = depLayer;
     }
 
     // see lower down for setMortRate (based on salinity)
