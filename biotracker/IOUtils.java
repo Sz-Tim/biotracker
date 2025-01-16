@@ -1120,12 +1120,12 @@ public class IOUtils {
 
     public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
-        String filePathPrefix = rp.location + rp.minchVersion;
+        String filePathPrefix = rp.mesh1Domain;
 
         File file1 = new File(rp.datadir + System.getProperty("file.separator"));
         List<File> allMatchingFiles = (List<File>) FileUtils.listFiles(
                 file1,
-                new RegexFileFilter(rp.location + rp.minchVersion + ".*nc"),
+                new RegexFileFilter(rp.mesh1Domain + ".*nc"),
                 DirectoryFileFilter.DIRECTORY); // Optional directory filter
 
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());

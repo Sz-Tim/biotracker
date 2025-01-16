@@ -245,7 +245,7 @@ public class Particle_track {
                     for (int i=0; i < habitat.size(); i++) {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
                         int m = habitat.get(i).getContainingMesh();
-                        int nLayers = (int) Mesh.findNearestSigmas(30.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
+                        int nLayers = (int) Mesh.findNearestSigmas(20.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
                         double[][] currentConditions = new double[nLayers][7];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
@@ -549,11 +549,11 @@ public class Particle_track {
                                     rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
                                     rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
                             String[] filesT1 = new String[]{
-                                    rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
-                                    rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                                    rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                                    rp.mesh2Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
                             String[] filesT2 = new String[]{
-                                    rp.location + rp.minchVersion + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
-                                    rp.location2 + rp.minchVersion2 + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
+                                    rp.mesh1Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
+                                    rp.mesh2Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
                             List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
                             List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
                             // Read both files and combine
@@ -563,7 +563,7 @@ public class Particle_track {
                         else {
                             List<File> files1 = (List<File>) FileUtils.listFiles(
                                     new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
+                                    new WildcardFileFilter(rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
                                     null);
                             ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
                             if (isLastDay) {
@@ -572,7 +572,7 @@ public class Particle_track {
                             }
                             List<File> files2 = (List<File>) FileUtils.listFiles(
                                     new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
-                                    new WildcardFileFilter(rp.location + rp.minchVersion + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
+                                    new WildcardFileFilter(rp.mesh1Domain + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
                                     null);
                             // Read both files and combine
                             hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
@@ -586,10 +586,10 @@ public class Particle_track {
                             System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
                             if (!rp.backwards) {
                                 System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
                             } else {
                                 System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
                             }
                             System.exit(1);
                         }
@@ -631,8 +631,8 @@ public class Particle_track {
                                 rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
                                 rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
                         String[] filesT1 = new String[]{
-                                rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
-                                rp.location2 + rp.minchVersion2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                                rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                                rp.mesh2Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
                         List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
                         // Read both files and combine
                         hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
@@ -645,10 +645,10 @@ public class Particle_track {
                             System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
                             if (!rp.backwards) {
                                 System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
                             } else {
                                 System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.location + rp.minchVersion + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
                             }
                             System.exit(1);
                         }

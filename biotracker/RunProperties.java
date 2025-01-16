@@ -18,7 +18,8 @@ public class RunProperties {
             mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
             mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            location, location2, sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
+            mesh1Domain, mesh2Domain, // Mesh domain location as in the .nc filenames (westcoms2, etive28)
+            sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
 
@@ -56,7 +57,6 @@ public class RunProperties {
             connectivityThresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
             parallelThreadsHD, // Number of cores for reading HD files; Fails inexplicably on Salmon occasionally
-            minchVersion, minchVersion2, // Another element of the filename for hydrodynamic files
             pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
             vertDistrInterval, vertDistrMax; // Interval in hours for recording vertDistr, max depth for bins (1 m bins from 0 to vertDistrMax)
 
@@ -107,15 +107,13 @@ public class RunProperties {
 
         // Geography, hydrodynamic files, & mesh files
         coordOS = Boolean.parseBoolean(properties.getProperty("coordOS", "true"));
-        location = properties.getProperty("location", "westcoms");
-        location2 = properties.getProperty("location2", "westcoms");
-        minchVersion = Integer.parseInt(properties.getProperty("minchVersion", "2"));
-        minchVersion2 = Integer.parseInt(properties.getProperty("minchVersion2", "2"));
         recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
         mesh1 = properties.getProperty("mesh1", "/home/sa04ts/FVCOM_meshes/WeStCOMS2_mesh.nc");
         mesh2 = properties.getProperty("mesh2", "");
         mesh1Type = properties.getProperty("mesh1Type", "");
         mesh2Type = properties.getProperty("mesh2Type", "");
+        mesh1Domain = properties.getProperty("mesh1Domain", "westcoms2");
+        mesh2Domain = properties.getProperty("mesh2Domain", "westcoms2");
         FVCOM = properties.getProperty("mesh1Type").equals("FVCOM");
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
         openBoundaryThresh = Double.parseDouble(properties.getProperty("openBoundaryThresh", "500"));
@@ -311,10 +309,10 @@ public class RunProperties {
                 "dt (s per HD record): " + this.dt + "\n" +
                 "Mesh 1: " + this.mesh1 + "\n" +
                 "Mesh 1 type: " + this.mesh1Type + "\n" +
-                "HD 1 path: " + this.datadir + this.datadirPrefix + "YYYY" + this.datadirSuffix + "/" + this.location + this.minchVersion + "_YYYYMMDD.*nc" + "\n" +
+                "HD 1 path: " + this.datadir + this.datadirPrefix + "YYYY" + this.datadirSuffix + "/" + this.mesh1Domain + "_YYYYMMDD.*nc" + "\n" +
                 "Mesh 2: " + this.mesh2 + "\n" +
                 "Mesh 2 type: " + this.mesh2Type + "\n" +
-                "HD 2 path: " + this.datadir2 + this.datadir2Prefix + "YYYY" + this.datadir2Suffix + "/" + this.location2 + this.minchVersion2 + "_YYYYMMDD.*nc" + "\n" +
+                "HD 2 path: " + this.datadir2 + this.datadir2Prefix + "YYYY" + this.datadir2Suffix + "/" + this.mesh2Domain + "_YYYYMMDD.*nc" + "\n" +
                 "Daily sunlight hours: " + this.daylightPath + "\n" +
                 "Read salinity: " + this.needS + "\n" +
                 "Read temperature: " + this.needT + "\n" +
