@@ -391,7 +391,7 @@ public class RunProperties {
                 "- Copepodid: " + this.recordVertDistr + "\n" +
                 "- Nauplius: " + this.recordImmature + "\n" +
                 "- Recording interval (h): " + this.vertDistrInterval + "\n" +
-                "- Max depth (m): " + this.vertDistrMax +
+                "- Max depth (m): " + this.vertDistrMax + "\n" +
                 "Hourly particle locations: " + this.recordLocations + "\n" +
                 "Particle arrivals: " + this.recordArrivals + "\n" +
                 "Sub-hourly movement: " + this.recordMovement + "\n" +
