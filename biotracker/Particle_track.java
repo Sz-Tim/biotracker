@@ -45,7 +45,7 @@ public class Particle_track {
         int numberOfDays = endIsoDate.getDateNum() - currentIsoDate.getDateNum() + 1;
 
         // Print all main arguments
-        System.out.println(rp);
+        System.out.println(rp.printProperties());
 
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
@@ -261,16 +261,22 @@ public class Particle_track {
                             habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
-                        // Note: Norwegian model uses Stien et al 2005: N_naup = N_fish * N_female * 0.17 * (temp+4.28)^2
-                        // Linear model comes from Kragesteen
                         // These are nearly identical under the temperatures in Scotland (r = 0.998)
                         float[][] eggSigmas = Mesh.findNearestSigmas(10, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth());
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
-                        double eggsPerFemale = rp.eggTemp_b0 * (rp.dt / (60*60*24));
-                        if (rp.eggTemp_b1 > 0.001) {
-                            // eggsPerFemale = (rp.eggTemp_b0 + rp.eggTemp_b1 * eggTemperature) * (rp.dt/(60*60*24));
-                            eggsPerFemale = rp.eggTemp_b0 * Math.pow((eggTemperature + rp.eggTemp_b1), 2) * (rp.dt / (60*60*24));
-                        }
+                        double eggsPerFemale = switch (rp.eggTemp_fn) {
+                            case "constant" -> rp.eggTemp_b.get(0) * (rp.dt / (60 * 60 * 24));
+                            // Linear model comes from data in Kragesteen 2023 Table 1
+                            case "linear" ->
+                                    (rp.eggTemp_b.get(0) + rp.eggTemp_b.get(1) * eggTemperature) * (rp.dt / (60 * 60 * 24));
+                            // Norwegian model uses Stien et al 2005: N_naup = N_fish * N_female * 0.17 * (temp+4.28)^2
+                            case "quadratic" ->
+                                    (rp.eggTemp_b.get(0) * Math.pow((eggTemperature + rp.eggTemp_b.get(1)), 2)) * (rp.dt / (60 * 60 * 24));
+                            // Logistic model comes from data in Kragesteen 2023 Table 1
+                            case "logistic" ->
+                                    (rp.eggTemp_b.get(0) / (1 + Math.exp(-rp.eggTemp_b.get(1) * (eggTemperature - rp.eggTemp_b.get(2)))) + rp.eggTemp_b.get(3)) * (rp.dt / (60 * 60 * 24));
+                            default -> rp.eggTemp_b.get(0) * (rp.dt / (60 * 60 * 24));
+                        };
                         habitat.get(i).setScale(siteDensities[i][fnum] / rp.nparts * eggsPerFemale);
                     }
 

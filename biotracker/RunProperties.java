@@ -7,7 +7,10 @@ package biotracker;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * @author sa01ta
@@ -21,7 +24,8 @@ public class RunProperties {
             mesh1Domain, mesh2Domain, // Mesh domain location as in the .nc filenames (westcoms2, etive28)
             sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
-            daylightPath; // Path + filename for sunrise / sunset hours; defaults to "" = ignore
+            daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
+            eggTemp_fn; // Function to relate egg production to temperature; "constant" (default), "linear", or "quadratic"
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
@@ -77,7 +81,6 @@ public class RunProperties {
             swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
             salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             passiveSinkingIntercept, passiveSinkingSlope,
-            eggTemp_b0, eggTemp_b1, // temperature dependent egg production intercept and slope
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
             connectDepth1_max, // max depth for connectivity layer 1
@@ -87,6 +90,7 @@ public class RunProperties {
             pstepsMaxDepth, // maximum depth for recording particle density in psteps output
             releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
+    List<Double> eggTemp_b; // temperature dependent egg production parameters
 
     public RunProperties(String filename) {
         System.out.println("Getting properties from " + filename);
@@ -202,8 +206,16 @@ public class RunProperties {
         salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
         passiveSinkingIntercept = Double.parseDouble(properties.getProperty("passiveSinkingIntercept", "0.001527"));
         passiveSinkingSlope = Double.parseDouble(properties.getProperty("passiveSinkingSlope", "-0.0000168"));
-        eggTemp_b0 = Double.parseDouble(properties.getProperty("eggTemp_b0", "28.2"));
-        eggTemp_b1 = Double.parseDouble(properties.getProperty("eggTemp_b1", "0"));
+        eggTemp_fn = properties.getProperty("eggTemp_fn", "constant");
+        String eggTemp_defaults = switch (eggTemp_fn) {
+            case "constant" -> "28.2";
+            case "linear" -> "9.835,4.579";
+            case "quadratic" -> "0.17,4.28";
+            case "logistic" -> "85.94,0.4696,8.193,7.649";
+            default -> "28.2";
+        };
+        String eggTemp_b_Str = properties.getProperty("eggTemp_b", eggTemp_defaults);
+        eggTemp_b = Arrays.stream(eggTemp_b_Str.split(",")).map(Double::parseDouble).toList();
 
         // Demographics
         salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "true"));
@@ -281,8 +293,7 @@ public class RunProperties {
         }
     }
 
-    @Override
-    public String toString() {
+    public String printProperties() {
         return "\n------------ biotracker properties ------------\n" +
                 "\n" +
                 "-------- Run settings: \n" +
@@ -355,8 +366,8 @@ public class RunProperties {
                 "Nauplius light threshold (umol/m2/s): " + this.lightThreshNauplius + "\n" +
                 "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
-                "Egg production intercept (eggs/AF/d): " + this.eggTemp_b0 + "\n" +
-                "Egg production slope (eggs/AF/d/C):" + this.eggTemp_b1 + "\n" +
+                "Egg production function: " + this.eggTemp_fn + "\n" +
+                "Egg production parameters: " + this.eggTemp_b + "\n" +
                 "\n" +
                 "-------- Recording: \n" +
                 "Psteps (lice/element/time): \n" +
