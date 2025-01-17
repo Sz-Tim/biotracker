@@ -58,7 +58,6 @@ public class RunProperties {
             nparts, // Number of particles released per site (per hour in releaseScenario == 1
             recordsPerFile1, // Number of records per velocity file (allow two velocity files with different sizes)
             stepsPerStep, // Number of increments between each velocity record (also for time interpolations)
-            connectivityThresh, // Threshold distance for "settlement" (m)
             parallelThreads, // Number of threads to use in parallel execution
             parallelThreadsHD, // Number of cores for reading HD files; Fails inexplicably on Salmon occasionally
             pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
@@ -83,6 +82,7 @@ public class RunProperties {
             passiveSinkingIntercept, passiveSinkingSlope,
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
+            connectivityThresh, // Threshold distance for "settlement" (m)
             connectDepth1_max, // max depth for connectivity layer 1
             connectDepth1_min, // min depth for connectivity layer 1
             connectDepth2_max, // max depth for connectivity layer 2
@@ -167,7 +167,7 @@ public class RunProperties {
 
         // Arrival
         endOnArrival = Boolean.parseBoolean(properties.getProperty("endOnArrival", "false"));
-        connectivityThresh = Integer.parseInt(properties.getProperty("connectivityThresh", "100"));
+        connectivityThresh = Double.parseDouble(properties.getProperty("connectivityThresh", "100"));
 
         // Advection & diffusion
         rk4 = Boolean.parseBoolean(properties.getProperty("rk4", "true"));
