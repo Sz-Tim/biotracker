@@ -202,25 +202,26 @@ public class Particle_track {
                 }
 
                 long splitTime = System.currentTimeMillis();
-                System.out.printf("\n------ Day %d (%s) - Stepcount %d (%.1f hrs) ------ \n",
+                System.out.printf("------ Day %d (%s) - Stepcount %d (%.1f hrs) ------ \n",
                         fnum + 1, currentIsoDate, stepcount, elapsedHours);
-                System.out.println("Elapsed time (s) = " + (splitTime - startTime) / 1000.0);
-                System.out.println("Last 24hr time (s) = " + (splitTime - currTime) / 1000.0);
+                System.out.printf("Elapsed time:     %.1f h (%.0f s)\n", (splitTime - startTime) / 1000.0 / 3600, (splitTime - startTime) / 1000.0);
+                System.out.printf("Last 24hr time:   %.1f s\n", (splitTime - currTime) / 1000.0);
                 currTime = System.currentTimeMillis();
+
 
                 // COUNT the number of particles in different states
                 freeViableSettleExit = particleCounts(particles);
-                System.out.println("Free particles    = " + freeViableSettleExit[0]);
-                System.out.println("Viable particles  = " + freeViableSettleExit[1]);
-                System.out.println("Arrival count     = " + freeViableSettleExit[2]);
-                System.out.println("Boundary exits    = " + freeViableSettleExit[3]);
+                System.out.println("Free particles:   " + freeViableSettleExit[0]);
+                System.out.println("Viable particles: " + freeViableSettleExit[1]);
+                System.out.println("Arrival count:    " + freeViableSettleExit[2]);
+                System.out.println("Boundary exits:   " + freeViableSettleExit[3]);
+                System.out.println("-------------------");
 
 
                   // default, run loop forwards
                 // ---- LOOP OVER ENTRIES IN THE HYDRO OUTPUT ------------------------
                 for (int currentHour = 0; currentHour < 24; currentHour++) {
 
-                    System.out.printf("--------- Day %d, %dh ----------\n", fnum+1, currentHour);
                     // Calculate current time of the day (complete hours elapsed since midnight)
                     if (!rp.daylightPath.isEmpty()) {
                         isDaytime = daylightHours[fnum][0] <= currentHour && daylightHours[fnum][1] >= currentHour;
@@ -235,12 +236,16 @@ public class Particle_track {
                         boolean missingTomorrow = missingHydroFiles.contains(nextDateShort);
                         if (missingToday) {
                             System.out.print("Can't find file: Reusing hydrodynamics from yesterday\n");
+                            System.out.println("-------------------");
                         } else {
                             hfToday = fnum == 0 ? readHydroField(meshes, currentIsoDate, rp) : hfTomorrow;
                             hfTomorrow = (missingTomorrow | isLastDay) ? hfToday : readHydroField(meshes, nextIsoDate, rp);
                             hydroFields = mergeHydroFields(hfToday, hfTomorrow, rp);
+                            System.out.println("-------------------");
                         }
                     }
+
+                    System.out.printf("---- %s %02dh: ", currentIsoDate, currentHour);
 
                     for (int i=0; i < habitat.size(); i++) {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
@@ -288,7 +293,7 @@ public class Particle_track {
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
-                        System.out.printf("  %,d new particles (%,d active of %,d total)\n", newParts.size(), particles.size(), numParticlesCreated);
+                        System.out.printf("%,d new particles (%,d active of %,d total)", newParts.size(), particles.size(), numParticlesCreated);
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario == 0) {
                             allowRelease = false;
@@ -426,6 +431,7 @@ public class Particle_track {
 
                     // Clean up "dead" (666) and "exited" (66) particles
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
+                    System.out.print("\n");
                 }
 
                 FileWriter fstream = new FileWriter("siteConditions_" + today + "_" + Math.round(elapsedHours) + ".csv", false);
