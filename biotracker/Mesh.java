@@ -29,6 +29,7 @@ public class Mesh {
     private int[] openBoundaryNodes;
     private ArrayList<Integer> openBoundaryElems;
     private int[] boundaryNodes;
+    private int adjoiningElement; // ONE element index at the boundary of the nested mesh (element of mesh 1 at boundary of mesh 0)
 
     // Variables used in the case of ROMS grid
     private float[][] lon_u;
@@ -361,6 +362,10 @@ public class Mesh {
         return boundaryNodes;
     }
 
+    public void setAdjoiningElement(int adjoiningElement) { this.adjoiningElement = adjoiningElement; }
+
+    public int getAdjoiningElement() { return adjoiningElement; }
+
     public float[][] getConvexHull() {
         return convexHull;
     }
@@ -368,6 +373,7 @@ public class Mesh {
     public Path2D.Float getConvexHullPath() {
         return convexHullPath;
     }
+
     public String getType() {
         return meshType;
     }

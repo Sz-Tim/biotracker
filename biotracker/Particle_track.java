@@ -54,6 +54,18 @@ public class Particle_track {
         meshes.add(new Mesh(rp.mesh1, rp.mesh1Type, rp.coordOS));
         if (!rp.mesh2.isEmpty()) {
             meshes.add(new Mesh(rp.mesh2, rp.mesh2Type, rp.coordOS));
+            if (rp.mesh2Domain.equalsIgnoreCase("westcoms2")) {
+                int adjElem1 = switch (rp.mesh1Domain) {
+                    case "etive28" -> 69784;
+                    default -> 69784;
+                };
+                int adjElem0 = switch (rp.mesh1Domain) {
+                    case "etive28" -> 16;
+                    default -> 16;
+                };
+                meshes.get(0).setAdjoiningElement(adjElem0);
+                meshes.get(1).setAdjoiningElement(adjElem1);
+            }
         }
         int[] allelems = IntStream.rangeClosed(0, meshes.get(0).getUvnode()[0].length - 1).toArray();
 

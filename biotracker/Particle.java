@@ -428,14 +428,15 @@ public class Particle {
     /**
      * Sets the mortality rate for the particle packet based upon local salinity
      */
-    public void setMortRate(double salinity, RunProperties rp) {
-        this.mortRate = switch (rp.mortSal_fn) {
+    public void setMortRate(double salinity, RunProperties rp, double dt) {
+        double mortRateHourly = switch (rp.mortSal_fn) {
             case "constant" -> rp.mortSal_b.get(0);
             case "quadratic" -> rp.mortSal_b.get(0) + rp.mortSal_b.get(1) * salinity + rp.mortSal_b.get(2) * salinity * salinity;
             // mort_h = b[0]/(1 + exp(-b[1] * (salinity - b[2]))) + b[3]
             case "logistic" -> rp.mortSal_b.get(0) / (1 + Math.exp(-rp.mortSal_b.get(1) * (salinity - rp.mortSal_b.get(2)))) + rp.mortSal_b.get(3);
             default -> rp.mortSal_b.get(0);
         };
+        this.mortRate = 1 - Math.pow(1 - mortRateHourly, dt);
     }
 
     public void incrementAge(double increment) {
@@ -566,7 +567,7 @@ public class Particle {
      * @param nMesh Number of meshes
      */
     private void handleMesh0(double[] newLoc, List<Mesh> meshes, RunProperties rp, double[] oldLoc, int oldElem, int nMesh) {
-        int [] elemMesh0 = findContainingElement(newLoc, oldElem, meshes.get(0), true, 10);
+        int [] elemMesh0 = findContainingElement(newLoc, oldElem, meshes.get(0), false, 40);
         if (elemMesh0[0] > -1) {
             // New location is within mesh 0: update position
             updateLocation(newLoc, elemMesh0[0], meshes, 0, false);
@@ -597,12 +598,12 @@ public class Particle {
      * @param oldElem Current element index
      */
     private void handleMesh1(double[] newLoc, List<Mesh> meshes, RunProperties rp, double[] oldLoc, int oldElem) {
-        int[] elemMesh0 = findContainingElement(newLoc, 0, meshes.get(0), true, 1);
+        int[] elemMesh0 = findContainingElement(newLoc, meshes.get(0).getAdjoiningElement(), meshes.get(0), false, 40);
         if (elemMesh0[0] > -1) {
             // New location is within mesh 0: update position
             updateLocation(newLoc, elemMesh0[0], meshes, 0, true);
         } else {
-            int[] elemMesh1 = findContainingElement(newLoc, oldElem, meshes.get(1), true, 10);
+            int[] elemMesh1 = findContainingElement(newLoc, oldElem, meshes.get(1), false, 40);
             if (elemMesh1[0] > -1) {
                 // New location is within mesh 1: update position
                 updateLocation(newLoc, elemMesh1[0], meshes, 1, false);
@@ -648,7 +649,7 @@ public class Particle {
      * @param meshes List of meshes
      */
     private void handleMeshBoundary(double[] newLoc, List<Mesh> meshes) {
-        int[] elemMesh1 = findContainingElement(newLoc, 0, meshes.get(1), true, 1);
+        int[] elemMesh1 = findContainingElement(newLoc, meshes.get(1).getAdjoiningElement(), meshes.get(1), true, 40);
         if (elemMesh1[0] > -1) {
             // New location is within mesh 1: update position
             updateLocation(newLoc, elemMesh1[0], meshes, 1, true);
@@ -684,7 +685,7 @@ public class Particle {
                 el = this.getElem();
                 //checkAll = false;
             }
-            int[] c = findContainingElement(this.getLocation(), el, m,true, 10);
+            int[] c = findContainingElement(this.getLocation(), el, m,true, 40);
             // if particle is within the mesh, update location normally and save the distance travelled
             this.setElem(c[0]);
 
@@ -952,7 +953,7 @@ public class Particle {
     }
 
 
-    public static double[] velocityFromNearestList(double[][] nrList, int hour, HydroField hf) {
+    public static double[] velocityFromNearestList(double[][] nrList, float[][] uHour, float[][] vHour, float[][] wHour) {
         double[] velocity = {0,0,0};
         double usum = 0, vsum = 0, wsum = 0, sum = 0;
         for (int i = 0; i < nrList.length; i++) {
@@ -960,9 +961,9 @@ public class Particle {
             double distance = nrList[i][1];
             double weight = distance == 0 ? 1 : 1.0 / (distance * distance);
             int depLayer = (int) nrList[i][2];
-            wsum += weight * hf.getW()[hour][depLayer][elem];
-            usum += weight * hf.getU()[hour][depLayer][elem];
-            vsum += weight * hf.getV()[hour][depLayer][elem];
+            wsum += weight * wHour[depLayer][elem];
+            usum += weight * uHour[depLayer][elem];
+            vsum += weight * vHour[depLayer][elem];
             sum += weight;
         }
         velocity[0] = usum / sum;
@@ -1056,70 +1057,6 @@ public class Particle {
 
 
     /**
-     * Search through lists of elements progressively further away from the last known
-     * location in order to find the new location.
-     * <p>
-     * Returned array contains the element in which the particle is determined to be located,
-     * plus the number of counts required at each scale (for diagnostics).
-     */
-//    public static int[] findContainingElement(double[] xy, int elemPart,
-//                                              float[][] nodexy, int[][] trinodes, int[][] neighbours, boolean checkAll) {
-//        int[] c = new int[6];
-//        int[] elems = new int[1];
-//        elems[0] = elemPart;
-//
-//        int whereami = whichElement(xy, elems, nodexy, trinodes);
-//        c[1] = 1;
-//
-//        // If this fails, look in my neighbours
-//        if (whereami == -1) {
-//            c[2] = 1;
-//            int[] elems0 = new int[]{neighbours[0][elemPart], neighbours[1][elemPart], neighbours[2][elemPart]};
-//            whereami = whichElement(xy, elems0, nodexy, trinodes);
-//
-//            // if fails, look in the neighbours of my neighbours
-//            if (whereami == -1) {
-//                // Find the non-0 neighbours out of the ones just searched
-//                int[] nonZeroNeighbours = Arrays.stream(elems0).filter(num -> num != 0).toArray();
-//                // List THEIR neighbours
-//                int[] elems1 = new int[nonZeroNeighbours.length * 3];
-//                for (int i = 0; i < nonZeroNeighbours.length; i++) {
-//                    for (int j = 0; j < 3; j++) {
-//                        elems1[i * 3 + j] = neighbours[j][nonZeroNeighbours[i]];
-//                    }
-//                }
-//                c[3] = 1;
-//                whereami = whichElement(xy, elems1, nodexy, trinodes);
-//
-//                // If fails, look in neighbours' neighbours' neighbours
-//                // Shouldn't really need to get this far? Maybe you should.
-//                if (whereami == -1) {
-//                    c[4] = 1;
-//                    // Find the non-0 neighbours out of the ones just searched
-//                    int[] nonZeroNeighbours1 = Arrays.stream(elems1).filter(num -> num != 0).toArray();
-//                    // List THEIR neighbours
-//                    int[] elems2 = new int[nonZeroNeighbours1.length * 3];
-//                    for (int i = 0; i < nonZeroNeighbours1.length; i++) {
-//                        for (int j = 0; j < 3; j++) {
-//                            elems2[i * 3 + j] = neighbours[j][nonZeroNeighbours1[i]];
-//                        }
-//                    }
-//                    whereami = whichElement(xy, elems2, nodexy, trinodes);
-//
-//                    // if this fails, look in all elements (desperation) - unless movement is attempting to place particle outside mesh
-//                    if (whereami == -1 && checkAll) {
-//                        c[5] = 1;
-//                        int[] allelems = IntStream.rangeClosed(0, trinodes[0].length - 1).toArray();
-//                        whereami = whichElement(xy, allelems, nodexy, trinodes);
-//                    }
-//                }
-//            }
-//        }
-//        c[0] = whereami;
-//        return c;
-//    }
-
-    /**
      * Find which element a particle resides within (edge checking).
      *
      * @param xy Coordinates of the particle
@@ -1138,11 +1075,26 @@ public class Particle {
                 yt[j] = nodexy[1][trinodes[j][elem]];
             }
 
-            if (isPointInTriangle(xy, xt, yt)) {
+            if (isPointInBoundingBox(xy, xt, yt) && isPointInTriangle(xy, xt, yt)) {
                 return elem;
             }
         }
         return -1;
+    }
+
+    /**
+     * Check whether a point lies within the bounding box of a triangle.
+     *
+     * @param xy Coordinates of the point
+     * @param xt X-coordinates of the triangle vertices
+     * @param yt Y-coordinates of the triangle vertices
+     * @return True if the point lies within the bounding box, otherwise false
+     */
+    private static boolean isPointInBoundingBox(double[] xy, double[] xt, double[] yt) {
+        return xy[0] >= Math.min(Math.min(xt[0], xt[1]), xt[2]) &&
+                xy[0] <= Math.max(Math.max(xt[0], xt[1]), xt[2]) &&
+                xy[1] >= Math.min(Math.min(yt[0], yt[1]), yt[2]) &&
+                xy[1] <= Math.max(Math.max(yt[0], yt[1]), yt[2]);
     }
 
     /**
@@ -1174,11 +1126,17 @@ public class Particle {
      * @return Array containing the element index where the particle is located and diagnostic counts for each search scale
      */
     public static int[] findContainingElement(double[] xy, int elemPart, Mesh m, boolean checkAll, int numRounds) {
+        int[] c = new int[numRounds+1];
+        int[] elemInit = {elemPart};
+
+        if (!m.isInMesh(xy)) {
+            c[0] = -1;
+            return c;
+        }
+
         float[][] nodexy = m.getNodexy();
         int[][] trinodes = m.getTrinodes();
         int[][] neighbours = m.getNeighbours();
-        int[] c = new int[numRounds+1];
-        int[] elemInit = {elemPart};
 
         int whereami = whichElement(xy, elemInit, nodexy, trinodes);
         c[1] = 1;
@@ -1199,8 +1157,10 @@ public class Particle {
                 round++;
             } else {
                 if (checkAll) {
-                    int[] allelems = IntStream.rangeClosed(0, trinodes[0].length - 1).toArray();
-                    whereami = whichElement(xy, allelems, nodexy, trinodes);
+                    int[] allRemainingElems = IntStream.rangeClosed(0, trinodes[0].length - 1)
+                            .filter(elem -> !elemsChecked.contains(elem))
+                            .toArray();
+                    whereami = whichElement(xy, allRemainingElems, nodexy, trinodes);
                 }
                 break;
             }
@@ -1218,12 +1178,33 @@ public class Particle {
      * @param elemsChecked Set of already checked elements
      * @return Array of neighbouring elements that have not been checked
      */
+//    private static int[] getNeighbours(int[] elems, int[][] neighbours, Set<Integer> elemsChecked) {
+//        return Arrays.stream(elems)
+//                .flatMap(elem -> Arrays.stream(neighbours).mapToInt(neigh -> neigh[elem]))
+//                .filter(neigh -> !elemsChecked.contains(neigh) && neigh != 0)
+//                .distinct()
+//                .toArray();
+//    }
+
     private static int[] getNeighbours(int[] elems, int[][] neighbours, Set<Integer> elemsChecked) {
-        return Arrays.stream(elems)
-                .flatMap(elem -> Arrays.stream(neighbours).mapToInt(neigh -> neigh[elem]))
-                .filter(neigh -> !elemsChecked.contains(neigh) && neigh != 0)
-                .distinct()
-                .toArray();
+        Set<Integer> neighboursSet = new HashSet<>();
+
+        for (int elem : elems) {
+            for (int[] neighbourArray : neighbours) {
+                int neigh = neighbourArray[elem];
+                if (neigh != 0 && !elemsChecked.contains(neigh)) {
+                    neighboursSet.add(neigh);
+                }
+            }
+        }
+
+        int[] result = new int[neighboursSet.size()];
+        int index = 0;
+        for (int neigh : neighboursSet) {
+            result[index++] = neigh;
+        }
+
+        return result;
     }
 
 
@@ -1267,7 +1248,9 @@ public class Particle {
      * @param coordOS use OS coordinate system: EPSG 27700
      * @return double[8][3] with rows = elements and columns = [elementID, distance to particle (3D), depth layer]
      */
-    public static double[][] neighbourCellsList3D(double[] xy, int elemPart, int depLayer, Mesh m, double depth, boolean coordOS) {
+    public static double[][] neighbourCellsList3D(double[] xy, int elemPart, int depLayer, float[][] uvnode,
+                                                  float[] depthUvnode, float[][] nodexy, int[][] trinodes,
+                                                  float[] siglayers, int[][] neighbours, double depth, boolean coordOS) {
 
         double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
 
@@ -1278,22 +1261,23 @@ public class Particle {
         int[][] nrLayerIndexes = new int[4][2];
 
         // layer 0 = below particle, layer 1 = above particle
-        nrLayerIndexes[0] = Mesh.findNearestSigmaIndexes(depLayer, m.getSiglay().length);
+        nrLayerIndexes[0] = Mesh.findNearestSigmaIndexes(depLayer, siglayers.length);
         for (int nbr = 0; nbr < 3; nbr++) {
-            nrLayerIndexes[nbr+1] = Mesh.findNearestSigmaIndexes(depth, m.getSiglay(), m.getDepthUvnode()[m.getNeighbours()[nbr][elemPart]]);
+            nrLayerIndexes[nbr+1] = Mesh.findNearestSigmaIndexes(depth, siglayers, depthUvnode[neighbours[nbr][elemPart]]);
         }
 
         // layer 0: below particle
         // containing element
         nrList[0][0] = elemPart;
         nrList[0][1] = distanceEuclid2(xy[0], xy[1], depth,
-                m.getUvnode()[0][elemPart], m.getUvnode()[1][elemPart], m.getDepthUvnode()[elemPart] * m.getSiglay()[nrLayerIndexes[0][0]], coordOS);
+                uvnode[0][elemPart], uvnode[1][elemPart], depthUvnode[elemPart] * siglayers[nrLayerIndexes[0][0]], coordOS);
         nrList[0][2] = nrLayerIndexes[0][0];
         // 3 neighbours
         for (int nbr = 0; nbr < 3; nbr++) {
-            nrList[nbr+1][0] = m.getNeighbours()[nbr][elemPart];
+            int nbrElem = neighbours[nbr][elemPart];
+            nrList[nbr+1][0] = nbrElem;
             nrList[nbr+1][1] = distanceEuclid2(xy[0], xy[1], depth,
-                    m.getUvnode()[0][m.getNeighbours()[nbr][elemPart]], m.getUvnode()[1][m.getNeighbours()[nbr][elemPart]], m.getDepthUvnode()[m.getNeighbours()[nbr][elemPart]] * m.getSiglay()[nrLayerIndexes[nbr+1][0]], coordOS);
+                    uvnode[0][nbrElem], uvnode[1][nbrElem], depthUvnode[nbrElem] * siglayers[nrLayerIndexes[nbr+1][0]], coordOS);
             nrList[nbr+1][2] = nrLayerIndexes[nbr+1][0];
         }
 
@@ -1307,15 +1291,16 @@ public class Particle {
         // containing element
         if (nrLayerIndexes[0][0] != nrLayerIndexes[0][1]) {
             nrList[4][0] = elemPart;
-            nrList[4][1] = distanceEuclid2(xy[0], xy[1], depth, m.getUvnode()[0][elemPart], m.getUvnode()[1][elemPart], m.getDepthUvnode()[elemPart] * m.getSiglay()[nrLayerIndexes[0][1]], coordOS);
+            nrList[4][1] = distanceEuclid2(xy[0], xy[1], depth, uvnode[0][elemPart], uvnode[1][elemPart], depthUvnode[elemPart] * siglayers[nrLayerIndexes[0][1]], coordOS);
             nrList[4][2] = nrLayerIndexes[0][1];
         }
         // 3 neighbours
         for (int nbr = 0; nbr < 3; nbr++) {
+            int nbrElem = neighbours[nbr][elemPart];
             if (nrLayerIndexes[nbr+1][0] != nrLayerIndexes[nbr+1][1]) {
-                nrList[nbr+5][0] = m.getNeighbours()[nbr][elemPart];
+                nrList[nbr+5][0] = nbrElem;
                 nrList[nbr+5][1] = distanceEuclid2(xy[0], xy[1], depth,
-                        m.getUvnode()[0][m.getNeighbours()[nbr][elemPart]], m.getUvnode()[1][m.getNeighbours()[nbr][elemPart]], m.getDepthUvnode()[m.getNeighbours()[nbr][elemPart]] * m.getSiglay()[nrLayerIndexes[nbr+1][1]], coordOS);
+                        uvnode[0][nbrElem], uvnode[1][nbrElem], depthUvnode[nbrElem] * siglayers[nrLayerIndexes[nbr+1][1]], coordOS);
                 nrList[nbr+5][2] = nrLayerIndexes[nbr+1][1];
             }
         }
@@ -1333,23 +1318,23 @@ public class Particle {
         int elemPart = this.getElem();
         int meshPart = this.getMesh();
         int depLayer = this.getDepthLayer();
-        double[] advectStep = {0,0,0};
-        float[][][] u = hydroFields.get(meshPart).getU();
-        float[][][] v = hydroFields.get(meshPart).getV();
-        float[][][] w = hydroFields.get(meshPart).getW();
         float[][] uvnode = meshes.get(meshPart).getUvnode();
         float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
         float[][] nodexy = meshes.get(meshPart).getNodexy();
         int[][] trinodes = meshes.get(meshPart).getTrinodes();
         float[] siglayers = meshes.get(meshPart).getSiglay();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
-        String meshType = meshes.get(meshPart).getType();
+        float[][][] u = hydroFields.get(meshPart).getU();
+        float[][][] v = hydroFields.get(meshPart).getV();
+        float[][][] w = hydroFields.get(meshPart).getW();
+        double[] advectStep = {0,0,0};
 
         // 1. Compute k_1 (initial spatial interpolation)
         double[] k1 = stepAhead(
                 this.getLocation(), this.getDepth(),
                 elemPart, depLayer, 0,
-                meshes.get(meshPart), hydroFields.get(meshPart),
+                uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
+                u, v, w,
                 hour, step, dt, stepsPerStep, coordOS, FVCOM
         );
         double[] k1Deg = new double[]{k1[0], k1[1]};
@@ -1360,7 +1345,7 @@ public class Particle {
         double k1Depth = this.getDepth() + k1[2] / 2.0;  // k1[2] = 0 if fixDepth = true
         int k1ElemPart = findContainingElement(k1Loc, elemPart, meshes.get(meshPart), false, 10)[0];
         elemPart = k1ElemPart == -1 ? elemPart : k1ElemPart; // particles can't exit mesh during substeps
-        depLayer = findLayerFromDepth(k1Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
+        depLayer = findLayerFromDepth(k1Depth, depthUvnode[elemPart], siglayers);
 
         // 2. Compute k_2 (spatial interpolation at half step, temporal interpolation at half step)
         // Estimated half-step location using Euler
@@ -1370,7 +1355,8 @@ public class Particle {
         double[] k2 = stepAhead(
                 k1Loc, k1Depth,
                 elemPart, depLayer, 1.0 / 2.0,
-                meshes.get(meshPart), hydroFields.get(meshPart),
+                uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
+                u, v, w,
                 hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k2Deg = new double[]{k2[0], k2[1]};
         if (!this.coordOS) {
@@ -1380,13 +1366,14 @@ public class Particle {
         double k2Depth = this.getDepth() + k2[2] / 2.0;  // k2[2] = 0 if fixDepth = true
         int k2ElemPart = findContainingElement(k1Loc, elemPart, meshes.get(meshPart), false, 10)[0];
         elemPart = k2ElemPart == -1 ? elemPart : k2ElemPart; // particles can't exit mesh during substeps
-        depLayer = findLayerFromDepth(k2Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
+        depLayer = findLayerFromDepth(k2Depth, depthUvnode[elemPart], siglayers);
 
         // 3. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
         double[] k3 = stepAhead(
                 k2Loc, k2Depth,
                 elemPart, depLayer, 1.0 / 2.0,
-                meshes.get(meshPart), hydroFields.get(meshPart),
+                uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
+                u, v, w,
                 hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k3Deg = new double[]{k3[0], k3[1]};
         if (!this.coordOS) {
@@ -1396,13 +1383,14 @@ public class Particle {
         double k3Depth = this.getDepth() + k3[2];  // k3[2] = 0 if fixDepth = true
         int k3ElemPart = findContainingElement(k3Loc, elemPart, meshes.get(meshPart), false, 10)[0];
         elemPart = k3ElemPart == -1 ? elemPart : k3ElemPart; // particles can't exit mesh during substeps
-        depLayer = findLayerFromDepth(k3Depth, meshes.get(meshPart).getDepthUvnode()[elemPart], meshes.get(meshPart).getSiglay());
+        depLayer = findLayerFromDepth(k3Depth, depthUvnode[elemPart], siglayers);
 
         // 4. Compute k_4 (spatial interpolation at end step)
         double[] k4 = stepAhead(
                 k3Loc, k3Depth,
                 elemPart, depLayer, 1.0,
-                meshes.get(meshPart), hydroFields.get(meshPart),
+                uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
+                u, v, w,
                 hour, step, dt, stepsPerStep, coordOS, FVCOM);
 
         // 5. Add it all together
@@ -1421,7 +1409,9 @@ public class Particle {
      * @param timeStepAhead Time step ahead i.e. "1.0/2.0" if half-step ahead, "1.0" if full step ahead
      */
     public static double[] stepAhead(double[] xy, double depth, int elemPart, int depLayer, double timeStepAhead,
-                                     Mesh mesh, HydroField hf,
+                                     float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes,
+                                     float[] siglayers, int[][] neighbours,
+                                     float[][][] u, float[][][] v, float[][][] w,
                                      int hour, int step, double dt,
                                      int stepsPerStep, boolean coordOS, boolean FVCOM) {
         double[] xyz_step = {0,0,0};
@@ -1430,13 +1420,13 @@ public class Particle {
 
         if (FVCOM) {
             double[][] xNrList;
-            xNrList = neighbourCellsList3D(xy, elemPart, depLayer, mesh, depth, coordOS);
+            xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, depth, coordOS);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of time step
-            vel = velocityFromNearestList(xNrList, hour, hf);
+            vel = velocityFromNearestList(xNrList, u[hour], v[hour], w[hour]);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-            velplus1 = velocityFromNearestList(xNrList, hour + 1, hf);
+            velplus1 = velocityFromNearestList(xNrList, u[hour+1], v[hour+1], w[hour+1]);
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {
@@ -1486,6 +1476,9 @@ public class Particle {
         float[][] nodexy = meshes.get(meshPart).getNodexy();
         int[][] trinodes = meshes.get(meshPart).getTrinodes();
         int[][] neighbours = meshes.get(meshPart).getNeighbours();
+        float[][][] u = hydroFields.get(meshPart).getU();
+        float[][][] v = hydroFields.get(meshPart).getV();
+        float[][][] w = hydroFields.get(meshPart).getW();
 
         double[] thisLoc = this.getLocation();
 
@@ -1499,9 +1492,9 @@ public class Particle {
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of time step
-            vel = velocityFromNearestList(xNrList, hour, hydroFields.get(meshPart));
+            vel = velocityFromNearestList(xNrList, u[hour], v[hour], w[hour]);
             // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
-            velplus1 = velocityFromNearestList(xNrList, hour + 1, hydroFields.get(meshPart));
+            velplus1 = velocityFromNearestList(xNrList, u[hour+1], v[hour+1], w[hour+1]);
 
             // If predicted location of particle is outside mesh, return zero velocity
             if (xNrList[0][0] == 0) {

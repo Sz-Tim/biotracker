@@ -130,12 +130,9 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             part.incrementDegreeDays(localTemperature, rp);
 
-            // Implement mortality once per hour
-            boolean approxHour = elapsedHours % 1 < 0.01 || elapsedHours % 1 > 0.99;
-            if (step == 0 && approxHour) {
-                part.setMortRate(localSalinity, rp);
-                part.setDensity();
-            }
+            // Implement mortality
+            part.setMortRate(localSalinity, rp, subStepDt / 3600.0);
+            part.setDensity();
 
             // Diffusion
             double D_h = rp.D_h;
@@ -238,7 +235,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Location actually updated here
             part.moveInMesh(new double[]{newlocx, newlocy}, meshes, rp);
-            //part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             double newDepth = part.getDepth() + displacement[2];
             double maxAllowedDepth = meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] < rp.maxDepth ? meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] : rp.maxDepth;
             part.setDepth(newDepth, maxAllowedDepth);
