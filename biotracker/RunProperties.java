@@ -25,12 +25,12 @@ public class RunProperties {
             sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
-            eggTemp_fn; // Function to relate egg production to temperature; "constant" (default), "linear", or "quadratic"
+            eggTemp_fn, // Function to relate egg production to temperature; "constant" (default), "linear", "quadratic", or "logistic"
+            mortSal_fn; // Function to relate mortality to salinity; "constant" (default), "linear", or "quadratic"
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             diffusion, variableDh, variableDhV, // include random walk, use diffusion parameter from hydro output?
-            salinityMort, // mortality calculated based on local salinity
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             setStartDepth, // set particle depth at initiation?
             fixDepth,
@@ -68,7 +68,6 @@ public class RunProperties {
             openBoundaryThresh, // distance threshold (m) to open boundary nodes for particles to be ejected
             D_h, // Horizontal diffusion parameter
             D_hVert, // Vertical diffusion parameter
-            mortalityRate, // Hourly mortality rate of particles
             maxParticleAge, // Maximum age for particles. Set to <=0 to ignore.
             viableDegreeDays, maxDegreeDays, // Degree x days to use for settlement viability time and mortality
             lightThreshCopepodid, lightThreshNauplius,
@@ -90,7 +89,8 @@ public class RunProperties {
             pstepsMaxDepth, // maximum depth for recording particle density in psteps output
             releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
-    List<Double> eggTemp_b; // temperature dependent egg production parameters
+    List<Double> eggTemp_b, // temperature dependent egg production parameters; response = eggs per day per gravid female
+            mortSal_b; // salinity dependent mortality parameters; response = mortality rate per hour for larvae
 
     public RunProperties(String filename) {
         System.out.println("Getting properties from " + filename);
@@ -209,8 +209,14 @@ public class RunProperties {
         eggTemp_fn = properties.getProperty("eggTemp_fn", "constant");
         String eggTemp_defaults = switch (eggTemp_fn) {
             case "constant" -> "28.2";
+            // Linear model comes from data in Kragesteen 2023 Table 1
+            // eggs_d = b[0] + b[1]*temperature
             case "linear" -> "9.835,4.579";
+            // Norwegian model uses Stien et al 2005
+            // eggs_d = b[0] * (temperature + b[1])^2
             case "quadratic" -> "0.17,4.28";
+            // Logistic model comes from data in Kragesteen 2023 Table 1
+            // eggs_d = b[0]/(1 + exp(-b[1] * (temperature - b[2]))) + b[3]
             case "logistic" -> "85.94,0.4696,8.193,7.649";
             default -> "28.2";
         };
@@ -218,8 +224,20 @@ public class RunProperties {
         eggTemp_b = Arrays.stream(eggTemp_b_Str.split(",")).map(Double::parseDouble).toList();
 
         // Demographics
-        salinityMort = Boolean.parseBoolean(properties.getProperty("salinityMort", "true"));
-        mortalityRate = Double.parseDouble(properties.getProperty("mortalityRate", "0.01"));
+        mortSal_fn = properties.getProperty("mortSal_fn", "constant");
+        String mortSal_defaults = switch (mortSal_fn) {
+            // Stien et al 2005
+            case "constant" -> "0.01";
+            // estimated 2nd order polynomial fit to Bricknell et al. 2006 Table 1
+            // mort_h = b[0] + b[1]*salinity + b[2]*salinity*salinity
+            case "quadratic" -> "0.0011,1.1239,-0.07";
+            // estimated logistic fit to Bricknell et al. 2006 Table 1
+            // mort_h = b[0]/(1 + exp(-b[1] * (salinity - b[2]))) + b[3]
+            case "logistic" -> "0.9087,-0.6457,13.31,0.05071";
+            default -> "0.01";
+        };
+        String mortSal_b_Str = properties.getProperty("mortSal_b", mortSal_defaults);
+        mortSal_b = Arrays.stream(mortSal_b_Str.split(",")).map(Double::parseDouble).toList();
         viabletime = Double.parseDouble(properties.getProperty("viabletime", "-1"));
         maxParticleAge = Double.parseDouble(properties.getProperty("maxParticleAge", "-1"));
         viableDegreeDays = Double.parseDouble(properties.getProperty("viableDegreeDays", "40"));
@@ -261,7 +279,7 @@ public class RunProperties {
         recordConnectivityDepth2 = connectDepth2_min < 10000 && connectDepth2_max < 10000;
 
         // hydrodynamic file requirements
-        needS = (!fixDepth) || salinityMort;
+        needS = (!fixDepth) || (!mortSal_fn.equals("constant"));
         needT = viableDegreeDays > -1;
         needZeta = false;
         needK = (!fixDepth) && variableDhV;
@@ -355,7 +373,8 @@ public class RunProperties {
                 "Max particle age (h): " + this.maxParticleAge + "\n" +
                 "Viable degree days: " + this.viableDegreeDays + "\n" +
                 "Max degree days: " + this.maxDegreeDays + "\n" +
-                "Mortality rate (prop/h): " + (this.salinityMort ? "variable" : this.mortalityRate) + "\n" +
+                "Mortality rate function: " + this.mortSal_fn + "\n" +
+                "Mortality rate parameters (/h): " + this.mortSal_b + "\n" +
                 "Passive sinking intercept (m/s): " + this.passiveSinkingIntercept + "\n" +
                 "Passive sinking slope (m/s/psu): " + this.passiveSinkingSlope + "\n" +
                 "P(swim down) = 0-1: " + this.salinityThreshMax + " - " + salinityThreshMin + "\n" +
@@ -367,7 +386,7 @@ public class RunProperties {
                 "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
                 "Egg production function: " + this.eggTemp_fn + "\n" +
-                "Egg production parameters: " + this.eggTemp_b + "\n" +
+                "Egg production parameters (/d): " + this.eggTemp_b + "\n" +
                 "\n" +
                 "-------- Recording: \n" +
                 "Psteps (lice/element/time): \n" +

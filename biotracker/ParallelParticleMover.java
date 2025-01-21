@@ -125,9 +125,17 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                     }
                 }
             }
+
             // Increment in particle age & degree days
             part.incrementAge(subStepDt / 3600.0); // particle age in hours
             part.incrementDegreeDays(localTemperature, rp);
+
+            // Implement mortality once per hour
+            boolean approxHour = elapsedHours % 1 < 0.01 || elapsedHours % 1 > 0.99;
+            if (step == 0 && approxHour) {
+                part.setMortRate(localSalinity, rp);
+                part.setDensity();
+            }
 
             // Diffusion
             double D_h = rp.D_h;
@@ -138,10 +146,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             float[][] nearestLevelsAdj;
             double K_zAdj = rp.D_hVert;
             double depthAdj;
-
-            if (rp.salinityMort) {
-                part.setMortRateSalinity(localSalinity);
-            }
 
             if (rp.variableDh) {
                 D_h = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "vh", rp, nearestLayers);
@@ -198,12 +202,6 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         hourActivity[Math.toIntExact(Math.round(elapsedHours))][activity]++;
                     }
                 }
-            }
-
-            // Implement mortality once per hour
-            boolean approxHour = elapsedHours % 1 < 0.01 || elapsedHours % 1 > 0.99;
-            if (step == 0 && approxHour) {
-                part.setDensity();
             }
 
             // advection

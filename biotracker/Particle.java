@@ -55,7 +55,7 @@ public class Particle {
     private boolean settledThisHour = false;
     private boolean boundaryExit = false;
 
-    private final String species;
+    private String species = "sealice";
 
     private String lastArrival = "0";
 
@@ -86,8 +86,8 @@ public class Particle {
         this.species = species;
     }
 
-    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate, double startDensity,
-                    ISO_datestr startDate, double startTime, boolean coordOS, String species) {
+    public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double startDensity,
+                    ISO_datestr startDate, double startTime, boolean coordOS) {
         this.id = id;
         this.xy[0] = xstart;
         this.xy[1] = ystart;
@@ -97,11 +97,9 @@ public class Particle {
         this.startTime = startTime;
         this.startLoc[0] = xstart;
         this.startLoc[1] = ystart;
-        this.mortRate = mortalityRate;
         this.density = startDensity;
         this.depth = startDepth;
         this.coordOS = coordOS;
-        this.species = species;
     }
 
     /**
@@ -430,9 +428,14 @@ public class Particle {
     /**
      * Sets the mortality rate for the particle packet based upon local salinity
      */
-    public void setMortRateSalinity(double salinity) {
-        // estimated 2nd order polynomial fit to Bricknell et al.'s (2006) data
-        this.mortRate = 0.0011 * salinity * salinity - 0.07 * salinity + 1.1239;
+    public void setMortRate(double salinity, RunProperties rp) {
+        this.mortRate = switch (rp.mortSal_fn) {
+            case "constant" -> rp.mortSal_b.get(0);
+            case "quadratic" -> rp.mortSal_b.get(0) + rp.mortSal_b.get(1) * salinity + rp.mortSal_b.get(2) * salinity * salinity;
+            // mort_h = b[0]/(1 + exp(-b[1] * (salinity - b[2]))) + b[3]
+            case "logistic" -> rp.mortSal_b.get(0) / (1 + Math.exp(-rp.mortSal_b.get(1) * (salinity - rp.mortSal_b.get(2)))) + rp.mortSal_b.get(3);
+            default -> rp.mortSal_b.get(0);
+        };
     }
 
     public void incrementAge(double increment) {

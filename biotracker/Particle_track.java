@@ -271,13 +271,10 @@ public class Particle_track {
                         double eggTemperature = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, 2, currentHour, "temp", rp, eggSigmas);
                         double eggsPerFemale = switch (rp.eggTemp_fn) {
                             case "constant" -> rp.eggTemp_b.get(0) * (rp.dt / (60 * 60 * 24));
-                            // Linear model comes from data in Kragesteen 2023 Table 1
                             case "linear" ->
                                     (rp.eggTemp_b.get(0) + rp.eggTemp_b.get(1) * eggTemperature) * (rp.dt / (60 * 60 * 24));
-                            // Norwegian model uses Stien et al 2005: N_naup = N_fish * N_female * 0.17 * (temp+4.28)^2
                             case "quadratic" ->
                                     (rp.eggTemp_b.get(0) * Math.pow((eggTemperature + rp.eggTemp_b.get(1)), 2)) * (rp.dt / (60 * 60 * 24));
-                            // Logistic model comes from data in Kragesteen 2023 Table 1
                             case "logistic" ->
                                     (rp.eggTemp_b.get(0) / (1 + Math.exp(-rp.eggTemp_b.get(1) * (eggTemperature - rp.eggTemp_b.get(2)))) + rp.eggTemp_b.get(3)) * (rp.dt / (60 * 60 * 24));
                             default -> rp.eggTemp_b.get(0) * (rp.dt / (60 * 60 * 24));
@@ -506,7 +503,7 @@ public class Particle_track {
             double startDensity = habitat.get(startid).getScale();
 
             Particle p = new Particle(xstart, ystart, rp.startDepth, habitat.get(startid).getID(), startid, numParticlesCreated + i,
-                    rp.mortalityRate, startDensity, currentDate, currentTime, rp.coordOS, rp.species);
+                    startDensity, currentDate, currentTime, rp.coordOS);
             p.setMesh(meshStart);
             p.setElem(elemFVCOMStart);
             p.setLayerFromDepth(meshes.get(meshStart).getDepthUvnode()[elemFVCOMStart], meshes.get(meshStart).getSiglay());
