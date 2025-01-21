@@ -172,7 +172,7 @@ public class Particle_track {
         float[][] vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
         float[][] vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1]; // bin upper z limits: from 0 to vertDistrMax
         if (rp.recordMovement) {
-            IOUtils.writeMovementsHeader("ID,date,hour,step,startDate,age,density,x,y,z,layer,status,degreeDays,sink,swim,temp,salinity,mortality,tempSurface,dX,dY,dZ",
+            IOUtils.writeMovementsHeader("ID,date,hour,step,startDate,age,density,x,y,z,layer,mesh,status,degreeDays,sink,swim,temp,salinity,mortality,tempSurface,dX,dY,dZ",
                     "movementFile.csv");
         }
 
@@ -293,7 +293,7 @@ public class Particle_track {
                         List<Particle> newParts = createNewParticles(habitat, meshes, rp, currentIsoDate, currentHour, numParticlesCreated);
                         particles.addAll(newParts);
                         numParticlesCreated = numParticlesCreated + (rp.nparts * habitat.size());
-                        System.out.printf("%,d new particles (%,d active of %,d total)", newParts.size(), particles.size(), numParticlesCreated);
+                        System.out.printf("%,d new (%,d active, %,d total)", newParts.size(), particles.size(), numParticlesCreated);
                         // If only one release to be made, prevent further releases
                         if (rp.releaseScenario == 0) {
                             allowRelease = false;

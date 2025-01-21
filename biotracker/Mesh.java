@@ -143,18 +143,7 @@ public class Mesh {
                 }
                 // find elements with at least one trinode as an open boundary
                 System.out.println("Finding boundary elements...");
-                ArrayList<Integer> obElems = new ArrayList<>();
-                for (int i = 0; i < openBoundaryNodes.length; i++) {
-                    for (int j = 0; j < trinodes[0].length; j++) {
-                        if(!obElems.contains(j) &&
-                                (trinodes[0][j] == openBoundaryNodes[i] ||
-                                        trinodes[1][j] == openBoundaryNodes[i] ||
-                                        trinodes[2][j] == openBoundaryNodes[i])) {
-                            obElems.add(j);
-                        }
-                    }
-                }
-            openBoundaryElems = obElems;
+                openBoundaryElems = findOpenBoundaryElements();
             } else {
                 System.err.println("No openBoundaryNode information in mesh file");
             }
@@ -219,6 +208,21 @@ public class Mesh {
             // increasing second index => decreasing latitude
         }
         convexHullPath = Mesh.pointsToPath(this.getConvexHull());
+    }
+
+    private ArrayList<Integer> findOpenBoundaryElements() {
+        ArrayList<Integer> obElems = new ArrayList<>();
+        for (int openBoundaryNode : openBoundaryNodes) {
+            for (int j = 0; j < trinodes[0].length; j++) {
+                if (!obElems.contains(j) &&
+                        (trinodes[0][j] == openBoundaryNode ||
+                                trinodes[1][j] == openBoundaryNode ||
+                                trinodes[2][j] == openBoundaryNode)) {
+                    obElems.add(j);
+                }
+            }
+        }
+        return obElems;
     }
 
     /**
@@ -417,8 +421,7 @@ public class Mesh {
                 if (elemLoc != null) {
                     eL = elemLoc[0];
                 }
-                c = Particle.findContainingElement(xy, eL,
-                        this.getNodexy(), this.getTrinodes(), this.getNeighbours(), checkAllElems)[0];
+                c = Particle.findContainingElement(xy, eL, this, checkAllElems, 1)[0];
             } else if (this.getType().equals("ROMS")) {
                 // Use the U grid to determine whether within the mesh or not.
                 // This leads to some particles that are outside the V grid being identified as in the mesh.

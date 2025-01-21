@@ -715,7 +715,7 @@ public class IOUtils {
             // Create file
             FileWriter fstream = new FileWriter(filename, append);
             PrintWriter out = new PrintWriter(fstream);
-            out.printf("%d,%s,%d,%d,%s,%.4f,%.4f,%.1f,%.1f,%.4f,%d,%d,%.4f,%d,%d,%.4f,%.4f,%.4f,%.4f",
+            out.printf("%d,%s,%d,%d,%s,%.4f,%.4f,%.1f,%.1f,%.4f,%d,%d,%d,%.4f,%d,%d,%.4f,%.4f,%.4f,%.4f",
                     part.getID(),
                     currentDate,
                     currentHour,
@@ -727,6 +727,7 @@ public class IOUtils {
                     part.getLocation()[1],
                     part.getDepth(),
                     part.getDepthLayer(),
+                    part.getMesh(),
                     part.getStatus(),
                     part.getDegreeDays(),
                     sink, swim,

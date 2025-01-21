@@ -239,7 +239,8 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             double newlocy = part.getLocation()[1] + displacement[1];
 
             // Location actually updated here
-            part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
+            part.moveInMesh(new double[]{newlocx, newlocy}, meshes, rp);
+            //part.meshSelectOrExit(new double[]{newlocx, newlocy}, meshes, rp);
             double newDepth = part.getDepth() + displacement[2];
             double maxAllowedDepth = meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] < rp.maxDepth ? meshes.get(part.getMesh()).getDepthUvnode()[part.getElem()] : rp.maxDepth;
             part.setDepth(newDepth, maxAllowedDepth);
@@ -402,13 +403,20 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
         return -1;
     }
 
-    public static int openBoundaryCheck(double[] newLoc, int elem, Mesh m, RunProperties rp) {
+    public static int openBoundaryCheck(double[] loc, int elem, Mesh m, RunProperties rp) {
         // check whether the particle has entered into a boundary *element*
         // (make it settle there, even if it is inviable)
-        int elemNew = Particle.findContainingElement(newLoc, elem, m.getNodexy(), m.getTrinodes(), m.getNeighbours(), false)[0];
+        int elemNew = Particle.findContainingElement(loc, elem, m, false, 10)[0];
         if (m.getOpenBoundaryElems().contains(elemNew)) {
             return elemNew;
         }
         return -1;
+    }
+
+    public static boolean openBoundaryCheck(int elem, ArrayList<Integer> openBoundaryElems, RunProperties rp) {
+        if (rp.checkOpenBoundaries) {
+            return openBoundaryElems.contains(elem);
+        }
+        return false;
     }
 }
