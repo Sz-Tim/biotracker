@@ -476,18 +476,13 @@ public class HydroField {
             dist[i] = Particle.distanceEuclid2(location[0], location[1], mesh.getNodexy()[0][particleNodes[i]], mesh.getNodexy()[1][particleNodes[i]], rp.coordOS);
             weights[i] = 1.0 / (dist[i] * dist[i]);
             weightSum += weights[i];
-            if (varName.equals("temp")) {
-                sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equals("salinity")) {
-                sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equals("short_wave")) {
-                sum += getLight()[hour][particleNodes[i]] * weights[i];
-            } else if (varName.equals("k")) {
-                sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equals("vh")) {
-                sum += getVh()[hour][depthLayer][particleNodes[i]] * weights[i];
-            } else if (varName.equals("zeta")) {
-                sum += getZeta()[hour][particleNodes[i]] * weights[i];
+            switch (varName) {
+                case "temp" -> sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
+                case "salinity" -> sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
+                case "short_wave" -> sum += getLight()[hour][particleNodes[i]] * weights[i];
+                case "k" -> sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
+                case "vh" -> sum += getVh()[hour][depthLayer][particleNodes[i]] * weights[i];
+                case "zeta" -> sum += getZeta()[hour][particleNodes[i]] * weights[i];
             }
         }
 
