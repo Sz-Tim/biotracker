@@ -46,7 +46,7 @@ public class HydroField {
      * @param type    type of hydro field (FVCOM/ROMS)
      */
     public HydroField(String filename, String[] varNames, int[] origin, int[] shape, int[] shapeST, String type, RunProperties rp) {
-        System.out.println("Reading hydro file: " + filename);
+        System.out.println("Reading " + filename);
         final int MAX_RETRIES = 3;
         final long RETRY_DELAY_MS = 5000;
 
