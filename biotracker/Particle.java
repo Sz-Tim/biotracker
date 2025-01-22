@@ -567,7 +567,7 @@ public class Particle {
      * @param nMesh Number of meshes
      */
     private void handleMesh0(double[] newLoc, List<Mesh> meshes, RunProperties rp, double[] oldLoc, int oldElem, int nMesh) {
-        int [] elemMesh0 = findContainingElement(newLoc, oldElem, meshes.get(0), false, 40);
+        int [] elemMesh0 = findContainingElement(newLoc, oldElem, meshes.get(0), false, 20);
         if (elemMesh0[0] > -1) {
             // New location is within mesh 0: update position
             updateLocation(newLoc, elemMesh0[0], meshes, 0, false);
@@ -598,12 +598,12 @@ public class Particle {
      * @param oldElem Current element index
      */
     private void handleMesh1(double[] newLoc, List<Mesh> meshes, RunProperties rp, double[] oldLoc, int oldElem) {
-        int[] elemMesh0 = findContainingElement(newLoc, meshes.get(0).getAdjoiningElement(), meshes.get(0), false, 40);
+        int[] elemMesh0 = findContainingElement(newLoc, meshes.get(0).getAdjoiningElement(), meshes.get(0), false, 20);
         if (elemMesh0[0] > -1) {
             // New location is within mesh 0: update position
             updateLocation(newLoc, elemMesh0[0], meshes, 0, true);
         } else {
-            int[] elemMesh1 = findContainingElement(newLoc, oldElem, meshes.get(1), false, 40);
+            int[] elemMesh1 = findContainingElement(newLoc, oldElem, meshes.get(1), false, 20);
             if (elemMesh1[0] > -1) {
                 // New location is within mesh 1: update position
                 updateLocation(newLoc, elemMesh1[0], meshes, 1, false);
