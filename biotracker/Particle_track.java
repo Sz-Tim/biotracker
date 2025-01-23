@@ -404,7 +404,6 @@ public class Particle_track {
 
                     // Write Psteps
                     if (rp.recordPsteps && stepcount % (rp.pstepsInterval * rp.stepsPerStep) == 0) {
-                        System.out.println("Writing psteps");
                         if (rp.recordImmature) {
                             IOUtils.writeNonZeros2DArrayToCSV(pstepsImmature, "i,NA,value","%d,%d,%.4e" , "pstepsImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
                             pstepsImmature = new float[meshes.get(0).getNElems()][pstepsInd2];
@@ -437,7 +436,6 @@ public class Particle_track {
                     if (rp.recordVertDistr) {
                         IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
                         if (stepcount % (rp.vertDistrInterval * rp.stepsPerStep) == 0) {
-                            System.out.println("Writing vertical distribution");
                             if (rp.recordImmature) {
                                 IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e", "vertDistrImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
