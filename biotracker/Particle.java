@@ -52,12 +52,9 @@ public class Particle {
     private boolean arrived = false;
     private boolean viable = false;
     private boolean free = false;
-    private boolean settledThisHour = false;
     private boolean boundaryExit = false;
 
     private String species = "sealice";
-
-    private String lastArrival = "0";
 
     private double xTotal = 0;
     private double yTotal = 0;
@@ -66,8 +63,7 @@ public class Particle {
 
     // A list to store data on the arrivals made by each particle.
     // If rp.endOnArrival=true, this will contain a maximum of one element.
-    // --- Not presently used ---
-    private List<Arrival> arrivals;
+    private ArrayList<Arrival> arrivals = new ArrayList<>();
 
     public Particle(double xstart, double ystart, double startDepth, String startSiteID, int startIndex, int id, double mortalityRate,
                     ISO_datestr startDate, double startTime, boolean coordOS, String species) {
@@ -129,13 +125,16 @@ public class Particle {
         return this.getID() + " " + Arrays.toString(this.xy);
     }
 
-    // Not presently used
-    public void reportArrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity) {
-        arrivals.add(new Arrival(sourceLocation, arrivalLocation, arrivalTime, arrivalDensity));
+    public ArrayList<Arrival> getArrivals() {
+        return this.arrivals;
     }
 
-    public List<Arrival> getArrivals() {
-        return this.arrivals;
+    public void addArrival(Arrival arrival) {
+        this.arrivals.add(arrival);
+    }
+
+    public void clearArrivals() {
+        this.arrivals.clear();
     }
 
     public void setReleaseTime(double releaseTime) {
@@ -370,18 +369,6 @@ public class Particle {
         this.arrived = arrived;
     }
 
-    public void setLastArrival(String loc) {
-        this.lastArrival = loc;
-    }
-
-    public String getLastArrival() {
-        return this.lastArrival;
-    }
-
-    public void setSettledThisHour(boolean settled) {
-        this.settledThisHour = settled;
-    }
-
     public void setFree(boolean free) {
         this.free = free;
     }
@@ -396,10 +383,6 @@ public class Particle {
 
     public boolean hasArrived() {
         return this.arrived;
-    }
-
-    public boolean hasSettledThisHour() {
-        return this.settledThisHour;
     }
 
     public boolean isFree() {

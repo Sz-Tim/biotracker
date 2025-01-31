@@ -109,20 +109,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // Get local salinity, temperature
             if (!rp.readHydroVelocityOnly) {
-                if (rp.fixDepth) {
-                    if (rp.needS) {
-                        localSalinity = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "salinity", rp);
-                    }
-                    if (rp.needT) {
-                        localTemperature = hf.getAvgFromTrinodes(m, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "temp", rp);
-                    }
-                } else {
-                    if (rp.needS) {
-                        localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
-                    }
-                    if (rp.needT) {
-                        localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
-                    }
+                if (rp.needS) {
+                    localSalinity = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "salinity", rp, nearestLayers);
+                }
+                if (rp.needT) {
+                    localTemperature = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "temp", rp, nearestLayers);
                 }
             }
 
@@ -269,16 +260,22 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
             // **************** if able to settle, is it close to a possible settlement location? ******************************
             if (part.isInfectious() || rp.connectImmature) {
                 for (HabitatSite site : habitatEnd) {
+                    /* TODO: Is it possible to update connectivity tallies within this loop in parallel?
+                    * This would allow infection estimates more continuously rather than restricting once per hour
+                    * Densities could be scaled by dt/hr to still give hourly totals for outputs.
+                    * Alternatively, adjust particle properties (Arrival) to store a list of site ID, depth, and density,
+                    * clearing it each time connectivity is written. This improves on the current system that freezes
+                    * particles as soon as they are within a catchment radius, making the assumption they stay there
+                    * for the full hour.
+                    */
                     double dist = Particle.distanceEuclid2(part.getLocation()[0], part.getLocation()[1],
                             site.getLocation()[0], site.getLocation()[1], rp.coordOS);
-                    if (dist < rp.connectivityThresh && !part.hasSettledThisHour()) {  // TODO: I think this doesn't make sense? Necessary for part.setLastArrival(site.getID()) for connectivity though.
-                        if (rp.endOnArrival && part.isInfectious()) {
+                    if (dist < rp.connectivityThresh) {
+                        part.addArrival(new Arrival(part.getStartID(), site.getID(), part.getStatus(), part.getDepth(), part.getDensity() * subStepDt / rp.dt));
+                        if (rp.endOnArrival) {
                             part.setArrived(true);
                             part.setStatus(3);
                         }
-                        part.setSettledThisHour(true);
-                        part.setLastArrival(site.getID());
-                        break;
                     }
                 }
             }
