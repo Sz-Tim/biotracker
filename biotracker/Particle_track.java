@@ -359,30 +359,31 @@ public class Particle_track {
                     }
 
                     // update connectivity
-                    for (Particle particle : particles) {
-                        if (particle.getArrivals() != null) {
-                            for (Arrival arrival : particle.getArrivals()) {
-                                int destIndex = siteEndNames.indexOf(arrival.getArrivalSiteID());
-                                if (arrival.getArrivalStatus() == 2) { // copepodids
-                                    if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
-                                            arrival.getArrivalDepth() <= rp.connectDepth1_max) {
-                                        connectivity[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
-                                    }
-                                    if (rp.recordConnectivityDepth2 &&
-                                            arrival.getArrivalDepth() >= rp.connectDepth1_min &&
-                                            arrival.getArrivalDepth() <= rp.connectDepth1_max) {
-                                        connectivityDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
-                                    }
-                                }
-                                if (rp.connectImmature && arrival.getArrivalStatus() == 1) {
-                                    if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
-                                            arrival.getArrivalDepth() <= rp.connectDepth1_max) {
-                                        connectivityImmature[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
-                                    }
-                                    if (rp.recordConnectivityDepth2 &&
-                                            arrival.getArrivalDepth() >= rp.connectDepth1_min &&
-                                            arrival.getArrivalDepth() <= rp.connectDepth1_max) {
-                                        connectivityImmatureDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                    if (rp.recordConnectivity) {
+                        for (Particle particle : particles) {
+                            if (particle.getArrivals() != null) {
+                                for (Arrival arrival : particle.getArrivals()) {
+                                    int destIndex = siteEndNames.indexOf(arrival.getArrivalSiteID());
+                                    if (arrival.getArrivalStatus() == 2) { // copepodids
+                                        if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth1_max) {
+                                            connectivity[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                        if (rp.recordConnectivityDepth2 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth2_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth2_max) {
+                                            connectivityDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                    } else if (rp.connectImmature && arrival.getArrivalStatus() == 1) {
+                                        if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth1_max) {
+                                            connectivityImmature[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                        if (rp.recordConnectivityDepth2 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth2_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth2_max) {
+                                            connectivityImmatureDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
                                     }
                                 }
                             }
