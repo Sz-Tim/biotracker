@@ -233,7 +233,7 @@ public class RunProperties {
             case "quadratic" -> "0.0011,1.1239,-0.07";
             // estimated logistic fit to Bricknell et al. 2006 Table 1
             // mort_h = b[0]/(1 + exp(-b[1] * (salinity - b[2]))) + b[3]
-            case "logistic" -> "0.9087,-0.6457,13.31,0.05071";
+            case "logistic" -> "0.941,-0.594,13.5,0.0205";
             default -> "0.01";
         };
         String mortSal_b_Str = properties.getProperty("mortSal_b", mortSal_defaults);
