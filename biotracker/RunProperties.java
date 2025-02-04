@@ -211,13 +211,13 @@ public class RunProperties {
             case "constant" -> "28.2";
             // Linear model comes from data in Kragesteen 2023 Table 1
             // eggs_d = b[0] + b[1]*temperature
-            case "linear" -> "9.835,4.579";
+            case "linear" -> "8.27,3.79";
             // Norwegian model uses Stien et al 2005
             // eggs_d = b[0] * (temperature + b[1])^2
-            case "quadratic" -> "0.17,4.28";
+            case "quadratic" -> "0.109,8.54";
             // Logistic model comes from data in Kragesteen 2023 Table 1
             // eggs_d = b[0]/(1 + exp(-b[1] * (temperature - b[2]))) + b[3]
-            case "logistic" -> "85.94,0.4696,8.193,7.649";
+            case "logistic" -> "65.5,0.550,8.49,10.51";
             default -> "28.2";
         };
         String eggTemp_b_Str = properties.getProperty("eggTemp_b", eggTemp_defaults);
