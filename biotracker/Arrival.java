@@ -16,28 +16,34 @@ package biotracker;
  * @author sa01ta
  */
 public class Arrival {
-    private final int sourceLocation;
-    private final int arrivalLocation;
-    private final double arrivalTime;
+    private final String sourceSiteID;
+    private final String arrivalSiteID;
+    private final int arrivalStatus;
+    private final double arrivalDepth;
     private final double arrivalDensity;
 
-    public Arrival(int sourceLocation, int arrivalLocation, double arrivalTime, double arrivalDensity) {
-        this.sourceLocation = sourceLocation;
-        this.arrivalLocation = arrivalLocation;
-        this.arrivalTime = arrivalTime;
+    public Arrival(String sourceSiteID, String arrivalSiteID, int arrivalStatus, double arrivalDepth, double arrivalDensity) {
+        this.sourceSiteID = sourceSiteID;
+        this.arrivalSiteID = arrivalSiteID;
+        this.arrivalStatus = arrivalStatus;
+        this.arrivalDepth = arrivalDepth;
         this.arrivalDensity = arrivalDensity;
     }
 
-    public int getSourceLocation() {
-        return this.sourceLocation;
+    public String getSourceSiteID() {
+        return this.sourceSiteID;
     }
 
-    public int getArrivalLocation() {
-        return this.arrivalLocation;
+    public String getArrivalSiteID() {
+        return this.arrivalSiteID;
     }
 
-    public double getArrivalTime() {
-        return this.arrivalTime;
+    public int getArrivalStatus() {
+        return this.arrivalStatus;
+    }
+
+    public double getArrivalDepth() {
+        return this.arrivalDepth;
     }
 
     public double getArrivalDensity() {

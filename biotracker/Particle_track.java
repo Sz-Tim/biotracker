@@ -358,44 +358,37 @@ public class Particle_track {
                         IOUtils.particlesToRestartFile(particles, currentHour, "locations_" + today + ".csv", true, rp, 1); // rp.nparts * rp.numberOfDays * 10
                     }
 
-
-                    double elapsedHourRemainder = Math.round((elapsedHours % 1) * 100.0) / 100.0;
-                    if (elapsedHourRemainder == 1 || elapsedHourRemainder == 0) {
-                        // It's the end of an hour, so if particles are allowed to infect more than once, reactivate them
-                        for (Particle part : particles) {
-                            if (part.hasSettledThisHour()) {
-                                if (part.isInfectious()) { // copepodids
-                                    // Save arrival
-                                    if (rp.recordArrivals) {
-                                        IOUtils.arrivalToFile(part, currentIsoDate, currentHour, "arrivals_" + today + ".csv", true);
-                                    }
-                                    // Add arrival to connectivity file
-                                    int destIndex = siteEndNames.indexOf(part.getLastArrival());
-                                    double pDepth = part.getDepth();
-                                    if (pDepth >= rp.connectDepth1_min && pDepth <= rp.connectDepth1_max) {
-                                        connectivity[part.getStartIndex()][destIndex] += (float) part.getDensity();
-                                    }
-                                    if (rp.recordConnectivityDepth2 && pDepth >= rp.connectDepth2_min && pDepth <= rp.connectDepth2_max) {
-                                        connectivityDepth2[part.getStartIndex()][destIndex] += (float) part.getDensity();
-                                    }
-                                } else if (rp.connectImmature & part.getStatus()==1) { // nauplii
-                                    // Add arrival to connectivity file
-                                    int destIndex = siteEndNames.indexOf(part.getLastArrival());
-                                    double pDepth = part.getDepth();
-                                    if (pDepth >= rp.connectDepth1_min && pDepth <= rp.connectDepth1_max) {
-                                        connectivityImmature[part.getStartIndex()][destIndex] += (float) part.getDensity();
-                                    }
-                                    if (rp.recordConnectivityDepth2 && pDepth >= rp.connectDepth2_min && pDepth <= rp.connectDepth2_max) {
-                                        connectivityImmatureDepth2[part.getStartIndex()][destIndex] += (float) part.getDensity();
+                    // update connectivity
+                    if (rp.recordConnectivity) {
+                        for (Particle particle : particles) {
+                            if (particle.getArrivals() != null) {
+                                for (Arrival arrival : particle.getArrivals()) {
+                                    int destIndex = siteEndNames.indexOf(arrival.getArrivalSiteID());
+                                    if (arrival.getArrivalStatus() == 2) { // copepodids
+                                        if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth1_max) {
+                                            connectivity[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                        if (rp.recordConnectivityDepth2 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth2_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth2_max) {
+                                            connectivityDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                    } else if (rp.connectImmature && arrival.getArrivalStatus() == 1) {
+                                        if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth1_max) {
+                                            connectivityImmature[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                        if (rp.recordConnectivityDepth2 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth2_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth2_max) {
+                                            connectivityImmatureDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
                                     }
                                 }
-
-                                // Reset ability to settle
-                                part.setSettledThisHour(false);
                             }
                         }
                     }
-
 
                     // Hourly updates to pstep arrays
                     if (rp.recordPsteps) {
@@ -430,6 +423,9 @@ public class Particle_track {
                                         "connectivityImm_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
                             }
+                        }
+                        for (Particle particle : particles) {
+                            particle.clearArrivals();
                         }
                     }
 
@@ -913,18 +909,6 @@ public class Particle_track {
         status[4] += previousStatus[4];
         status[5] += previousStatus[5];
         return status;
-    }
-
-
-    // calculate a connectivity matrix detailing the 
-    public static double[][] connectFromParticleArrivals(List<Particle> particles, int nStartLocs, int nEndLocs, int npartsPerSite) {
-        double[][] connectMatrix = new double[nStartLocs][nEndLocs];
-        for (Particle part : particles) {
-            for (Arrival arrival : part.getArrivals()) {
-                connectMatrix[arrival.getSourceLocation()][arrival.getArrivalLocation()] += arrival.getArrivalDensity() / npartsPerSite;
-            }
-        }
-        return connectMatrix;
     }
 
 
