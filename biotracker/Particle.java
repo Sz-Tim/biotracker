@@ -441,10 +441,19 @@ public class Particle {
 
     public double calcSwimDownProb(double salinity, RunProperties rp) {
         double prSwimDown = 0;
-        if (salinity < rp.salinityThreshMax & salinity > rp.salinityThreshMin) {
-            prSwimDown =  (rp.salinityThreshMax - salinity) / (rp.salinityThreshMax - rp.salinityThreshMin);
+        double salThreshMin = 0;
+        double salThreshMax = 0;
+        if (this.isInfectious()) {
+            salThreshMin = rp.salinityThreshCopepodidMin;
+            salThreshMax = rp.salinityThreshCopepodidMax;
+        } else {
+            salThreshMin = rp.salinityThreshNaupliusMin;
+            salThreshMax = rp.salinityThreshNaupliusMax;
         }
-        if (salinity <= rp.salinityThreshMin) {
+        if (salinity < salThreshMax & salinity > salThreshMin) {
+            prSwimDown =  (salThreshMax - salinity) / (salThreshMax - salThreshMin);
+        }
+        if (salinity <= salThreshMin) {
             prSwimDown = 1;
         }
         return prSwimDown;

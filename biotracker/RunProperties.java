@@ -77,7 +77,8 @@ public class RunProperties {
             swimDownSpeedMean, swimDownSpeedStd, // Particle sinking distribution parameters
             swimDownSpeedCopepodidMean, swimDownSpeedCopepodidStd,
             swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
-            salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
+            salinityThreshold, // sink below threshold
+            salinityThreshCopepodidMin, salinityThreshCopepodidMax, salinityThreshNaupliusMin, salinityThreshNaupliusMax, // Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             passiveSinkingIntercept, passiveSinkingSlope,
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
@@ -202,8 +203,10 @@ public class RunProperties {
         swimDownSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusMean", "" + swimDownSpeedMean/2));
         swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + swimDownSpeedStd/2));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
-        salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
-        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
+        salinityThreshCopepodidMin = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMin", "" + salinityThreshold));
+        salinityThreshCopepodidMax = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMax", "" + (salinityThreshold+0.001)));
+        salinityThreshNaupliusMin = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMin", "" + salinityThreshold));
+        salinityThreshNaupliusMax = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMax", "" + (salinityThreshold+0.001)));
         passiveSinkingIntercept = Double.parseDouble(properties.getProperty("passiveSinkingIntercept", "0.001527"));
         passiveSinkingSlope = Double.parseDouble(properties.getProperty("passiveSinkingSlope", "-0.0000168"));
         eggTemp_fn = properties.getProperty("eggTemp_fn", "constant");
@@ -377,7 +380,8 @@ public class RunProperties {
                 "Mortality rate parameters (/h): " + this.mortSal_b + "\n" +
                 "Passive sinking intercept (m/s): " + this.passiveSinkingIntercept + "\n" +
                 "Passive sinking slope (m/s/psu): " + this.passiveSinkingSlope + "\n" +
-                "P(swim down) = 0-1: " + this.salinityThreshMax + " - " + salinityThreshMin + "\n" +
+                "Copepodid P(swim down) = 0-1: " + this.salinityThreshCopepodidMax + " - " + salinityThreshCopepodidMin + "\n" +
+                "Nauplius P(swim down) = 0-1: " + this.salinityThreshNaupliusMax + " - " + salinityThreshNaupliusMin + "\n" +
                 "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim down speed (m/s) ~ Norm(" + this.swimDownSpeedNaupliusMean + ", " + this.swimDownSpeedNaupliusStd + ")" + "\n" +
                 "Swim up based on shortwave: " + this.swimLightLevel + "\n" +
