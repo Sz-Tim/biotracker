@@ -522,6 +522,29 @@ public class Particle {
         return diffusion;
     }
 
+
+    public double[] calcStokesSurface(double sigWaveHeight, double meanWaveDir, double meanWavePeriod) {
+        double k = (2 * Math.PI) / (9.81 * Math.pow(meanWavePeriod, 2));
+        double omega = (2 * Math.PI) / meanWavePeriod;
+        double[] stokesSurfaceUV = new double[2];
+        stokesSurfaceUV[0] = (omega * Math.pow(sigWaveHeight, 2))/16 * Math.cos(meanWaveDir);
+        stokesSurfaceUV[1] = (omega * Math.pow(sigWaveHeight, 2))/16 * Math.sin(meanWaveDir);
+        return stokesSurfaceUV;
+    }
+
+
+    public double[] calcStokesDepthExponential(double[] stokesSurfaceUV, double sigWaveHeight, double meanWavePeriod, double depth, double dt) {
+        double stokesSurfaceSpeed = Math.sqrt(Math.pow(stokesSurfaceUV[0], 2) + Math.pow(stokesSurfaceUV[1], 2));
+        double stokesTransportMonochromatic = (2 * Math.PI / meanWavePeriod) * Math.pow(sigWaveHeight, 2) / 16;
+        double km = stokesSurfaceSpeed / (2 * stokesTransportMonochromatic);
+        double ke = km/3;
+        double stokesSpeed = stokesSurfaceSpeed * Math.exp(2*ke*depth) / (1-8*ke*depth); // check: depth needs to be negative!
+        double[] stokesDepthUV = new double[2];
+        stokesDepthUV[0] = stokesSpeed * stokesSurfaceUV[0] / stokesSpeed * dt;
+        stokesDepthUV[1] = stokesSpeed * stokesSurfaceUV[1] / stokesSpeed * dt;
+        return stokesDepthUV;
+    }
+
     /**
      * Move the particle within the mesh, updating the particle location, mesh, and element.
      * In the case where meshes is length 2, particles are always preferentially in mesh 0. Particles can only exit
