@@ -523,28 +523,6 @@ public class Particle {
     }
 
 
-    public double[] calcStokesSurface(double sigWaveHeight, double meanWaveDir, double meanWavePeriod) {
-        double k = (2 * Math.PI) / (9.81 * Math.pow(meanWavePeriod, 2));
-        double omega = (2 * Math.PI) / meanWavePeriod;
-        double[] stokesSurfaceUV = new double[2];
-        stokesSurfaceUV[0] = (omega * Math.pow(sigWaveHeight, 2))/16 * Math.cos(meanWaveDir);
-        stokesSurfaceUV[1] = (omega * Math.pow(sigWaveHeight, 2))/16 * Math.sin(meanWaveDir);
-        return stokesSurfaceUV;
-    }
-
-
-    public double[] calcStokesDepthExponential(double[] stokesSurfaceUV, double sigWaveHeight, double meanWavePeriod, double depth, double dt) {
-        double stokesSurfaceSpeed = Math.sqrt(Math.pow(stokesSurfaceUV[0], 2) + Math.pow(stokesSurfaceUV[1], 2));
-        double stokesTransportMonochromatic = (2 * Math.PI / meanWavePeriod) * Math.pow(sigWaveHeight, 2) / 16;
-        double km = stokesSurfaceSpeed / (2 * stokesTransportMonochromatic);
-        double ke = km/3;
-        double stokesSpeed = stokesSurfaceSpeed * Math.exp(2*ke*depth) / (1-8*ke*depth); // check: depth needs to be negative!
-        double[] stokesDepthUV = new double[2];
-        stokesDepthUV[0] = stokesSpeed * stokesSurfaceUV[0] / stokesSpeed * dt;
-        stokesDepthUV[1] = stokesSpeed * stokesSurfaceUV[1] / stokesSpeed * dt;
-        return stokesDepthUV;
-    }
-
     /**
      * Move the particle within the mesh, updating the particle location, mesh, and element.
      * In the case where meshes is length 2, particles are always preferentially in mesh 0. Particles can only exit
@@ -1193,13 +1171,6 @@ public class Particle {
      * @param elemsChecked Set of already checked elements
      * @return Array of neighbouring elements that have not been checked
      */
-//    private static int[] getNeighbours(int[] elems, int[][] neighbours, Set<Integer> elemsChecked) {
-//        return Arrays.stream(elems)
-//                .flatMap(elem -> Arrays.stream(neighbours).mapToInt(neigh -> neigh[elem]))
-//                .filter(neigh -> !elemsChecked.contains(neigh) && neigh != 0)
-//                .distinct()
-//                .toArray();
-//    }
 
     private static int[] getNeighbours(int[] elems, int[][] neighbours, Set<Integer> elemsChecked) {
         Set<Integer> neighboursSet = new HashSet<>();
@@ -1263,8 +1234,7 @@ public class Particle {
      * @param coordOS use OS coordinate system: EPSG 27700
      * @return double[8][3] with rows = elements and columns = [elementID, distance to particle (3D), depth layer]
      */
-    public static double[][] neighbourCellsList3D(double[] xy, int elemPart, int depLayer, float[][] uvnode,
-                                                  float[] depthUvnode, float[][] nodexy, int[][] trinodes,
+    public static double[][] neighbourCellsList3D(double[] xy, int elemPart, int depLayer, float[][] uvnode, float[] depthUvnode,
                                                   float[] siglayers, int[][] neighbours, double depth, boolean coordOS) {
 
         double[][] nrList = new double[8][3]; // (3 neighbors per layer + containing element) * 2 layers = 8
@@ -1322,6 +1292,18 @@ public class Particle {
         return nrList;
     }
 
+
+    public static double[] distanceToNodes(double[] xy, int elemPart, float[][] nodexy, int[][] trinodes, boolean coordOS) {
+        double[] nodeDistList = new double[3]; // [3 nodes per layer]
+        if (elemPart == -1) {
+            return nodeDistList;
+        }
+        for (int node = 0; node < trinodes.length; node++) {
+            nodeDistList[node] = distanceEuclid2(xy[0], xy[1], nodexy[0][trinodes[node][elemPart]], nodexy[1][trinodes[node][elemPart]], coordOS);
+        }
+        return nodeDistList;
+    }
+
     /**
      * Update particle location using an RK4 integration step.
      */
@@ -1335,6 +1317,85 @@ public class Particle {
         int depLayer = this.getDepthLayer();
         float[][] uvnode = meshes.get(meshPart).getUvnode();
         float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
+        float[] siglayers = meshes.get(meshPart).getSiglay();
+        int[][] neighbours = meshes.get(meshPart).getNeighbours();
+        float[][][] u = hydroFields.get(meshPart).getU();
+        float[][][] v = hydroFields.get(meshPart).getV();
+        float[][][] w = hydroFields.get(meshPart).getW();
+        double[] advectStep = {0,0,0};
+
+        // 1. Compute k_1 (initial spatial interpolation)
+        double[] k1 = stepAhead(this.getLocation(), this.getDepth(), elemPart, depLayer, 0, uvnode, depthUvnode,
+                siglayers, neighbours, u, v, w, hour, step, dt, stepsPerStep, coordOS, FVCOM);
+        double[] k1Deg = new double[]{k1[0], k1[1]};
+        if (!this.coordOS) {
+            k1Deg = ParallelParticleMover.distanceMetresToDegrees2(k1Deg, this.getLocation());
+        }
+        double[] k1Loc = new double[]{this.getLocation()[0] + k1Deg[0] / 2.0, this.getLocation()[1] + k1Deg[1] / 2.0};
+        double k1Depth = this.getDepth() + k1[2] / 2.0;  // k1[2] = 0 if fixDepth = true
+        int k1ElemPart = findContainingElement(k1Loc, elemPart, meshes.get(meshPart), false, 10)[0];
+        elemPart = k1ElemPart == -1 ? elemPart : k1ElemPart; // particles can't exit mesh during substeps
+        depLayer = findLayerFromDepth(k1Depth, depthUvnode[elemPart], siglayers);
+
+        // 2. Compute k_2 (spatial interpolation at half step, temporal interpolation at half step)
+        // Estimated half-step location using Euler
+        // NOTE that here, for the purposes of identifying the elements containing the part-step locations,
+        // the steps in degrees are calculated. These are separate of the actual half-step values in metres
+        // which are retained and summed at the end of the method to give a transport distance in metres
+        double[] k2 = stepAhead(k1Loc, k1Depth,elemPart, depLayer, 1.0 / 2.0, uvnode, depthUvnode,
+                siglayers, neighbours, u, v, w, hour, step, dt, stepsPerStep, coordOS, FVCOM);
+        double[] k2Deg = new double[]{k2[0], k2[1]};
+        if (!this.coordOS) {
+            k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
+        }
+        double[] k2Loc = new double[]{this.getLocation()[0] + k2Deg[0] / 2.0, this.getLocation()[1] + k2Deg[1] / 2.0};
+        double k2Depth = this.getDepth() + k2[2] / 2.0;  // k2[2] = 0 if fixDepth = true
+        int k2ElemPart = findContainingElement(k1Loc, elemPart, meshes.get(meshPart), false, 10)[0];
+        elemPart = k2ElemPart == -1 ? elemPart : k2ElemPart; // particles can't exit mesh during substeps
+        depLayer = findLayerFromDepth(k2Depth, depthUvnode[elemPart], siglayers);
+
+        // 3. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
+        double[] k3 = stepAhead(k2Loc, k2Depth, elemPart, depLayer, 1.0 / 2.0, uvnode, depthUvnode,
+                siglayers, neighbours, u, v, w, hour, step, dt, stepsPerStep, coordOS, FVCOM);
+        double[] k3Deg = new double[]{k3[0], k3[1]};
+        if (!this.coordOS) {
+            k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
+        }
+        double[] k3Loc = new double[]{this.getLocation()[0] + k3Deg[0], this.getLocation()[1] + k3Deg[1]};
+        double k3Depth = this.getDepth() + k3[2];  // k3[2] = 0 if fixDepth = true
+        int k3ElemPart = findContainingElement(k3Loc, elemPart, meshes.get(meshPart), false, 10)[0];
+        elemPart = k3ElemPart == -1 ? elemPart : k3ElemPart; // particles can't exit mesh during substeps
+        depLayer = findLayerFromDepth(k3Depth, depthUvnode[elemPart], siglayers);
+
+        // 4. Compute k_4 (spatial interpolation at end step)
+        double[] k4 = stepAhead(k3Loc, k3Depth, elemPart, depLayer, 1.0, uvnode, depthUvnode,
+                siglayers, neighbours, u, v, w, hour, step, dt, stepsPerStep, coordOS, FVCOM);
+
+        // 5. Add it all together
+        if(k1[0] != 0 && k2[0] != 0 && k3[0] != 0 && k4[0] != 0) {
+            for (int i = 0; i < 3; i++) {
+                advectStep[i] = (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6.0;
+            }
+        }
+        return advectStep;
+    }
+
+    /**
+     * Update particle location using an RK4 integration step.
+     */
+    public double[] rk4StokesStep(List<HydroField> hydroFields, // velocities
+                                  List<Mesh> meshes,      // other mesh info
+                                  int hour, int step, double dt,           // locate particle in space and time
+                                  int stepsPerStep,  // info on simulation length
+                                  boolean coordOS, boolean FVCOM) {
+        int elemPart = this.getElem();
+        int meshPart = this.getMesh();
+        int depLayer = this.getDepthLayer();
+        if (meshPart != 0) {
+            System.err.println("Error: Stokes drift not implemented for nested meshes!");
+        }
+        float[][] uvnode = meshes.get(meshPart).getUvnode();
+        float[] depthUvnode = meshes.get(meshPart).getDepthUvnode();
         float[][] nodexy = meshes.get(meshPart).getNodexy();
         int[][] trinodes = meshes.get(meshPart).getTrinodes();
         float[] siglayers = meshes.get(meshPart).getSiglay();
@@ -1345,12 +1406,9 @@ public class Particle {
         double[] advectStep = {0,0,0};
 
         // 1. Compute k_1 (initial spatial interpolation)
-        double[] k1 = stepAhead(
-                this.getLocation(), this.getDepth(),
-                elemPart, depLayer, 0,
+        double[] k1 = stepAheadStokes(this.getLocation(), this.getDepth(), elemPart, depLayer, 0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
-                u, v, w,
-                hour, step, dt, stepsPerStep, coordOS, FVCOM
+                u, v, w, hydroFields.get(2), hour, step, dt, stepsPerStep, coordOS, FVCOM
         );
         double[] k1Deg = new double[]{k1[0], k1[1]};
         if (!this.coordOS) {
@@ -1367,12 +1425,9 @@ public class Particle {
         // NOTE that here, for the purposes of identifying the elements containing the part-step locations,
         // the steps in degrees are calculated. These are separate of the actual half-step values in metres
         // which are retained and summed at the end of the method to give a transport distance in metres
-        double[] k2 = stepAhead(
-                k1Loc, k1Depth,
-                elemPart, depLayer, 1.0 / 2.0,
+        double[] k2 = stepAheadStokes(k1Loc, k1Depth, elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
-                u, v, w,
-                hour, step, dt, stepsPerStep, coordOS, FVCOM);
+                u, v, w, hydroFields.get(2), hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k2Deg = new double[]{k2[0], k2[1]};
         if (!this.coordOS) {
             k2Deg = ParallelParticleMover.distanceMetresToDegrees2(k2Deg, this.getLocation());
@@ -1384,12 +1439,9 @@ public class Particle {
         depLayer = findLayerFromDepth(k2Depth, depthUvnode[elemPart], siglayers);
 
         // 3. Compute k_3 (spatial interpolation at half step, temporal interpolation at half step)
-        double[] k3 = stepAhead(
-                k2Loc, k2Depth,
-                elemPart, depLayer, 1.0 / 2.0,
+        double[] k3 = stepAheadStokes(k2Loc, k2Depth, elemPart, depLayer, 1.0 / 2.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
-                u, v, w,
-                hour, step, dt, stepsPerStep, coordOS, FVCOM);
+                u, v, w, hydroFields.get(2), hour, step, dt, stepsPerStep, coordOS, FVCOM);
         double[] k3Deg = new double[]{k3[0], k3[1]};
         if (!this.coordOS) {
             k3Deg = ParallelParticleMover.distanceMetresToDegrees2(k3Deg, this.getLocation());
@@ -1401,12 +1453,9 @@ public class Particle {
         depLayer = findLayerFromDepth(k3Depth, depthUvnode[elemPart], siglayers);
 
         // 4. Compute k_4 (spatial interpolation at end step)
-        double[] k4 = stepAhead(
-                k3Loc, k3Depth,
-                elemPart, depLayer, 1.0,
+        double[] k4 = stepAheadStokes(k3Loc, k3Depth, elemPart, depLayer, 1.0,
                 uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours,
-                u, v, w,
-                hour, step, dt, stepsPerStep, coordOS, FVCOM);
+                u, v, w, hydroFields.get(2), hour, step, dt, stepsPerStep, coordOS, FVCOM);
 
         // 5. Add it all together
         if(k1[0] != 0 && k2[0] != 0 && k3[0] != 0 && k4[0] != 0) {
@@ -1424,7 +1473,7 @@ public class Particle {
      * @param timeStepAhead Time step ahead i.e. "1.0/2.0" if half-step ahead, "1.0" if full step ahead
      */
     public static double[] stepAhead(double[] xy, double depth, int elemPart, int depLayer, double timeStepAhead,
-                                     float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes,
+                                     float[][] uvnode, float[] depthUvnode,
                                      float[] siglayers, int[][] neighbours,
                                      float[][][] u, float[][][] v, float[][][] w,
                                      int hour, int step, double dt,
@@ -1435,7 +1484,7 @@ public class Particle {
 
         if (FVCOM) {
             double[][] xNrList;
-            xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, nodexy, trinodes, siglayers, neighbours, depth, coordOS);
+            xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, siglayers, neighbours, depth, coordOS);
 
             // 2. Compute k_1 (spatial interpolation at start of step)
             // Velocity from start of time step
@@ -1468,6 +1517,46 @@ public class Particle {
             xyz_step[i] = dt * (vel[i] + ((step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
         }
 
+        return xyz_step;
+    }
+
+    public static double[] stepAheadStokes(double[] xy, double depth, int elemPart, int depLayer, double timeStepAhead,
+                                     float[][] uvnode, float[] depthUvnode, float[][] nodexy, int[][] trinodes,
+                                     float[] siglayers, int[][] neighbours,
+                                     float[][][] u, float[][][] v, float[][][] w,
+                                     HydroField hfStokes,
+                                     int hour, int step, double dt,
+                                     int stepsPerStep, boolean coordOS, boolean FVCOM) {
+        double[] xyz_step = {0,0,0};
+        double[] vel = {0,0,0};
+        double[] velplus1 = {0,0,0};
+        double[] velStokes = {0,0};
+        double[] velplus1Stokes = {0,0};
+
+        if (FVCOM) {
+            double[][] xNrList = neighbourCellsList3D(xy, elemPart, depLayer, uvnode, depthUvnode, siglayers, neighbours, depth, coordOS);
+            double[] xNodeList = distanceToNodes(xy, elemPart, nodexy, trinodes, coordOS);
+            // If predicted location of particle is outside mesh, return zero velocity
+            if (xNrList[0][0] == 0) {
+                return xyz_step;
+            }
+            // Velocity from start of time step
+            vel = velocityFromNearestList(xNrList, u[hour], v[hour], w[hour]);
+            velStokes = hfStokes.getAvgFromTrinodes(elemPart, trinodes, xNodeList, hour, depth);
+            // Velocity from end of this hour - will linearly interpolate to end of subTimeStep below and in stepAhead
+            velplus1 = velocityFromNearestList(xNrList, u[hour+1], v[hour+1], w[hour+1]);
+            velplus1Stokes = hfStokes.getAvgFromTrinodes(elemPart, trinodes, xNodeList, hour+1, depth);
+            for (int i=0; i < 2; i++) {
+                vel[i] += velStokes[i];
+                velplus1[i] += velplus1Stokes[i];
+            }
+        } else {
+            System.err.println("Error: Stokes drift only implemented for FVCOM");
+        }
+        // Do the relevant temporal interpolation for this part of the step
+        for (int i = 0; i < 3; i++) {
+            xyz_step[i] = dt * (vel[i] + ((step + timeStepAhead) / (double) stepsPerStep) * (velplus1[i] - vel[i]));
+        }
         return xyz_step;
     }
 

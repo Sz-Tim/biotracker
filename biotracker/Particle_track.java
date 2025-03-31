@@ -7,10 +7,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.nio.file.FileSystems;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.sql.Array;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
@@ -50,16 +48,16 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // File reading and domain configuration
         // --------------------------------------------------------------------------------------       
-        List<Mesh> meshes = new ArrayList<>();
-        meshes.add(new Mesh(rp.mesh1, rp.mesh1Type, rp.coordOS));
-        if (!rp.mesh2.isEmpty()) {
-            meshes.add(new Mesh(rp.mesh2, rp.mesh2Type, rp.coordOS));
-            if (rp.mesh2Domain.equalsIgnoreCase("westcoms2")) {
-                int adjElem1 = switch (rp.mesh1Domain) {
+        List<Mesh> meshes = new ArrayList<>(2);
+        meshes.add(new Mesh(rp.mesh0, rp.meshType0, rp.coordOS));
+        if (!rp.mesh1.isEmpty()) {
+            meshes.add(new Mesh(rp.mesh1, rp.meshType1, rp.coordOS));
+            if (rp.hfFilePrefix1.equalsIgnoreCase("westcoms2")) {
+                int adjElem1 = switch (rp.hfFilePrefix0) {
                     case "etive28" -> 69784;
                     default -> 69784;
                 };
-                int adjElem0 = switch (rp.mesh1Domain) {
+                int adjElem0 = switch (rp.hfFilePrefix0) {
                     case "etive28" -> 16;
                     default -> 16;
                 };
@@ -127,18 +125,37 @@ public class Particle_track {
         // --------------------------------------------------------------------------------------
         // Setup hydrodynamic fields and file lists
         // --------------------------------------------------------------------------------------
-        List<HydroField> hydroFields = new ArrayList<>();
-        List<HydroField> hfToday;
-        List<HydroField> hfTomorrow = null;
-        ArrayList<String> missingHydroFiles = IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays);
-        if(!missingHydroFiles.isEmpty()) {
-            System.out.println("\nWarning! Cannot find the following hydrodynamic files:");
-            for (String missing: missingHydroFiles) {
-                System.out.println(missing);
+        List<HydroField> hydroFields = new ArrayList<>(Collections.nCopies(3, null));
+        List<HydroField> hfToday = new ArrayList<>(Collections.nCopies(3, null));
+        List<HydroField> hfTomorrow = new ArrayList<>(Collections.nCopies(3, null));
+        List<Integer> hfIters = new ArrayList<>();
+        ArrayList<ArrayList<String>> missingHydroFiles = new ArrayList<>(Collections.nCopies(3, null));
+        for (int m = 0; m < meshes.size(); m++) {
+            hfIters.add(m);
+            missingHydroFiles.set(m, IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays, m));
+            if (!missingHydroFiles.get(m).isEmpty()) {
+                System.out.println("\nWarning! Cannot find these files for mesh " + m + ":");
+                for (String missing: missingHydroFiles.get(m)) {
+                    System.out.println(missing);
+                }
+                System.out.println("-- The previous day will be used for each instead!");
+            } else {
+                System.out.println("  All found for mesh " + m);
             }
-            System.out.println("-- The previous day will be used for each instead!");
-        } else {
-            System.out.println("  All found");
+        }
+        if (rp.needStokes) {
+            int m = 2;
+            hfIters.add(m);
+            missingHydroFiles.set(m, IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays, m));
+            if (!missingHydroFiles.get(m).isEmpty()) {
+                System.out.println("\nWarning! Cannot find these files for mesh " + m + ":");
+                for (String missing: missingHydroFiles.get(m)) {
+                    System.out.println(missing);
+                }
+                System.out.println("-- The previous day will be used for each instead!");
+            } else {
+                System.out.println("  All found for mesh " + m);
+            }
         }
 
         // --------------------------------------------------------------------------------------
@@ -245,16 +262,23 @@ public class Particle_track {
                         String currentDateShort = currentIsoDate.toStringShort();
                         ISO_datestr nextIsoDate = ISO_datestr.getTomorrow(currentIsoDate);
                         String nextDateShort = nextIsoDate.toStringShort();
-                        boolean missingToday = missingHydroFiles.contains(currentDateShort);
-                        boolean missingTomorrow = missingHydroFiles.contains(nextDateShort);
-                        if (missingToday) {
-                            System.out.print("Can't find file: Reusing hydrodynamics from yesterday\n");
-                            System.out.println("-------------------");
-                        } else {
-                            hfToday = fnum == 0 ? readHydroField(meshes, currentIsoDate, rp) : hfTomorrow;
-                            hfTomorrow = (missingTomorrow | isLastDay) ? hfToday : readHydroField(meshes, nextIsoDate, rp);
-                            hydroFields = mergeHydroFields(hfToday, hfTomorrow, rp);
-                            System.out.println("-------------------");
+                        for (Integer h : hfIters) {
+                            int m = h==2 ? 0 : h;
+                            boolean missingToday = missingHydroFiles.get(h).contains(currentDateShort);
+                            boolean missingTomorrow = missingHydroFiles.get(h).contains(nextDateShort);
+                            if (missingToday) {
+                                System.out.print("Can't find file: Reusing hydrodynamics from yesterday\n");
+                                System.out.println("-------------------");
+                            } else {
+                                hfToday.set(h, fnum == 0 ? readHydroField(meshes.get(m), currentIsoDate, rp, h) : hfTomorrow.get(h));
+                                hfTomorrow.set(h, (missingTomorrow | isLastDay) ? hfToday.get(h) : readHydroField(meshes.get(m), nextIsoDate, rp, h));
+                                if (h==2) {
+                                    hydroFields.set(h, mergeHydroFieldsStokes(hfToday.get(h), hfTomorrow.get(h), rp));
+                                } else {
+                                    hydroFields.set(h, mergeHydroFields(hfToday.get(h), hfTomorrow.get(h), rp));
+                                }
+                                System.out.println("-------------------");
+                            }
                         }
                     }
 
@@ -267,10 +291,12 @@ public class Particle_track {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
                         int m = habitat.get(i).getContainingMesh();
                         int nLayers = (int) Mesh.findNearestSigmas(20.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
-                        double[][] currentConditions = new double[nLayers][7];
+                        double[][] currentConditions = new double[nLayers][13];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
                         siteLoc[1] = habitat.get(i).getLocation()[1];
+                        double[] siteNodeDist = Particle.distanceToNodes(siteLoc, siteElem, meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), rp.coordOS);
+                        double[] siteStokesUV = {0,0};
                         for (int j = 0; j < nLayers; j++) {
                             currentConditions[j][0] = hydroFields.get(m).getU()[currentHour][j][siteElem];
                             currentConditions[j][1] = hydroFields.get(m).getV()[currentHour][j][siteElem];
@@ -279,6 +305,15 @@ public class Particle_track {
                             currentConditions[j][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "salinity", rp) : -9999;
                             currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
                             currentConditions[j][6] = rp.needK ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "km", rp) : -9999;
+                            if (rp.needStokes) {
+                                siteStokesUV = hydroFields.get(2).getAvgFromTrinodes(siteElem, meshes.get(0).getTrinodes(), siteNodeDist, currentHour, 0);
+                            }
+                            currentConditions[j][7] = rp.needStokes ? siteStokesUV[0] : -9999;
+                            currentConditions[j][8] = rp.needStokes ? siteStokesUV[1] : -9999;
+                            currentConditions[j][9] = rp.needStokes ? Math.sqrt(siteStokesUV[0]*siteStokesUV[0] + siteStokesUV[1]*siteStokesUV[1]) : -9999;
+                            currentConditions[j][10] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Hsig", rp) : -9999;
+                            currentConditions[j][11] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Dir", rp) : -9999;
+                            currentConditions[j][12] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Tm", rp) : -9999;
                             habitat.get(i).addEnvCondition(currentConditions[j]);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
@@ -455,11 +490,13 @@ public class Particle_track {
 
                 FileWriter fstream = new FileWriter("siteConditions_" + today + "_" + Math.round(elapsedHours) + ".csv", false);
                 PrintWriter out = new PrintWriter(fstream);
-                out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,u,v,w,uv,salinity,temperature,k");
+                out.println("site,x,y,depth,mesh,centroid,elem,MeshType," +
+                        "u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,stokesU0_Avg,stokesV0_Avg,stokesUV0_Avg,Hsig_Avg,waveDir_Avg,waveT_Avg," +
+                        "u,v,w,uv,salinity,temperature,k,stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT");
                 for (HabitatSite habitatSite : habitat) {
                     out.println(habitatSite);
-                    habitatSite.setEnvConditionDay(new double[7]);
-                    habitatSite.setEnvConditionCountDay(new int[7]);
+                    habitatSite.setEnvConditionDay(new double[13]);
+                    habitatSite.setEnvConditionCountDay(new int[13]);
                 }
                 out.close();
 
@@ -493,7 +530,9 @@ public class Particle_track {
 
         FileWriter fstream = new FileWriter("startSitesUsed.csv", false);
         PrintWriter out = new PrintWriter(fstream);
-        out.println("site,x,y,depth,mesh,centroid,elem,MeshType,u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,u,v,w,uv,salinity,temperature,k");
+        out.println("site,x,y,depth,mesh,centroid,elem,MeshType," +
+                "u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,stokesU0_Avg,stokesV0_Avg,stokesUV0_Avg,Hsig_Avg,waveDir_Avg,waveT_Avg," +
+                "u,v,w,uv,salinity,temperature,k,stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT");
         for (HabitatSite habitatSite : habitat) {
             out.println(habitatSite);
         }
@@ -550,331 +589,300 @@ public class Particle_track {
      * iii) More than one mesh, hour 23 of the day. In this case, as single hour (23) is read from
      * the first file, and then record 0 from tomorrow's file is read.
      */
-    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) throws InterruptedException {
-        List<HydroField> hydroFields = new ArrayList<>();
+//    public static List<HydroField> readHydroFields(List<Mesh> meshes, ISO_datestr currentIsoDate, int currentHour, boolean isLastDay, RunProperties rp) throws InterruptedException {
+//        List<HydroField> hydroFields = new ArrayList<>();
+//
+//        // 24 hr files only case - read once a day
+//        int m = 0;
+//        for (Mesh mesh : meshes) {
+//            if (mesh.getType().equalsIgnoreCase("FVCOM")) {
+//
+//                // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
+//                int readAttempt = 0;
+//                while (readAttempt < 5) {
+//                    try{
+//                        // Dima file naming format: minch2_20171229_0003.nc
+//                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave", "Hsig", "Dir", "Tm01"};
+//
+//                        // Normal "forwards time"
+//                        if (!rp.backwards) {
+//                            ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
+//                            if (isLastDay) {
+//                                System.out.println("** Last day or missing day - reading same hydro file twice **");
+//                                tomorrow = currentIsoDate;
+//                            }
+//                            // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
+//                            String[] dirsT1 = new String[]{
+//                                    rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
+//                                    rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
+//                            String[] dirsT2 = new String[]{
+//                                    rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
+//                                    rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
+//                            String[] filesT1 = new String[]{
+//                                    rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+//                                    rp.mesh2Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+//                            String[] filesT2 = new String[]{
+//                                    rp.mesh1Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
+//                                    rp.mesh2Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
+//                            List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
+//                            List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
+//                            // Read both files and combine
+//                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+//                        }
+//                        // Instead read time backwards, so need yesterday instead
+//                        else {
+//                            List<File> files1 = (List<File>) FileUtils.listFiles(
+//                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
+//                                    new WildcardFileFilter(rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
+//                                    null);
+//                            ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
+//                            if (isLastDay) {
+//                                System.out.println("** Last day - reading same hydro file twice **");
+//                                yesterday = currentIsoDate;
+//                            }
+//                            List<File> files2 = (List<File>) FileUtils.listFiles(
+//                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
+//                                    new WildcardFileFilter(rp.mesh1Domain + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
+//                                    null);
+//                            // Read both files and combine
+//                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+//                        }
+//                        readAttempt = 5; // success, so exit loop
+//                    } catch (Exception ignored) {
+//                        System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt+1);
+//                        readAttempt++;
+//                        Thread.sleep(5000);
+//                        if (readAttempt == 5) {
+//                            System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
+//                            if (!rp.backwards) {
+//                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
+//                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+//                            } else {
+//                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
+//                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
+//                            }
+//                            System.exit(1);
+//                        }
+//                    }
+//                }
+//            } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
+//                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
+//                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
+//                String filename2 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
+//                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
+//                String[] varNames1 = {"u", "v", "", "", ""};
+//                // Read both files and combine
+//                hydroFields.add(new HydroField(filename1, filename2, varNames1, null, null, null, "ROMS_TRI", rp));
+//            }
+//
+//            m++;
+//
+//        }
+//        return hydroFields;
+//    }
 
-        // 24 hr files only case - read once a day
-        int m = 0;
-        for (Mesh mesh : meshes) {
-            if (mesh.getType().equalsIgnoreCase("FVCOM")) {
 
-                // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
-                int readAttempt = 0;
-                while (readAttempt < 5) {
-                    try{
-                        // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave"};
+    public static HydroField readHydroField(Mesh mesh, ISO_datestr currentIsoDate, RunProperties rp, int m) throws InterruptedException {
+        if (mesh.getType().equalsIgnoreCase("FVCOM")) {
+            // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
+            int readAttempt = 0;
+            while (readAttempt < 5) {
+                try {
+                    String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave", "Hsig", "Dir", "Tm01"};
 
-                        // Normal "forwards time"
+                    // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
+                    String[] dirsT1 = new String[]{
+                            rp.hfDir0 + rp.hfDirPrefix0 + currentIsoDate.getYear() + rp.hfDirSuffix0 + FileSystems.getDefault().getSeparator(),
+                            rp.hfDir1 + rp.hfDirPrefix1 + currentIsoDate.getYear() + rp.hfDirSuffix1 + FileSystems.getDefault().getSeparator(),
+                            rp.hfDir2 + rp.hfDirPrefix2 + currentIsoDate.getYear() + rp.hfDirSuffix2 + FileSystems.getDefault().getSeparator()};
+                    String[] filesT1 = new String[]{
+                            rp.hfFilePrefix0 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                            rp.hfFilePrefix1 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
+                            rp.hfFilePrefix2 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
+                    List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
+                    // Read both files and combine
+                    if (m == 2) {
+                        return(new HydroField(files1.get(0).getCanonicalPath(), varNames1, null, null, null, true, rp));
+                    } else {
+                        return(new HydroField(files1.get(0).getCanonicalPath(), varNames1, null, null, null, rp));
+                    }
+                } catch (Exception ignored) {
+                    System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt + 1);
+                    readAttempt++;
+                    Thread.sleep(5000);
+                    if (readAttempt == 5) {
+                        System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
                         if (!rp.backwards) {
-                            ISO_datestr tomorrow = ISO_datestr.getTomorrow(currentIsoDate);
-                            if (isLastDay) {
-                                System.out.println("** Last day or missing day - reading same hydro file twice **");
-                                tomorrow = currentIsoDate;
-                            }
-                            // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
-                            String[] dirsT1 = new String[]{
-                                    rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
-                                    rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
-                            String[] dirsT2 = new String[]{
-                                    rp.datadir + rp.datadirPrefix + tomorrow.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
-                                    rp.datadir2 + rp.datadir2Prefix + tomorrow.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
-                            String[] filesT1 = new String[]{
-                                    rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
-                                    rp.mesh2Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
-                            String[] filesT2 = new String[]{
-                                    rp.mesh1Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc",
-                                    rp.mesh2Domain + "_" + tomorrow.getYear() + String.format("%02d", tomorrow.getMonth()) + String.format("%02d", tomorrow.getDay()) + "*.nc"};
-                            List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
-                            List<File> files2 = (List<File>) FileUtils.listFiles(new File(dirsT2[m]), new WildcardFileFilter(filesT2[m]), null);
-                            // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
+                            System.err.println("Requested file: " + rp.hfDir0 + rp.hfDirPrefix0 + currentIsoDate.getYear() + rp.hfDirSuffix0 + FileSystems.getDefault().getSeparator()
+                                    + rp.hfFilePrefix0 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
+                        } else {
+                            System.err.println("Requested file: " + rp.hfDir0 + rp.hfDirPrefix0 + currentIsoDate.getYear() + rp.hfDirSuffix0 + FileSystems.getDefault().getSeparator()
+                                    + rp.hfFilePrefix0 + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
                         }
-                        // Instead read time backwards, so need yesterday instead
-                        else {
-                            List<File> files1 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
-                                    new WildcardFileFilter(rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc"),
-                                    null);
-                            ISO_datestr yesterday = ISO_datestr.getYesterday(currentIsoDate);
-                            if (isLastDay) {
-                                System.out.println("** Last day - reading same hydro file twice **");
-                                yesterday = currentIsoDate;
-                            }
-                            List<File> files2 = (List<File>) FileUtils.listFiles(
-                                    new File(rp.datadir + rp.datadirPrefix + yesterday.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()),
-                                    new WildcardFileFilter(rp.mesh1Domain + "_" + yesterday.getYear() + String.format("%02d", yesterday.getMonth()) + String.format("%02d", yesterday.getDay()) + "*_rev.nc"),
-                                    null);
-                            // Read both files and combine
-                            hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), files2.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
-                        }
-                        readAttempt = 5; // success, so exit loop
-                    } catch (Exception ignored) {
-                        System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt+1);
-                        readAttempt++;
-                        Thread.sleep(5000);
-                        if (readAttempt == 5) {
-                            System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
-                            if (!rp.backwards) {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
-                            } else {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
-                            }
-                            System.exit(1);
-                        }
+                        System.exit(1);
                     }
                 }
-            } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
-                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
-                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
-                String filename2 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
-                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
-                String[] varNames1 = {"u", "v", "", "", ""};
-                // Read both files and combine
-                hydroFields.add(new HydroField(filename1, filename2, varNames1, null, null, null, "ROMS_TRI", rp));
             }
-
-            m++;
-
+        } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
+//            String filename1 = rp.hfDir1 + rp.hfDirPrefix1 + currentIsoDate.getYear() + rp.hfDirSuffix1 + FileSystems.getDefault().getSeparator()
+//                    + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
+//            String[] varNames1 = {"u", "v", "", "", ""};
+//            // Read both files and combine
+//            return(new HydroField(filename1, varNames1, null, null, null, "ROMS_TRI", rp));
         }
-        return hydroFields;
+        return(null);
+    }
+
+    // Note: Stokes drift variables are stored in a separate structure as relevant .nc files are assumed to be distinct
+    public static HydroField mergeHydroFields(HydroField hf1, HydroField hf2, RunProperties rp) {
+        // Get hydrodynamics
+        float[][][] u1 = hf1.getU(), u2 = hf2.getU();
+        float[][][] u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
+        float[][][] v1 = hf1.getV(), v2 = hf2.getV();
+        float[][][] v = new float[v1.length + 1][v1[0].length][v1[0][0].length];
+        float[][][] w1 = hf1.getW(), w2 = hf2.getW();
+        float[][][] w = new float[w1.length + 1][w1[0].length][w1[0][0].length];
+
+        int nHour = u1.length;
+        int nDep = u1[0].length;
+        int nElem = u1[0][0].length;
+        int nNode = 0;
+
+        float[][][] s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null, vh = null, vh1 = null, vh2 = null;
+        float[][] zeta = null, zeta1 = null, zeta2 = null, light = null, light1 = null, light2 = null;
+        if (rp.needS) {
+            s1 = hf1.getS();
+            s2 = hf2.getS();
+            s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
+            nNode = s1[0][0].length;
+        }
+        if (rp.needT) {
+            t1 = hf1.getT();
+            t2 = hf2.getT();
+            t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
+            nNode = t1[0][0].length;
+        }
+        if (rp.needZeta) {
+            zeta1 = hf1.getZeta();
+            zeta2 = hf2.getZeta();
+            zeta = new float[zeta1.length + 1][zeta1[0].length];
+            nNode = zeta1[0].length;
+        }
+        if (rp.needLight) {
+            light1 = hf1.getLight();
+            light2 = hf2.getLight();
+            light = new float[light1.length + 1][light1[0].length];
+        }
+        if (rp.needK) {
+            k1 = hf1.getK();
+            k2 = hf2.getK();
+            k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
+        }
+        if (rp.needVh) {
+            vh1 = hf1.getVh();
+            vh2 = hf2.getVh();
+            vh = new float[vh1.length + 1][vh1[0].length][vh1[0][0].length];
+        }
+
+        for (int hour = 0; hour < nHour; hour++) {
+            for (int dep = 0; dep < nDep; dep++) {
+                for (int elem = 0; elem < nElem; elem++) {
+                    u[hour][dep][elem] = u1[hour][dep][elem];
+                    v[hour][dep][elem] = v1[hour][dep][elem];
+                    w[hour][dep][elem] = w1[hour][dep][elem];
+                }
+                for (int node = 0; node < nNode; node++) {
+                    if (s != null) {
+                        s[hour][dep][node] = s1[hour][dep][node];
+                    }
+                    if (t != null) {
+                        t[hour][dep][node] = t1[hour][dep][node];
+                    }
+                    if (dep == 0) {
+                        if (zeta != null) {
+                            zeta[hour][node] = zeta1[hour][node];
+                        }
+                        if (light != null) {
+                            light[hour][node] = light1[hour][node];
+                        }
+                    }
+                    if (k != null) {
+                        k[hour][dep][node] = k1[hour][dep][node];
+                        // easiest way to adjust for extra sigma level
+                        if (dep == u1[0].length - 1) {
+                            k[hour][dep + 1][node] = k1[hour][dep + 1][node];
+                        }
+                    }
+                    if (vh != null) {
+                        vh[hour][dep][node] = vh1[hour][dep][node];
+                    }
+                }
+            }
+        }
+        for (int dep = 0; dep < nDep; dep++) {
+            for (int elem = 0; elem < nElem; elem++) {
+                u[u.length - 1][dep][elem] = u2[0][dep][elem];
+                v[u.length - 1][dep][elem] = v2[0][dep][elem];
+                w[u.length - 1][dep][elem] = w2[0][dep][elem];
+            }
+            for (int node = 0; node < nNode; node++) {
+                if (s != null) {
+                    s[u.length - 1][dep][node] = s2[0][dep][node];
+                }
+                if (t != null) {
+                    t[u.length - 1][dep][node] = t2[0][dep][node];
+                }
+                if (dep == 0) {
+                    if (zeta != null) {
+                        zeta[u.length - 1][node] = zeta2[0][node];
+                    }
+                    if (light != null) {
+                        light[u.length - 1][node] = light2[0][node];
+                    }
+                }
+                if (k != null) {
+                    k[u.length - 1][dep][node] = k2[0][dep][node];
+                    // easiest way to adjust for extra sigma level
+                    if (dep == u1[0].length - 1) {
+                        k[u.length - 1][dep + 1][node] = k2[0][dep + 1][node];
+                    }
+                }
+                if (vh != null) {
+                    vh[u.length - 1][dep][node] = vh2[0][dep][node];
+                }
+            }
+        }
+        return(new HydroField(u, v, w, s, t, zeta, k, vh, light, null, null, null));
     }
 
 
-    public static List<HydroField> readHydroField(List<Mesh> meshes, ISO_datestr currentIsoDate, RunProperties rp) throws InterruptedException {
-        List<HydroField> hydroFields = new ArrayList<>();
-        // 24 hr files only case - read once a day
-        int m = 0;
-        for (Mesh mesh : meshes) {
-            if (mesh.getType().equalsIgnoreCase("FVCOM")) {
+    public static HydroField mergeHydroFieldsStokes(HydroField hf1, HydroField hf2, RunProperties rp) {
+        // Get hydrodynamics
+        float[][] Hsig1 = hf1.getHsig(), Hsig2 = hf2.getHsig();
+        float[][] Hsig = new float[Hsig1.length + 1][Hsig1[0].length];
+        float[][] Dir1 = hf1.getDir(), Dir2 = hf2.getDir();
+        float[][] Dir = new float[Dir1.length + 1][Dir1[0].length];
+        float[][] Tm1 = hf1.getTm(), Tm2 = hf2.getTm();
+        float[][] Tm = new float[Tm1.length + 1][Tm1[0].length];
 
-                // Occasionally the read fails for unknown reasons when the .nc file exists, so try up to 5 times before quitting
-                int readAttempt = 0;
-                while (readAttempt < 5) {
-                    try{
-                        // Dima file naming format: minch2_20171229_0003.nc
-                        String[] varNames1 = new String[]{"u", "v", "ww", "salinity", "temp", "zeta", "kh", "viscofh", "short_wave"};
+        int nHour = Hsig1.length;
+        int nNode = Hsig1[0].length;
 
-                        // Inelegant, but it works and I'm in a hurry. Clean it up if you're procrastinating on something else.
-                        String[] dirsT1 = new String[]{
-                                rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator(),
-                                rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()};
-                        String[] filesT1 = new String[]{
-                                rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc",
-                                rp.mesh2Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc"};
-                        List<File> files1 = (List<File>) FileUtils.listFiles(new File(dirsT1[m]), new WildcardFileFilter(filesT1[m]), null);
-                        // Read both files and combine
-                        hydroFields.add(new HydroField(files1.get(0).getCanonicalPath(), varNames1, null, null, null, "FVCOM", rp));
-                        readAttempt = 5; // success, so exit loop
-                    } catch (Exception ignored) {
-                        System.out.printf("Failed reading hydrofile on attempt %d. Retrying...\n", readAttempt+1);
-                        readAttempt++;
-                        Thread.sleep(5000);
-                        if (readAttempt == 5) {
-                            System.out.println("Hydro file not found, check PROPERTIES: datadir, datadirPrefix, datadirSuffix, location, minchVersion");
-                            if (!rp.backwards) {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*.nc");
-                            } else {
-                                System.err.println("Requested file: " + rp.datadir + rp.datadirPrefix + currentIsoDate.getYear() + rp.datadirSuffix + FileSystems.getDefault().getSeparator()
-                                        + rp.mesh1Domain + "_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + "*_rev.nc");
-                            }
-                            System.exit(1);
-                        }
-                    }
-                }
-            } else if (mesh.getType().equalsIgnoreCase("ROMS_TRI")) {
-                String filename1 = rp.datadir2 + rp.datadir2Prefix + currentIsoDate.getYear() + rp.datadir2Suffix + FileSystems.getDefault().getSeparator()
-                        + "NEATL_" + currentIsoDate.getYear() + String.format("%02d", currentIsoDate.getMonth()) + String.format("%02d", currentIsoDate.getDay()) + ".nc";
-                String[] varNames1 = {"u", "v", "", "", ""};
-                // Read both files and combine
-                hydroFields.add(new HydroField(filename1, varNames1, null, null, null, "ROMS_TRI", rp));
+        for (int hour = 0; hour < nHour; hour++) {
+            for (int node = 0; node < nNode; node++) {
+                Hsig[hour][node] = Hsig1[hour][node];
+                Dir[hour][node] = Dir1[hour][node];
+                Tm[hour][node] = Tm1[hour][node];
             }
-            m++;
         }
-        return hydroFields;
+        for (int node = 0; node < nNode; node++) {
+            Hsig[Hsig.length - 1][node] = Hsig2[0][node];
+            Dir[Dir.length - 1][node] = Dir2[0][node];
+            Tm[Tm.length - 1][node] = Tm2[0][node];
+        }
+        return (new HydroField(null, null, null, null, null, null, null, null, null, Hsig, Dir, Tm));
     }
 
-    public static List<HydroField> mergeHydroFields(List<HydroField> hf1, List<HydroField> hf2, RunProperties rp) {
-        List<HydroField> hydroFields = new ArrayList<>();
-
-        for (int m=0; m < hf1.size(); m++) {
-            // Get hydrodynamics
-            float[][][] u1 = hf1.get(m).getU(), u2 = hf2.get(m).getU();
-            float[][][] u = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-            float[][][] v1 = hf1.get(m).getV(), v2 = hf2.get(m).getV();
-            float[][][] v = new float[u1.length + 1][u1[0].length][u1[0][0].length];
-
-            int nHour = u1.length;
-            int nDep = u1[0].length;
-            int nElem = u1[0][0].length;
-            int nNode = 0;
-
-            float[][][] w = null, w1 = null, w2 = null, s = null, s1 = null, s2 = null, t = null, t1 = null, t2 = null, k = null, k1 = null, k2 = null, vh = null, vh1 = null, vh2 = null;
-            float[][] zeta = null, zeta1 = null, zeta2 = null, light = null, light1 = null, light2 = null;
-            w1 = hf1.get(m).getW();
-            w2 = hf2.get(m).getW();
-            w = new float[w1.length + 1][w1[0].length][w1[0][0].length];
-            if(rp.needS) {
-                s1 = hf1.get(m).getS();
-                s2 = hf2.get(m).getS();
-                s = new float[s1.length + 1][s1[0].length][s1[0][1].length];
-                nNode = s1[0][0].length;
-            }
-            if(rp.needT) {
-                t1 = hf1.get(m).getT();
-                t2 = hf2.get(m).getT();
-                t = new float[t1.length + 1][t1[0].length][t1[0][0].length];
-                nNode = t1[0][0].length;
-            }
-            if(rp.needZeta) {
-                zeta1 = hf1.get(m).getZeta();
-                zeta2 = hf2.get(m).getZeta();
-                zeta = new float[zeta1.length + 1][zeta1[0].length];
-                nNode = zeta1[0].length;
-            }
-            if(rp.needLight) {
-                light1 = hf1.get(m).getLight();
-                light2 = hf2.get(m).getLight();
-                light = new float[light1.length + 1][light1[0].length];
-            }
-            if(rp.needK) {
-                k1 = hf1.get(m).getK();
-                k2 = hf2.get(m).getK();
-                k = new float[k1.length + 1][k1[0].length][k1[0][0].length];
-            }
-            if(rp.needVh) {
-                vh1 = hf1.get(m).getVh();
-                vh2 = hf2.get(m).getVh();
-                vh = new float[vh1.length + 1][vh1[0].length][vh1[0][0].length];
-            }
-
-            double sumU = 0;
-
-            // Use this to test zero velocity/diffusion cases
-            boolean createTest = false;
-            float testU = 0;
-            float testV = (float) 0.1;
-            float testW = (float) 0.1;
-            //noinspection ConstantConditions
-            if (createTest) {
-                for (int hour = 0; hour < u.length; hour++) {
-                    for (int dep = 0; dep < u[0].length; dep++) {
-                        for (int elem = 0; elem < u[0][0].length; elem++) {
-                            u[hour][dep][elem] = testU;
-                            v[hour][dep][elem] = testV;
-                            w[hour][dep][elem] = testW;
-                            sumU += u[hour][dep][elem];
-                        }
-                        if (!rp.readHydroVelocityOnly) {
-                            for (int node = 0; node < zeta1[0].length; node++) {
-
-                                if (s2 != null) {
-                                    s[u.length - 1][dep][node] = 0;
-                                }
-                                if (t2 != null) {
-                                    t[u.length - 1][dep][node] = 0;
-                                }
-                                if (k2 != null) {
-                                    k[u.length - 1][dep][node] = 0;
-                                    // easiest way to adjust for extra sigma level
-                                    if (dep == u[0].length - 1) {
-                                        k[u.length - 1][dep + 1][node] = 0;
-                                    }
-                                }
-                                if (vh2 != null) {
-                                    vh[u.length - 1][dep][node] = 0;
-                                }
-                                if (dep == 0) {
-                                    zeta[u.length - 1][node] = 0;
-                                    light[u.length - 1][node] = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                for (int hour = 0; hour < nHour; hour++) {
-                    for (int dep = 0; dep < nDep; dep++) {
-                        for (int elem = 0; elem < nElem; elem++) {
-                            u[hour][dep][elem] = u1[hour][dep][elem];
-                            v[hour][dep][elem] = v1[hour][dep][elem];
-                            if (w != null) {
-                                w[hour][dep][elem] = w1[hour][dep][elem];
-                            }
-                            sumU += u[hour][dep][elem];
-                        }
-                        for (int node = 0; node < nNode; node++) {
-                            if (s != null) {
-                                s[hour][dep][node] = s1[hour][dep][node];
-                            }
-                            if (t != null) {
-                                t[hour][dep][node] = t1[hour][dep][node];
-                            }
-                            if (dep == 0) {
-                                if (zeta != null) {
-                                    zeta[hour][node] = zeta1[hour][node];
-                                }
-                                if (light != null) {
-                                    light[hour][node] = light1[hour][node];
-                                }
-                            }
-                            if (k != null) {
-                                k[hour][dep][node] = k1[hour][dep][node];
-                                // easiest way to adjust for extra sigma level
-                                if (dep == u1[0].length - 1) {
-                                    k[hour][dep + 1][node] = k1[hour][dep + 1][node];
-                                }
-                            }
-                            if (vh != null) {
-                                vh[hour][dep][node] = vh1[hour][dep][node];
-                            }
-                        }
-                    }
-                }
-                for (int dep = 0; dep < nDep; dep++) {
-                    for (int elem = 0; elem < nElem; elem++) {
-                        u[u.length - 1][dep][elem] = u2[0][dep][elem];
-                        v[u.length - 1][dep][elem] = v2[0][dep][elem];
-                        if (w != null) {
-                            w[u.length - 1][dep][elem] = w2[0][dep][elem];
-                        }
-                        sumU += u[u.length - 1][dep][elem];
-                    }
-                    for (int node = 0; node < nNode; node++) {
-                        if (s != null) {
-                            s[u.length - 1][dep][node] = s2[0][dep][node];
-                        }
-                        if (t != null) {
-                            t[u.length - 1][dep][node] = t2[0][dep][node];
-                        }
-                        if (dep == 0) {
-                            if (zeta != null) {
-                                zeta[u.length - 1][node] = zeta2[0][node];
-                            }
-                            if (light != null) {
-                                light[u.length - 1][node] = light2[0][node];
-                            }
-                        }
-                        if (k != null) {
-                            k[u.length - 1][dep][node] = k2[0][dep][node];
-                            // easiest way to adjust for extra sigma level
-                            if (dep == u1[0].length - 1) {
-                                k[u.length - 1][dep + 1][node] = k2[0][dep + 1][node];
-                            }
-                        }
-                        if (vh != null) {
-                            vh[u.length - 1][dep][node] = vh2[0][dep][node];
-                        }
-                    }
-                }
-            }
-            hydroFields.add(new HydroField(u, v, w, s, t, zeta, k, vh, light));
-        }
-        return hydroFields;
-    }
 
     /**
      * Count the number of particles in different states (free, viable, settled,
