@@ -15,13 +15,13 @@ import java.util.Properties;
  * @author sa01ta
  */
 public class RunProperties {
-    String hfDir0, hfDirPrefix0, hfDirSuffix0, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
+    String mesh0, mesh1, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
+            meshType0, meshType1, // What type of meshes are being read in (FVCOM or ROMS)
+            hfDir0, hfDirPrefix0, hfDirSuffix0, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
             hfDir1, hfDirPrefix1, hfDirSuffix1, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories
             hfDir2, hfDirPrefix2, hfDirSuffix2, // Location of wave data for Stokes drift, with prefix and suffix for finding annual subdirectories
-            mesh0, mesh1, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
-            meshType0, meshType1, // What type of meshes are being read in (FVCOM or ROMS)
-            restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             hfFilePrefix0, hfFilePrefix1, hfFilePrefix2, // Mesh domain location as in the .nc filenames (westcoms2, etive28)
+            restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
             sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
@@ -32,7 +32,6 @@ public class RunProperties {
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             diffusion, variableDh, variableDhV, // include random walk, use diffusion parameter from hydro output?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
-            setStartDepth, // set particle depth at initiation?
             fixDepth,
             swimLightLevel,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
@@ -163,8 +162,7 @@ public class RunProperties {
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
         siteDensityPath = properties.getProperty("siteDensityPath", "");
-        setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
-        startDepth = Double.parseDouble(properties.getProperty("startDepth", "0"));
+        startDepth = Double.parseDouble(properties.getProperty("startDepth", "1"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
         releaseInterval = Double.parseDouble(properties.getProperty("releaseInterval", "1"));
         nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
