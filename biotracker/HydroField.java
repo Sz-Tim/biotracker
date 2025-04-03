@@ -215,23 +215,16 @@ public class HydroField {
         return getAvgFromTrinodes(mesh, part.getLocation(), part.getDepthLayer(), part.getElem(), hour, "zeta", rp) + mesh.getDepthUvnode()[part.getElem()];
     }
 
-    public static double[] calcStokesSurface(float Hsig, double DirRadians, float Tm) {
-        double k = (2 * Math.PI) / (9.81 * Math.pow(Tm, 2));
-        double omega = (2 * Math.PI) / Tm;
-        double[] stokesSurfaceUV = new double[2];
-        stokesSurfaceUV[0] = (omega * Math.pow(Hsig, 2))/16 * Math.cos(DirRadians);
-        stokesSurfaceUV[1] = (omega * Math.pow(Hsig, 2))/16 * Math.sin(DirRadians);
-        return stokesSurfaceUV;
-    }
-
 
     // Returns m/s
     public static double[] calcStokesDepthExponential(float Hsig, double DirRadians, float Tm, double depth) {
-        double [] stokesSurfaceUV = calcStokesSurface(Hsig, DirRadians, Tm);
-        double stokesSurfaceSpeed = Math.sqrt(Math.pow(stokesSurfaceUV[0], 2) + Math.pow(stokesSurfaceUV[1], 2));
+        double k = (2 * Math.PI) / (9.81 * Math.pow(Tm, 2));
         double stokesTransportMonochromatic = (2 * Math.PI / Tm) * Math.pow(Hsig, 2) / 16;
-        double km = stokesSurfaceSpeed / (2 * stokesTransportMonochromatic);
-        double ke = km/3;
+        double[] stokesSurfaceUV = new double[2];
+        stokesSurfaceUV[0] = stokesTransportMonochromatic * Math.cos(DirRadians);
+        stokesSurfaceUV[1] = stokesTransportMonochromatic * Math.sin(DirRadians);
+        double stokesSurfaceSpeed = Math.sqrt(Math.pow(stokesSurfaceUV[0], 2) + Math.pow(stokesSurfaceUV[1], 2));
+        double ke = stokesSurfaceSpeed / (2 * stokesTransportMonochromatic) / 3;
         double stokesSpeed = stokesSurfaceSpeed * Math.exp(-2*ke*depth) / (1+8*ke*depth); // check: depth needs to be negative!
         double[] stokesDepthUV = new double[2];
         stokesDepthUV[0] = stokesSpeed * stokesSurfaceUV[0] / stokesSpeed;
