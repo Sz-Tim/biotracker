@@ -134,13 +134,13 @@ public class Particle_track {
             hfIters.add(m);
             missingHydroFiles.set(m, IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays, m));
             if (!missingHydroFiles.get(m).isEmpty()) {
-                System.out.println("\nWarning! Cannot find these files for mesh " + m + ":");
+                System.out.println("\nWarning! Cannot find these files for " + (m==0?rp.hfFilePrefix0:rp.hfFilePrefix1) + ":");
                 for (String missing: missingHydroFiles.get(m)) {
                     System.out.println(missing);
                 }
                 System.out.println("-- The previous day will be used for each instead!");
             } else {
-                System.out.println("  All found for mesh " + m);
+                System.out.println("-- All files found for " + (m==0?rp.hfFilePrefix0:rp.hfFilePrefix1));
             }
         }
         if (rp.needStokes) {
@@ -148,13 +148,13 @@ public class Particle_track {
             hfIters.add(m);
             missingHydroFiles.set(m, IOUtils.checkHydroFilesExist(rp, currentIsoDate, endIsoDate, numberOfDays, m));
             if (!missingHydroFiles.get(m).isEmpty()) {
-                System.out.println("\nWarning! Cannot find these files for mesh " + m + ":");
+                System.out.println("\nWarning! Cannot find these files for " + rp.hfFilePrefix2 + ":");
                 for (String missing: missingHydroFiles.get(m)) {
                     System.out.println(missing);
                 }
                 System.out.println("-- The previous day will be used for each instead!");
             } else {
-                System.out.println("  All found for mesh " + m);
+                System.out.println("-- All files found for " + rp.hfFilePrefix2);
             }
         }
 
