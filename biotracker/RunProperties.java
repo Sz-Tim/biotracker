@@ -77,7 +77,7 @@ public class RunProperties {
             swimDownSpeedMean, swimDownSpeedStd, // Particle sinking distribution parameters
             swimDownSpeedCopepodidMean, swimDownSpeedCopepodidStd,
             swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
-            salinityThreshold, // sink below threshold
+            salinityThreshold, salinityThreshMin, salinityThreshMax, // sink below threshold
             salinityThreshCopepodidMin, salinityThreshCopepodidMax, salinityThreshNaupliusMin, salinityThreshNaupliusMax, // Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             passiveSinkingIntercept, passiveSinkingSlope,
             startDepth, // Particle initiation depth
@@ -207,10 +207,12 @@ public class RunProperties {
         swimDownSpeedNaupliusMean = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusMean", "" + swimDownSpeedMean/2));
         swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + swimDownSpeedStd/2));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
-        salinityThreshCopepodidMin = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMin", "" + salinityThreshold));
-        salinityThreshCopepodidMax = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMax", "" + (salinityThreshold+0.001)));
-        salinityThreshNaupliusMin = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMin", "" + salinityThreshold));
-        salinityThreshNaupliusMax = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMax", "" + (salinityThreshold+0.001)));
+        salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
+        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold+0.001));
+        salinityThreshCopepodidMin = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMin", "" + salinityThreshMin));
+        salinityThreshCopepodidMax = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMax", "" + (salinityThreshMax)));
+        salinityThreshNaupliusMin = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMin", "" + salinityThreshMin));
+        salinityThreshNaupliusMax = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMax", "" + (salinityThreshMax)));
         passiveSinkingIntercept = Double.parseDouble(properties.getProperty("passiveSinkingIntercept", "0.001527"));
         passiveSinkingSlope = Double.parseDouble(properties.getProperty("passiveSinkingSlope", "-0.0000168"));
         eggTemp_fn = properties.getProperty("eggTemp_fn", "constant");
@@ -348,12 +350,12 @@ public class RunProperties {
                 "-------- Meshes & Environment: \n" +
                 "Records per HD file: " + this.recordsPerFile1 + "\n" +
                 "dt (s per HD record): " + this.dt + "\n" +
-                "Mesh 1: " + this.mesh0 + "\n" +
-                "Mesh 1 type: " + this.meshType0 + "\n" +
-                "HD 1 path: " + this.hfDir0 + this.hfDirPrefix0 + "YYYY" + this.hfDirSuffix0 + "/" + this.hfFilePrefix0 + "_YYYYMMDD.*nc" + "\n" +
-                "Mesh 2: " + this.mesh1 + "\n" +
-                "Mesh 2 type: " + this.meshType1 + "\n" +
-                "HD 2 path: " + this.hfDir1 + this.hfDirPrefix1 + "YYYY" + this.hfDirSuffix1 + "/" + this.hfFilePrefix1 + "_YYYYMMDD.*nc" + "\n" +
+                "Mesh 0: " + this.mesh0 + "\n" +
+                "Mesh 0 type: " + this.meshType0 + "\n" +
+                "HD 0 path: " + this.hfDir0 + this.hfDirPrefix0 + "YYYY" + this.hfDirSuffix0 + "/" + this.hfFilePrefix0 + "_YYYYMMDD.*nc" + "\n" +
+                "Mesh 1: " + this.mesh1 + "\n" +
+                "Mesh 1 type: " + this.meshType1 + "\n" +
+                "HD 1 path: " + this.hfDir1 + this.hfDirPrefix1 + "YYYY" + this.hfDirSuffix1 + "/" + this.hfFilePrefix1 + "_YYYYMMDD.*nc" + "\n" +
                 "Wave path: " + this.hfDir2 + this.hfDirPrefix2 + "YYYY" + this.hfDirSuffix2 + "/" + this.hfFilePrefix2 + "_YYYYMMDD.*nc" + "\n" +
                 "Daily sunlight hours: " + this.daylightPath + "\n" +
                 "Read salinity: " + this.needS + "\n" +
