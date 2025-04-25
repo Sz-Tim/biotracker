@@ -10,18 +10,18 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 /**
  * @author sa01ta
  */
 public class RunProperties {
-    String datadir, datadirPrefix, datadirSuffix, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
-            datadir2, datadir2Prefix, datadir2Suffix, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories 
-            mesh1, mesh2, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
-            mesh1Type, mesh2Type, // What type of meshes are being read in (FVCOM or ROMS)
+    String mesh0, mesh1, // Full path to the mesh files used describing spatial structure of the hydrodynamic data
+            meshType0, meshType1, // What type of meshes are being read in (FVCOM or ROMS)
+            hfDir0, hfDirPrefix0, hfDirSuffix0, // Location of default hydrodynamic data, with prefix and suffix for finding annual subdirectories
+            hfDir1, hfDirPrefix1, hfDirSuffix1, // Location of secondary (larger domain) hydrodynamic data, with prefix and suffix for finding annual subdirectories
+            hfDir2, hfDirPrefix2, hfDirSuffix2, // Location of wave data for Stokes drift, with prefix and suffix for finding annual subdirectories
+            hfFilePrefix0, hfFilePrefix1, hfFilePrefix2, // Mesh domain location as in the .nc filenames (westcoms2, etive28)
             restartParticles, // Full path to file containing locations of particles for a hot restart (matches last hour of locations file)
-            mesh1Domain, mesh2Domain, // Mesh domain location as in the .nc filenames (westcoms2, etive28)
             sitefile, sitefileEnd, habitat, suffix, species, // Descriptive strings
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
@@ -32,10 +32,10 @@ public class RunProperties {
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
             diffusion, variableDh, variableDhV, // include random walk, use diffusion parameter from hydro output?
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
-            setStartDepth, // set particle depth at initiation?
             fixDepth,
             swimLightLevel,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
+            stokesDrift,
             recordImmature,
             recordPsteps, splitPsteps, // record particle element densities? split by source site?
             recordConnectivity, // record connectivity between specific depths?
@@ -47,7 +47,7 @@ public class RunProperties {
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp,
-            needS, needT, needZeta, needK, needLight, needVh, // Internal use: which hydrodynamic variables need to be loaded?
+            needS, needT, needZeta, needK, needLight, needVh, needStokes, // Internal use: which hydrodynamic variables need to be loaded?
             coordOS, // Coordinate reference system
             FVCOM; // Is mesh FVCOM? If not, not all functions are supported
 
@@ -77,7 +77,8 @@ public class RunProperties {
             swimDownSpeedMean, swimDownSpeedStd, // Particle sinking distribution parameters
             swimDownSpeedCopepodidMean, swimDownSpeedCopepodidStd,
             swimDownSpeedNaupliusMean, swimDownSpeedNaupliusStd,
-            salinityThreshold, salinityThreshMin, salinityThreshMax, // 1) sink below threshold; 2-3) Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
+            salinityThreshold, salinityThreshMin, salinityThreshMax, // sink below threshold
+            salinityThreshCopepodidMin, salinityThreshCopepodidMax, salinityThreshNaupliusMin, salinityThreshNaupliusMax, // Sandvik 2020 A3: linear increase in prSink from Max (none sink) to Min (all sink)
             passiveSinkingIntercept, passiveSinkingSlope,
             startDepth, // Particle initiation depth
             maxDepth, // maximum particle depth
@@ -102,23 +103,27 @@ public class RunProperties {
         }
 
         // Directories
-        datadir = properties.getProperty("datadir", "/media/archiver/common/sa01da-work/WeStCOMS2/Archive/");
-        datadirPrefix = properties.getProperty("datadirPrefix", "netcdf_");
-        datadirSuffix = properties.getProperty("datadirSuffix", "");
-        datadir2 = properties.getProperty("datadir2", "");
-        datadir2Prefix = properties.getProperty("datadirPrefix", "");
-        datadir2Suffix = properties.getProperty("datadirSuffix", "");
+        hfDir0 = properties.getProperty("hfDir0", "/home/sa04ts/hydro/WeStCOMS2/Archive/");
+        hfDirPrefix0 = properties.getProperty("hfDirPrefix0", "netcdf_");
+        hfDirSuffix0 = properties.getProperty("hfDirSuffix0", "");
+        hfDir1 = properties.getProperty("hfDir1", "");
+        hfDirPrefix1 = properties.getProperty("hfDirPrefix1", "");
+        hfDirSuffix1 = properties.getProperty("hfDirSuffix1", "");
+        hfDir2 = properties.getProperty("hfDir2", "");
+        hfDirPrefix2 = properties.getProperty("hfDirPrefix2", "");
+        hfDirSuffix2 = properties.getProperty("hfDirSuffix2", "");
 
         // Geography, hydrodynamic files, & mesh files
         coordOS = Boolean.parseBoolean(properties.getProperty("coordOS", "true"));
         recordsPerFile1 = Integer.parseInt(properties.getProperty("recordsPerFile1", "25"));
-        mesh1 = properties.getProperty("mesh1", "/home/sa04ts/FVCOM_meshes/WeStCOMS2_mesh.nc");
-        mesh2 = properties.getProperty("mesh2", "");
-        mesh1Type = properties.getProperty("mesh1Type", "");
-        mesh2Type = properties.getProperty("mesh2Type", "");
-        mesh1Domain = properties.getProperty("mesh1Domain", "westcoms2");
-        mesh2Domain = properties.getProperty("mesh2Domain", "westcoms2");
-        FVCOM = properties.getProperty("mesh1Type").equals("FVCOM");
+        mesh0 = properties.getProperty("mesh0", "/home/sa04ts/FVCOM_meshes/WeStCOMS2_mesh.nc");
+        mesh1 = properties.getProperty("mesh1", "");
+        meshType0 = properties.getProperty("meshType0", "");
+        meshType1 = properties.getProperty("meshType1", "");
+        hfFilePrefix0 = properties.getProperty("hfFilePrefix0", "westcoms2");
+        hfFilePrefix1 = properties.getProperty("hfFilePrefix1", "westcoms2");
+        hfFilePrefix2 = properties.getProperty("hfFilePrefix2", "swan");
+        FVCOM = properties.getProperty("meshType0").equals("FVCOM");
         checkOpenBoundaries = Boolean.parseBoolean(properties.getProperty("checkOpenBoundaries", "false"));
         openBoundaryThresh = Double.parseDouble(properties.getProperty("openBoundaryThresh", "500"));
 
@@ -157,8 +162,7 @@ public class RunProperties {
         restartParticles = properties.getProperty("restartParticles", "");
         restartParticlesCutoffDays = Double.parseDouble(properties.getProperty("restartParticlesCutoffDays", "21"));
         siteDensityPath = properties.getProperty("siteDensityPath", "");
-        setStartDepth = Boolean.parseBoolean(properties.getProperty("setStartDepth", "false"));
-        startDepth = Integer.parseInt(properties.getProperty("startDepth", "0"));
+        startDepth = Double.parseDouble(properties.getProperty("startDepth", "1"));
         releaseScenario = Integer.parseInt(properties.getProperty("releaseScenario", "0"));
         releaseInterval = Double.parseDouble(properties.getProperty("releaseInterval", "1"));
         nparts = Integer.parseInt(properties.getProperty("nparts", "5"));
@@ -177,6 +181,7 @@ public class RunProperties {
         variableDhV = Boolean.parseBoolean(properties.getProperty("variableDhV", "true"));
         D_h = Double.parseDouble(properties.getProperty("D_h", "0.1"));
         D_hVert = Double.parseDouble(properties.getProperty("D_hVert", "0.001"));
+        stokesDrift = Boolean.parseBoolean(properties.getProperty("stokesDrift", "false"));
         if (fixDepth) {
             D_hVert = 0;
             variableDhV = false;
@@ -203,7 +208,11 @@ public class RunProperties {
         swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + swimDownSpeedStd/2));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
-        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
+        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold+0.001));
+        salinityThreshCopepodidMin = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMin", "" + salinityThreshMin));
+        salinityThreshCopepodidMax = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMax", "" + (salinityThreshMax)));
+        salinityThreshNaupliusMin = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMin", "" + salinityThreshMin));
+        salinityThreshNaupliusMax = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMax", "" + (salinityThreshMax)));
         passiveSinkingIntercept = Double.parseDouble(properties.getProperty("passiveSinkingIntercept", "0.001527"));
         passiveSinkingSlope = Double.parseDouble(properties.getProperty("passiveSinkingSlope", "-0.0000168"));
         eggTemp_fn = properties.getProperty("eggTemp_fn", "constant");
@@ -285,6 +294,7 @@ public class RunProperties {
         needK = (!fixDepth) && variableDhV;
         needLight = (!fixDepth) && swimLightLevel;
         needVh = variableDh;
+        needStokes = stokesDrift;
 
     }
 
@@ -300,9 +310,13 @@ public class RunProperties {
             conflict = true;
             conflictingProperties += "  start_ymd.isLaterThan(end_ymd)\n";
         }
-        if (!fixDepth && !mesh1Type.equals("FVCOM")) {
+        if (!fixDepth && !meshType0.equals("FVCOM")) {
             conflict = true;
             conflictingProperties += "  verticalDynamics && !mesh1Type.equals(\"FVCOM\")\n";
+        }
+        if (needStokes && (hfDir2.isEmpty())) {
+            conflict = true;
+            conflictingProperties += "  Stokes drift on but no data directory\n";
         }
 
         if(conflict) {
@@ -336,12 +350,13 @@ public class RunProperties {
                 "-------- Meshes & Environment: \n" +
                 "Records per HD file: " + this.recordsPerFile1 + "\n" +
                 "dt (s per HD record): " + this.dt + "\n" +
+                "Mesh 0: " + this.mesh0 + "\n" +
+                "Mesh 0 type: " + this.meshType0 + "\n" +
+                "HD 0 path: " + this.hfDir0 + this.hfDirPrefix0 + "YYYY" + this.hfDirSuffix0 + "/" + this.hfFilePrefix0 + "_YYYYMMDD.*nc" + "\n" +
                 "Mesh 1: " + this.mesh1 + "\n" +
-                "Mesh 1 type: " + this.mesh1Type + "\n" +
-                "HD 1 path: " + this.datadir + this.datadirPrefix + "YYYY" + this.datadirSuffix + "/" + this.mesh1Domain + "_YYYYMMDD.*nc" + "\n" +
-                "Mesh 2: " + this.mesh2 + "\n" +
-                "Mesh 2 type: " + this.mesh2Type + "\n" +
-                "HD 2 path: " + this.datadir2 + this.datadir2Prefix + "YYYY" + this.datadir2Suffix + "/" + this.mesh2Domain + "_YYYYMMDD.*nc" + "\n" +
+                "Mesh 1 type: " + this.meshType1 + "\n" +
+                "HD 1 path: " + this.hfDir1 + this.hfDirPrefix1 + "YYYY" + this.hfDirSuffix1 + "/" + this.hfFilePrefix1 + "_YYYYMMDD.*nc" + "\n" +
+                "Wave path: " + this.hfDir2 + this.hfDirPrefix2 + "YYYY" + this.hfDirSuffix2 + "/" + this.hfFilePrefix2 + "_YYYYMMDD.*nc" + "\n" +
                 "Daily sunlight hours: " + this.daylightPath + "\n" +
                 "Read salinity: " + this.needS + "\n" +
                 "Read temperature: " + this.needT + "\n" +
@@ -349,6 +364,7 @@ public class RunProperties {
                 "Read K: " + this.needK + "\n" +
                 "Read viscovh: " + this.needVh + "\n" +
                 "Read zeta: " + this.needZeta + "\n" +
+                "Read wave data: " + this.needStokes + "\n" +
                 "\n" +
                 "-------- Sites: \n" +
                 "Source site file: " + this.sitefile + "\n" +
@@ -363,6 +379,7 @@ public class RunProperties {
                 "Diffusion: " + this.diffusion + "\n" +
                 "Dh: " + (this.variableDh ? "variable" : this.D_h) + "\n" +
                 "DhV: " + (this.variableDhV ? "variable" : this.D_hVert) + "\n" +
+                "Stokes drift: " + this.stokesDrift + "\n" +
                 "\n" +
                 "-------- Biology: \n" +
                 "End on arrival: " + this.endOnArrival + "\n" +
@@ -377,7 +394,8 @@ public class RunProperties {
                 "Mortality rate parameters (/h): " + this.mortSal_b + "\n" +
                 "Passive sinking intercept (m/s): " + this.passiveSinkingIntercept + "\n" +
                 "Passive sinking slope (m/s/psu): " + this.passiveSinkingSlope + "\n" +
-                "P(swim down) = 0-1: " + this.salinityThreshMax + " - " + salinityThreshMin + "\n" +
+                "Copepodid P(swim down) = 0-1: " + this.salinityThreshCopepodidMax + " - " + salinityThreshCopepodidMin + "\n" +
+                "Nauplius P(swim down) = 0-1: " + this.salinityThreshNaupliusMax + " - " + salinityThreshNaupliusMin + "\n" +
                 "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
                 "Nauplius swim down speed (m/s) ~ Norm(" + this.swimDownSpeedNaupliusMean + ", " + this.swimDownSpeedNaupliusStd + ")" + "\n" +
                 "Swim up based on shortwave: " + this.swimLightLevel + "\n" +

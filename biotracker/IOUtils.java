@@ -1013,10 +1013,14 @@ public class IOUtils {
 
     /**
      * Make additions to the element presence counts (PSTEPS)
+     * Note that this ONLY applies to the first mesh when there are nested meshes!
      */
     public static void pstepsUpdater(List<Particle> particles, RunProperties rp,
                                      float[][] pstepsMature, float[][] pstepsImmature, double dt) {
         for (Particle p : particles) {
+            if(p.getMesh() > 0) {
+                continue;
+            }
             if(p.getDepth() > rp.pstepsMaxDepth) {
                 continue;
             }
@@ -1024,9 +1028,9 @@ public class IOUtils {
             int elemPart = p.getElem();
             int col = rp.splitPsteps ? p.getStartIndex() : 0;
             if (p.isInfectious()) {
-                pstepsMature[elemPart][col] += (float) d * (float) (dt / 3600);
+                pstepsMature[elemPart][col] += (float) (d * (dt / 3600));
             } else if (rp.recordImmature && p.isFree()) {
-                pstepsImmature[elemPart][col] += (float) d * (float) (dt / 3600);
+                pstepsImmature[elemPart][col] += (float) (d * (dt / 3600));
             }
         }
     }
@@ -1035,10 +1039,16 @@ public class IOUtils {
                                            List<SparseFloatArray> pstepsMature, List<SparseFloatArray> pstepsImmature, double subStepDt) {
         if(rp.pstepsMaxDepth > 1000) {
             for (Particle p : particles) {
+                if(p.getMesh() > 0) {
+                    continue;
+                }
                 pstepsAddParticle(rp, pstepsMature, pstepsImmature, subStepDt, p);
             }
         } else {
             for (Particle p : particles) {
+                if(p.getMesh() > 0) {
+                    continue;
+                }
                 if (p.getDepth() > rp.pstepsMaxDepth) {
                     continue;
                 }
@@ -1053,22 +1063,26 @@ public class IOUtils {
         int col = rp.splitPsteps ? p.getStartIndex() + 1 : 1;
         if (p.isInfectious()) {
             SparseFloatArray arr = pstepsMature.get(col); // Get the relevant sparse array from the list
-            arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
+            arr.put(col, arr.get(elemPart) + (float) (d * (subStepDt / 3600))); // place the new value in the array
             pstepsMature.set(col, arr); // put the array back in the list
 
         } else if (rp.recordImmature && p.isFree()) {
             SparseFloatArray arr = pstepsImmature.get(col); // Get the relevant sparse array from the list
-            arr.put(col, arr.get(elemPart) + (float) d * (float) (subStepDt / 3600)); // place the new value in the array
+            arr.put(col, arr.get(elemPart) + (float) (d * (subStepDt / 3600))); // place the new value in the array
             pstepsImmature.set(col, arr); // put the array back in the list
         }
     }
 
     /**
      * Make additions to the element vertical distribution
+     * NOTE: Only works with first mesh when nested meshes are used!
      */
     public static void vertDistrUpdater(List<Particle> particles, RunProperties rp,
                                         float[][] vertDistrMature, float[][] vertDistrImmature, double dt) {
         for (Particle p : particles) {
+            if(p.getMesh() > 0) {
+                continue;
+            }
             double d = p.getDensity();
             int elemPart = p.getElem();
             int col = (int) Math.min(Math.floor(p.getDepth()), rp.vertDistrMax);
@@ -1094,14 +1108,23 @@ public class IOUtils {
     }
 
 
-    public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays) {
+    public static ArrayList<String> checkHydroFilesExist(RunProperties rp, ISO_datestr startDate, ISO_datestr endDate, int numberOfDays, int m) {
         ArrayList<String> missingHydroFiles = new ArrayList<>();
-        String filePathPrefix = rp.mesh1Domain;
+        String datadir = rp.hfDir0;
+        String filePathPrefix = rp.hfFilePrefix0;
+        if (m == 1) {
+            datadir = rp.hfDir1;
+            filePathPrefix = rp.hfFilePrefix1;
+        } else if (m == 2) {
+            datadir = rp.hfDir2;
+            filePathPrefix = rp.hfFilePrefix2;
+        }
 
-        File file1 = new File(rp.datadir + System.getProperty("file.separator"));
+
+        File file1 = new File(datadir + System.getProperty("file.separator"));
         List<File> allMatchingFiles = (List<File>) FileUtils.listFiles(
                 file1,
-                new RegexFileFilter(rp.mesh1Domain + ".*nc"),
+                new RegexFileFilter(filePathPrefix + ".*nc"),
                 DirectoryFileFilter.DIRECTORY); // Optional directory filter
 
         ISO_datestr checkDate = new ISO_datestr(startDate.getDateStr());

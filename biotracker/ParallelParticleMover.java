@@ -194,7 +194,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
 
             // advection
             if (rp.rk4) {
-                advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS, rp.FVCOM);
+                if (rp.stokesDrift) {
+                    advectStep = part.rk4StokesStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS, rp.FVCOM);
+                } else {
+                    advectStep = part.rk4Step(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS, rp.FVCOM);
+                }
             } else {
                 advectStep = part.eulerStep(hydroFields, meshes, hour, step, subStepDt, rp.stepsPerStep, rp.coordOS, rp.fixDepth);
             }
