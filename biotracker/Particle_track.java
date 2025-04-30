@@ -295,7 +295,6 @@ public class Particle_track {
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
                         siteLoc[1] = habitat.get(i).getLocation()[1];
-                        double[] siteNodeDist = Particle.distanceToNodes(siteLoc, siteElem, meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), rp.coordOS);
                         double[] siteStokesUV = {0,0};
                         for (int j = 0; j < nLayers; j++) {
                             currentConditions[j][0] = hydroFields.get(m).getU()[currentHour][j][siteElem];
@@ -306,6 +305,7 @@ public class Particle_track {
                             currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
                             currentConditions[j][6] = rp.needK ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "km", rp) : -9999;
                             if (rp.needStokes) {
+                                double[] siteNodeDist = Particle.distanceToNodes(siteLoc, siteElem, meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), rp.coordOS);
                                 siteStokesUV = hydroFields.get(2).getAvgFromTrinodes(siteElem, meshes.get(0).getTrinodes(), siteNodeDist, currentHour, 0);
                             }
                             currentConditions[j][7] = rp.needStokes ? siteStokesUV[0] : -9999;
