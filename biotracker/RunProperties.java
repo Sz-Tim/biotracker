@@ -208,7 +208,7 @@ public class RunProperties {
         swimDownSpeedNaupliusStd = Double.parseDouble(properties.getProperty("swimDownSpeedNaupliusStd", "" + swimDownSpeedStd/2));
         salinityThreshold = Double.parseDouble(properties.getProperty("salinityThreshold", "20"));
         salinityThreshMin = Double.parseDouble(properties.getProperty("salinityThreshMin", "" + salinityThreshold));
-        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + salinityThreshold+0.001));
+        salinityThreshMax = Double.parseDouble(properties.getProperty("salinityThreshMax", "" + (salinityThreshold+0.001)));
         salinityThreshCopepodidMin = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMin", "" + salinityThreshMin));
         salinityThreshCopepodidMax = Double.parseDouble(properties.getProperty("salinityThreshCopepodidMax", "" + (salinityThreshMax)));
         salinityThreshNaupliusMin = Double.parseDouble(properties.getProperty("salinityThreshNaupliusMin", "" + salinityThreshMin));
