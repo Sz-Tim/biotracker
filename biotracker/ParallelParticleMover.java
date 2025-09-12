@@ -164,25 +164,39 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 }
 
                 if (part.getStatus()<3) {
-                    int activity = 2; // 0 = sink; 1 = swim; 2 = float
+                    int activity = 2; // 0 = sink; 1 = swim; 2 = passive
                     // following Sandvik et al 2020, citing on Crosbie 2019
+                    // does the particle actively sink downward?
                     double prSink = part.calcSwimDownProb(localSalinity, rp);
-                    if(prSink > ThreadLocalRandom.current().nextDouble(0,1)  ||
-                        (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
+                    if (prSink > ThreadLocalRandom.current().nextDouble(0, 1) ||
+                            (rp.variableDhV && Math.abs(K_z) > Math.abs(part.isInfectious() ? rp.swimUpSpeedCopepodidMean : rp.swimUpSpeedNaupliusMean))) {
                         activeMovement[2] = Math.max(part.sink(rp, subStepDt), part.passive(rp, localSalinity, subStepDt));
-                        activity = 0;
                         sink++;
-                    } else if (rp.swimLightLevel) {
-                        activeMovement[2] = part.swim(rp, m, hf, hour, subStepDt);
-                        if (Math.abs(activeMovement[2]) > 1e-10) {
-                            activity = 1;
+                        activity = 0;
+                    }
+                    // if not, does the particle actively swim upward?
+                    if (activity != 0) {
+                        // light trigger: irradiance or daylight hours
+                        if (rp.swimLightLevel) {
+                            activeMovement[2] = part.swim(rp, m, hf, hour, subStepDt);
+                            if (Math.abs(activeMovement[2]) > 1e-10) {
+                                swim++;
+                                activity = 1;
+                            }
+                        } else if (isDaytime) {
+                            activeMovement[2] = part.swim(rp, subStepDt);
                             swim++;
+                            activity = 1;
                         }
-                    } else if (isDaytime) {
-                        activeMovement[2] = part.swim(rp, subStepDt);
-                        activity = 1;
-                        swim++;
-                    } else {
+                        // depth trigger: independent of light
+                        if (part.getDepth() > rp.maxDepth) {
+                            activeMovement[2] = part.swim(rp, subStepDt);
+                            swim++;
+                            activity = 1;
+                        }
+                    }
+                    // if not sinking or swimming, then passive
+                    if (activity == 2) {
                         activeMovement[2] = part.passive(rp, localSalinity, subStepDt);
                     }
                     if (rp.recordActivity && part.getMesh()==0) {
