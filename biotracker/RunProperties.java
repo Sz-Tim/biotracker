@@ -41,6 +41,7 @@ public class RunProperties {
             recordConnectivity, // record connectivity between specific depths?
             connectImmature, // record connectivity for non-infectious stage?
             recordConnectivityDepth2, // record connectivity at a second set of depths?
+            recordConnectivityDepth3, // record connectivity at a third set of depths?
             recordLocations, recordArrivals, // record particle locations? arrivals at sites?
             recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
             recordVertDistr, // record vertical distributions?
@@ -87,6 +88,8 @@ public class RunProperties {
             connectDepth1_min, // min depth for connectivity layer 1
             connectDepth2_max, // max depth for connectivity layer 2
             connectDepth2_min, // min depth for connectivity layer 2
+            connectDepth3_max, // max depth for connectivity layer 3
+            connectDepth3_min, // min depth for connectivity layer 3
             pstepsMaxDepth, // maximum depth for recording particle density in psteps output
             releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
@@ -276,6 +279,8 @@ public class RunProperties {
         connectDepth1_min = Double.parseDouble(properties.getProperty("connectDepth1_min", "0"));
         connectDepth2_max = Double.parseDouble(properties.getProperty("connectDepth2_max", "10000"));
         connectDepth2_min = Double.parseDouble(properties.getProperty("connectDepth2_min", "10000"));
+        connectDepth3_max = Double.parseDouble(properties.getProperty("connectDepth3_max", "10000"));
+        connectDepth3_min = Double.parseDouble(properties.getProperty("connectDepth3_min", "10000"));
         recordLocations = Boolean.parseBoolean(properties.getProperty("recordLocations", "true"));
         recordArrivals = Boolean.parseBoolean(properties.getProperty("recordArrivals", "true"));
         recordMovement = Boolean.parseBoolean(properties.getProperty("recordMovement", "false"));
@@ -284,8 +289,9 @@ public class RunProperties {
         vertDistrInterval = Integer.parseInt(properties.getProperty("vertDistrInterval", "1"));
         vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
 
-        // record connectivity between a second set of depths if set differently than defaults (i.e., realistic values)
-        recordConnectivityDepth2 = connectDepth2_min < 10000 && connectDepth2_max < 10000;
+        // record connectivity between additional sets of depths if set differently than defaults (i.e., realistic values)
+        recordConnectivityDepth2 = connectDepth2_min < 10000 || connectDepth2_max < 10000;
+        recordConnectivityDepth3 = connectDepth3_min < 10000 || connectDepth3_max < 10000;
 
         // hydrodynamic file requirements
         needS = (!fixDepth) || (!mortSal_fn.equals("constant"));

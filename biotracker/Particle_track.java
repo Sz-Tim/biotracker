@@ -199,8 +199,10 @@ public class Particle_track {
         // Set up array to hold connectivity counts
         float[][] connectivity = new float[habitat.size()][habitatEnd.size()];
         float[][] connectivityDepth2 = new float[habitat.size()][habitatEnd.size()];
+        float[][] connectivityDepth3 = new float[habitat.size()][habitatEnd.size()];
         float[][] connectivityImmature = new float[habitat.size()][habitatEnd.size()];
         float[][] connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
+        float[][] connectivityImmatureDepth3 = new float[habitat.size()][habitatEnd.size()];
 
         int[][] elemActivity = new int[meshes.get(0).getNElems()][3]; // count of sink, swim, float within each element
         int[][] hourActivity = new int[numberOfDays*24+1][3]; // count of sink, swim, float within each hour
@@ -409,6 +411,11 @@ public class Particle_track {
                                                 arrival.getArrivalDepth() <= rp.connectDepth2_max) {
                                             connectivityDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
                                         }
+                                        if (rp.recordConnectivityDepth3 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth3_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth3_max) {
+                                            connectivityDepth3[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
                                     } else if (rp.connectImmature && arrival.getArrivalStatus() == 1) {
                                         if (arrival.getArrivalDepth() >= rp.connectDepth1_min &&
                                                 arrival.getArrivalDepth() <= rp.connectDepth1_max) {
@@ -418,6 +425,11 @@ public class Particle_track {
                                                 arrival.getArrivalDepth() >= rp.connectDepth2_min &&
                                                 arrival.getArrivalDepth() <= rp.connectDepth2_max) {
                                             connectivityImmatureDepth2[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
+                                        }
+                                        if (rp.recordConnectivityDepth3 &&
+                                                arrival.getArrivalDepth() >= rp.connectDepth3_min &&
+                                                arrival.getArrivalDepth() <= rp.connectDepth3_max) {
+                                            connectivityImmatureDepth3[particle.getStartIndex()][destIndex] += (float) arrival.getArrivalDensity();
                                         }
                                     }
                                 }
@@ -449,6 +461,11 @@ public class Particle_track {
                                     "connectivity_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                             connectivityDepth2 = new float[habitat.size()][habitatEnd.size()];
                         }
+                        if (rp.recordConnectivityDepth3) {
+                            IOUtils.writeNonZeros2DArrayToCSV(connectivityDepth3, "source,destination,value", "%d,%d,%.4e",
+                                    "connectivity_" + rp.connectDepth3_min + "-" + rp.connectDepth3_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                            connectivityDepth3 = new float[habitat.size()][habitatEnd.size()];
+                        }
                         if (rp.connectImmature) {
                             IOUtils.writeNonZeros2DArrayToCSV(connectivityImmature, "source,destination,value", "%d,%d,%.4e",
                                     "connectivityImm_" + rp.connectDepth1_min + "-" + rp.connectDepth1_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
@@ -457,6 +474,11 @@ public class Particle_track {
                                 IOUtils.writeNonZeros2DArrayToCSV(connectivityImmatureDepth2, "source,destination,value", "%d,%d,%.4e",
                                         "connectivityImm_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
+                            }
+                            if (rp.recordConnectivityDepth3) {
+                                IOUtils.writeNonZeros2DArrayToCSV(connectivityImmatureDepth3, "source,destination,value", "%d,%d,%.4e",
+                                        "connectivityImm_" + rp.connectDepth3_min + "-" + rp.connectDepth3_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                connectivityImmatureDepth3 = new float[habitat.size()][habitatEnd.size()];
                             }
                         }
                         for (Particle particle : particles) {
