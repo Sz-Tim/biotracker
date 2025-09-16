@@ -428,8 +428,12 @@ public class RunProperties {
                 "- Depth max 1 (m): " + this.connectDepth1_max + "\n" +
                 (this.recordConnectivityDepth2 ? (
                         "- Depth min 2 (m): " + this.connectDepth2_min + "\n" +
-                        "- Depth max 2 (m): " + this.connectDepth2_max + "\n"
-                        ) : "") +
+                                "- Depth max 2 (m): " + this.connectDepth2_max + "\n"
+                ) : "") +
+                (this.recordConnectivityDepth3 ? (
+                        "- Depth min 3 (m): " + this.connectDepth3_min + "\n" +
+                                "- Depth max 3 (m): " + this.connectDepth3_max + "\n"
+                ) : "") +
                 "Vertical distributions:\n" +
                 "- Copepodid: " + this.recordVertDistr + "\n" +
                 "- Nauplius: " + this.recordImmature + "\n" +
