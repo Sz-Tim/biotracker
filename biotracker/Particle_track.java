@@ -468,16 +468,16 @@ public class Particle_track {
                         }
                         if (rp.connectImmature) {
                             IOUtils.writeNonZeros2DArrayToCSV(connectivityImmature, "source,destination,value", "%d,%d,%.4e",
-                                    "connectivityImm_" + rp.connectDepth1_min + "-" + rp.connectDepth1_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                    "connectivityImmature_" + rp.connectDepth1_min + "-" + rp.connectDepth1_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                             connectivityImmature = new float[habitat.size()][habitatEnd.size()];
                             if (rp.recordConnectivityDepth2) {
                                 IOUtils.writeNonZeros2DArrayToCSV(connectivityImmatureDepth2, "source,destination,value", "%d,%d,%.4e",
-                                        "connectivityImm_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                        "connectivityImmature_" + rp.connectDepth2_min + "-" + rp.connectDepth2_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 connectivityImmatureDepth2 = new float[habitat.size()][habitatEnd.size()];
                             }
                             if (rp.recordConnectivityDepth3) {
                                 IOUtils.writeNonZeros2DArrayToCSV(connectivityImmatureDepth3, "source,destination,value", "%d,%d,%.4e",
-                                        "connectivityImm_" + rp.connectDepth3_min + "-" + rp.connectDepth3_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                        "connectivityImmature_" + rp.connectDepth3_min + "-" + rp.connectDepth3_max + "m_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 connectivityImmatureDepth3 = new float[habitat.size()][habitatEnd.size()];
                             }
                         }
@@ -490,10 +490,12 @@ public class Particle_track {
                         IOUtils.vertDistrUpdater(particles, rp, vertDistrMature, vertDistrImmature, rp.dt);
                         if (stepcount % (rp.vertDistrInterval * rp.stepsPerStep) == 0) {
                             if (rp.recordImmature) {
-                                IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e", "vertDistrImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                                IOUtils.writeNonZeros2DArrayToCSV(vertDistrImmature, "i,z,value", "%d,%d,%.4e",
+                                        "vertDistrImmature_" + today + "_" + Math.round(elapsedHours) + ".csv");
                                 vertDistrImmature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
                             }
-                            IOUtils.writeNonZeros2DArrayToCSV(vertDistrMature, "i,z,value", "%d,%d,%.4e", "vertDistrMature_" + today + "_" + Math.round(elapsedHours) + ".csv");
+                            IOUtils.writeNonZeros2DArrayToCSV(vertDistrMature, "i,z,value", "%d,%d,%.4e",
+                                    "vertDistrMature_" + today + "_" + Math.round(elapsedHours) + ".csv");
                             vertDistrMature = new float[meshes.get(0).getNElems()][rp.vertDistrMax+1];
                         }
                     }

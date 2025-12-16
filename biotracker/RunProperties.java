@@ -34,6 +34,7 @@ public class RunProperties {
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             fixDepth,
             swimLightLevel,
+            swimColdNauplius,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             stokesDrift,
             recordImmature,
@@ -197,6 +198,7 @@ public class RunProperties {
         swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
         lightThreshCopepodid = Double.parseDouble(properties.getProperty("lightThreshCopepodid", "2.06e-5"));
         lightThreshNauplius = Double.parseDouble(properties.getProperty("lightThreshNauplius", "0.392"));
+        swimColdNauplius = Boolean.parseBoolean(properties.getProperty("swimColdNauplius", "false"));
         swimUpSpeedMean = Double.parseDouble(properties.getProperty("swimUpSpeedMean", "0"));
         swimUpSpeedStd = Double.parseDouble(properties.getProperty("swimUpSpeedStd", "0"));
         swimUpSpeedCopepodidMean = Double.parseDouble(properties.getProperty("swimUpSpeedCopepodidMean", "" + swimUpSpeedMean));
@@ -391,24 +393,25 @@ public class RunProperties {
                 "End on arrival: " + this.endOnArrival + "\n" +
                 "Fixed depth: " + this.fixDepth + "\n" +
                 "Start depth (m): " + this.startDepth + "\n" +
-                "Maximum depth (m): " + this.maxDepth + "\n" +
+                "Maximum preferred depth (m): " + this.maxDepth + "\n" +
                 "Viable time (h): " + this.viabletime + "\n" +
                 "Max particle age (h): " + this.maxParticleAge + "\n" +
-                "Viable degree days: " + this.viableDegreeDays + "\n" +
-                "Max degree days: " + this.maxDegreeDays + "\n" +
+                "Molt to copepodid: " + this.viableDegreeDays + " degree days" + "\n" +
+                "Senescence: " + this.maxDegreeDays + " degree days" + "\n" +
                 "Mortality rate function: " + this.mortSal_fn + "\n" +
                 "Mortality rate parameters (/h): " + this.mortSal_b + "\n" +
                 "Passive sinking intercept (m/s): " + this.passiveSinkingIntercept + "\n" +
                 "Passive sinking slope (m/s/psu): " + this.passiveSinkingSlope + "\n" +
-                "Copepodid P(swim down) = 0-1: " + this.salinityThreshCopepodidMax + " - " + salinityThreshCopepodidMin + "\n" +
                 "Nauplius P(swim down) = 0-1: " + this.salinityThreshNaupliusMax + " - " + salinityThreshNaupliusMin + "\n" +
-                "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
+                "Copepodid P(swim down) = 0-1: " + this.salinityThreshCopepodidMax + " - " + salinityThreshCopepodidMin + "\n" +
                 "Nauplius swim down speed (m/s) ~ Norm(" + this.swimDownSpeedNaupliusMean + ", " + this.swimDownSpeedNaupliusStd + ")" + "\n" +
+                "Copepodid swim down speed (m/s) ~ Norm(" + this.swimDownSpeedCopepodidMean + ", " + this.swimDownSpeedCopepodidStd + ")" + "\n" +
                 "Swim up based on shortwave: " + this.swimLightLevel + "\n" +
-                "Copepodid light threshold (umol/m2/s): " + this.lightThreshCopepodid + "\n" +
                 "Nauplius light threshold (umol/m2/s): " + this.lightThreshNauplius + "\n" +
-                "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
+                "Copepodid light threshold (umol/m2/s): " + this.lightThreshCopepodid + "\n" +
+                "Nauplius swim up only toward colder water: " + this.swimColdNauplius + "\n" +
                 "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
+                "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
                 "Egg production function: " + this.eggTemp_fn + "\n" +
                 "Egg production parameters (/d): " + this.eggTemp_b + "\n" +
                 "\n" +

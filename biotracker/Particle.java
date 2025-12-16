@@ -287,8 +287,8 @@ public class Particle {
 
     public void setStatus(int status) {
         // 0 = not free
-        // 1 = free
-        // 2 = viable (able to settle)
+        // 1 = free (nauplius)
+        // 2 = viable (copepodid / able to settle)
         // 3 = settled
         // 66 = boundary exit
         // 666 = dead (exceeded lifespan)

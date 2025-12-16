@@ -175,21 +175,21 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activity = 0;
                     }
                     // if not, does the particle actively swim upward?
-                    if (activity != 0) {
+                    if (activity == 2 && (part.isInfectious() || (rp.swimColdNauplius && tempSurface < localTemperature) )) {
+                        // depth trigger: independent of light
+                        if (part.getDepth() > rp.maxDepth) {
+                            activeMovement[2] = part.swim(rp, subStepDt);
+                            swim++;
+                            activity = 1;
+                        }
                         // light trigger: irradiance or daylight hours
-                        if (rp.swimLightLevel) {
+                        if (activity == 2 && rp.swimLightLevel) {
                             activeMovement[2] = part.swim(rp, m, hf, hour, subStepDt);
                             if (Math.abs(activeMovement[2]) > 1e-10) {
                                 swim++;
                                 activity = 1;
                             }
-                        } else if (isDaytime) {
-                            activeMovement[2] = part.swim(rp, subStepDt);
-                            swim++;
-                            activity = 1;
-                        }
-                        // depth trigger: independent of light
-                        if (part.getDepth() > rp.maxDepth) {
+                        } else if (activity == 2 && isDaytime) {
                             activeMovement[2] = part.swim(rp, subStepDt);
                             swim++;
                             activity = 1;
