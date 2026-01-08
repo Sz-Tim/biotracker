@@ -452,6 +452,11 @@ public class RunProperties {
                 "Particle arrivals: " + this.recordArrivals + "\n" +
                 "Sub-hourly movement: " + this.recordMovement + "\n" +
                 "Total sink-swim-passive by element: " + this.recordActivity + "\n" +
+                "Site environments: " + this.recordSiteEnv + "\n" +
+                (this.recordSiteEnv ? (
+                        "- Recording interval (h): " + this.siteEnvInterval + "\n" +
+                                "- Vertically averaged from 0-" + this.siteEnvMaxDepth + "m\n"
+                ) : "") +
                 "\n" +
                 "-------------- end of properties --------------\n\n";
     }

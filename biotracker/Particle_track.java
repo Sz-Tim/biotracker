@@ -520,7 +520,7 @@ public class Particle_track {
                         PrintWriter out = new PrintWriter(fstream);
                         out.println(siteEnvIntervalHeader);
                         for (HabitatSite habitatSite : habitat) {
-                            out.println(habitatSite.getID() + "," + habitatSite.avgIntervalToString());
+                            out.println(habitatSite.getID() + habitatSite.avgIntervalToString());
                             habitatSite.setEnvConditionDay(new double[15]);
                             habitatSite.setEnvConditionCountDay(new int[15]);
                         }
@@ -548,7 +548,7 @@ public class Particle_track {
             PrintWriter out = new PrintWriter(fstream);
             out.println(siteEnvOverallHeader);
             for (HabitatSite habitatSite : habitat) {
-                out.println(habitatSite.toString() + "," + habitatSite.avgOverallToString());
+                out.println(habitatSite.toString() + habitatSite.avgOverallToString());
             }
             out.close();
             // Write out the final locations of the particles.

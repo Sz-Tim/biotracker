@@ -155,10 +155,8 @@ public class HabitatSite {
         double[] avgEnv = this.getAvgEnvConditionDay();
         for (int i = 0; i < avgEnv.length; i++) {
             if (avgEnv[i] > -9999) {
+                intervalAvg.append(",");
                 intervalAvg.append(avgEnv[i]);
-                if (i < avgEnv.length - 1) {
-                    intervalAvg.append(",");
-                }
             }
         }
         return intervalAvg.toString();
@@ -169,10 +167,8 @@ public class HabitatSite {
         double[] avgEnv = this.getAvgEnvCondition();
         for (int i = 0; i < avgEnv.length; i++) {
             if(avgEnv[i] > -9999) {
+                overallAvg.append(",");
                 overallAvg.append(avgEnv[i]);
-                if (i < avgEnv.length - 1) {
-                    overallAvg.append(",");
-                }
             }
         }
         return overallAvg.toString();
