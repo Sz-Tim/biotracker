@@ -46,6 +46,7 @@ public class RunProperties {
             recordLocations, recordArrivals, // record particle locations? arrivals at sites?
             recordMovement, recordActivity, // record all movements for a sample of particles? Record sink/swim/float counts within each element and hour?
             recordVertDistr, // record vertical distributions?
+            recordSiteEnv, // record vertically averaged environmental conditions at each site?
             duplicateLastDay, // Should hydro file for last day be duplicated for interpolation purposes during last hour of simulation (false except when in operational mode)
             checkOpenBoundaries, // Should open boundaries be checked? If reading hydro mesh from file directly, the answer is currently NO (open boundaries treated as closed boundaries).
             verboseSetUp,
@@ -63,7 +64,8 @@ public class RunProperties {
             parallelThreads, // Number of threads to use in parallel execution
             parallelThreadsHD, // Number of cores for reading HD files; Fails inexplicably on Salmon occasionally
             pstepsInterval, connectivityInterval,  // Interval in hours between recording element density summaries, connectivity
-            vertDistrInterval, vertDistrMax; // Interval in hours for recording vertDistr, max depth for bins (1 m bins from 0 to vertDistrMax)
+            vertDistrInterval, vertDistrMax, // Interval in hours for recording vertDistr, max depth for bins (1 m bins from 0 to vertDistrMax)
+            siteEnvInterval; // Interval in hours for recording site conditions
 
     double releaseTime, releaseTimeEnd, viabletime, // Time of particle release (if releaseScenario == "0") and end of particle release (if releaseScenario == 2), Time to attain settlement competency
             dt, // Time step (s) per record
@@ -92,6 +94,7 @@ public class RunProperties {
             connectDepth3_max, // max depth for connectivity layer 3
             connectDepth3_min, // min depth for connectivity layer 3
             pstepsMaxDepth, // maximum depth for recording particle density in psteps output
+            siteEnvMaxDepth, // maximum depth for recording depth-averaged site conditions (from surface)
             releaseInterval, // release frequency in hours
             restartParticlesCutoffDays; // when reading the specified restart particles file, cutoff in particle start date to apply (days before start date of run)
     List<Double> eggTemp_b, // temperature dependent egg production parameters; response = eggs per day per gravid female
@@ -290,6 +293,9 @@ public class RunProperties {
         recordVertDistr = Boolean.parseBoolean(properties.getProperty("recordVertDistr", "false"));
         vertDistrInterval = Integer.parseInt(properties.getProperty("vertDistrInterval", "1"));
         vertDistrMax = Integer.parseInt(properties.getProperty("vertDistrMax", "20"));
+        recordSiteEnv = Boolean.parseBoolean(properties.getProperty("recordSiteEnv", "true"));
+        siteEnvInterval = Integer.parseInt(properties.getProperty("siteEnvInterval", "24"));
+        siteEnvMaxDepth = Integer.parseInt(properties.getProperty("siteEnvMaxDepth", "30"));
 
         // record connectivity between additional sets of depths if set differently than defaults (i.e., realistic values)
         recordConnectivityDepth2 = connectDepth2_min < 10000 || connectDepth2_max < 10000;

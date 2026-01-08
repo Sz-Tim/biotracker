@@ -35,10 +35,11 @@ public class HabitatSite {
         this.ID = ID;
         this.xy = new float[]{x, y};
         this.scale = scale;
-        this.envConditionDay = new double[13]; // [u, v, w, uv, salinity, temp, km, stokesU0, stokesV0, stokesUV0, Hsig, waveDir, waveT]
-        this.envConditionSum = new double[13]; // [u, v, w, uv, salinity, temp, km, stokesU0, stokesV0, stokesUV0, Hsig, waveDir, waveT]
-        this.envConditionCount = new int[13]; // [u, v, w, uv, salinity, temp, km, stokesU0, stokesV0, stokesUV0, Hsig, waveDir, waveT]
-        this.envConditionCountDay = new int[13]; // [u, v, w, uv, salinity, temp, km, stokesU0, stokesV0, stokesUV0, Hsig, waveDir, waveT]
+        // [u, v, w, uv, salinity, temp, light, Vh, km, stokesU0, stokesV0, stokesUV0, Hsig, waveDir, waveT]
+        this.envConditionDay = new double[15];
+        this.envConditionSum = new double[15];
+        this.envConditionCount = new int[15];
+        this.envConditionCountDay = new int[15];
 
         double[] xy2 = new double[]{this.xy[0], this.xy[1]};
 
@@ -135,31 +136,46 @@ public class HabitatSite {
 
     @Override
     public String toString() {
-        String details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.containingMesh;
+        String details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.depth + "," + this.containingMesh;
         if (this.containingMeshType.equalsIgnoreCase("FVCOM") || this.containingMeshType.equalsIgnoreCase("ROMS_TRI")) {
-            details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.depth + ","
-                    + this.containingMesh + "," + this.nearestFVCOMCentroid + "," + this.containingFVCOMElem
-                    + "," + this.containingMeshType
-                    + "," + this.getAvgEnvCondition()[0] + "," + this.getAvgEnvCondition()[1]
-                    + "," + this.getAvgEnvCondition()[2] + "," + this.getAvgEnvCondition()[3]
-                    + "," + this.getAvgEnvCondition()[4] + "," + this.getAvgEnvCondition()[5]
-                    + "," + this.getAvgEnvCondition()[6] + "," + this.getAvgEnvCondition()[7]
-                    + "," + this.getAvgEnvCondition()[8] + "," + this.getAvgEnvCondition()[9]
-                    + "," + this.getAvgEnvCondition()[10] + "," + this.getAvgEnvCondition()[11]
-                    + "," + this.getAvgEnvCondition()[12]
-                    + "," + this.getAvgEnvConditionDay()[0] + "," + this.getAvgEnvConditionDay()[1]
-                    + "," + this.getAvgEnvConditionDay()[2] + "," + this.getAvgEnvConditionDay()[3]
-                    + "," + this.getAvgEnvConditionDay()[4] + "," + this.getAvgEnvConditionDay()[5]
-                    + "," + this.getAvgEnvConditionDay()[6] + "," + this.getAvgEnvConditionDay()[7]
-                    + "," + this.getAvgEnvConditionDay()[8] + "," + this.getAvgEnvConditionDay()[9]
-                    + "," + this.getAvgEnvConditionDay()[10] + "," + this.getAvgEnvConditionDay()[11]
-                    + "," + this.getAvgEnvConditionDay()[12];
+            return details + "," + this.nearestFVCOMCentroid + "," + this.containingFVCOMElem + "," + this.containingMeshType;
         } else if (this.containingMeshType.equalsIgnoreCase("ROMS")) {
-            details = this.ID + "," + this.xy[0] + "," + this.xy[1] + "," + this.containingMesh + " U_grid: ("
-                    + this.nearestROMSGridPointU[0] + "," + this.nearestROMSGridPointU[1] + ") ("
-                    + this.containingROMSElemU[0] + "," + this.nearestROMSGridPointU[1] + ")";
+            return details + "," +
+                    "U:" + this.nearestROMSGridPointU[0] + ";" + this.nearestROMSGridPointU[1] + ";" +
+                    "V:" + this.nearestROMSGridPointV[0] + ";" + this.nearestROMSGridPointV[1] + "," +
+                    "U:" + this.containingROMSElemU[0] + ";" + this.containingROMSElemU[1] + ";" +
+                    "V:" + this.containingROMSElemV[0] + ";" + this.containingROMSElemV[1] + "," +
+                    "ROMS";
         }
         return details;
+    }
+
+    public String avgIntervalToString() {
+        StringBuilder intervalAvg = new StringBuilder();
+        double[] avgEnv = this.getAvgEnvConditionDay();
+        for (int i = 0; i < avgEnv.length; i++) {
+            if (avgEnv[i] > -9999) {
+                intervalAvg.append(avgEnv[i]);
+                if (i < avgEnv.length - 1) {
+                    intervalAvg.append(",");
+                }
+            }
+        }
+        return intervalAvg.toString();
+    }
+
+    public String avgOverallToString() {
+        StringBuilder overallAvg = new StringBuilder();
+        double[] avgEnv = this.getAvgEnvCondition();
+        for (int i = 0; i < avgEnv.length; i++) {
+            if(avgEnv[i] > -9999) {
+                overallAvg.append(avgEnv[i]);
+                if (i < avgEnv.length - 1) {
+                    overallAvg.append(",");
+                }
+            }
+        }
+        return overallAvg.toString();
     }
 
     public String getID() {
