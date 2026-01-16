@@ -52,13 +52,14 @@ public class Particle_track {
         meshes.add(new Mesh(rp.mesh0, rp.meshType0, rp.coordOS));
         if (!rp.mesh1.isEmpty()) {
             meshes.add(new Mesh(rp.mesh1, rp.meshType1, rp.coordOS));
-            if (rp.hfFilePrefix1.equalsIgnoreCase("westcoms2")) {
-                int adjElem1 = switch (rp.hfFilePrefix0) {
-                    case "etive28" -> 69784;
-                    default -> 69784;
+            if (rp.hfFilePrefix1.matches("(?i).*westcoms.*")) { // high res mesh nested within WeStCOMS
+                int adjElem1 = switch (rp.hfFilePrefix0 + "_" + rp.hfFilePrefix1) {
+                    case "etive28_westcoms2" -> 69784; // westcoms2 element id at etive28 element 16
+                    case "etive28_westcoms3" -> 74813; // westcoms3 element id at etive28 element 16
+                    default -> 74813;
                 };
                 int adjElem0 = switch (rp.hfFilePrefix0) {
-                    case "etive28" -> 16;
+                    case "etive28" -> 16; // etive28 element id
                     default -> 16;
                 };
                 meshes.get(0).setAdjoiningElement(adjElem0);
