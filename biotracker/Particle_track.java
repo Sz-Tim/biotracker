@@ -300,35 +300,38 @@ public class Particle_track {
 
                     for (int i=0; i < habitat.size(); i++) {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
-                        int m = habitat.get(i).getContainingMesh();
-                        int nLayers = (int) Mesh.findNearestSigmas(rp.siteEnvMaxDepth, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
-                        double[][] currentConditions = new double[nLayers][15];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
                         siteLoc[1] = habitat.get(i).getLocation()[1];
-                        double[] siteStokesUV = {0,0};
-                        double surface_short_wave = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "short_wave", rp);
-                        for (int j = 0; j < nLayers; j++) {
-                            currentConditions[j][0] = hydroFields.get(m).getU()[currentHour][j][siteElem];
-                            currentConditions[j][1] = hydroFields.get(m).getV()[currentHour][j][siteElem];
-                            currentConditions[j][2] = hydroFields.get(m).getW()[currentHour][j][siteElem];
-                            currentConditions[j][3] = Math.sqrt(currentConditions[j][0]*currentConditions[j][0] + currentConditions[j][1]*currentConditions[j][1]);
-                            currentConditions[j][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "salinity", rp) : -9999;
-                            currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
-                            currentConditions[j][6] = rp.needLight ? surface_short_wave : -9999;
-                            currentConditions[j][7] = rp.needVh ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "vh", rp) : -9999;
-                            currentConditions[j][8] = rp.needK ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "km", rp) : -9999;
+                        int m = habitat.get(i).getContainingMesh();
+                        // get environmental conditions at each depth from surface to siteEnvMaxDepth (or bed) every siteEnvInterval meters
+                        int maxEnvDepth = (int) Math.floor(Math.min(rp.siteEnvMaxDepth, habitat.get(i).getDepth()));
+                        for (int d = 0; d <= maxEnvDepth; d+=rp.siteEnvInterval) {
+                            double[] localEnv = new double[15];
+                            Arrays.fill(localEnv, -9999);
+                            double[] siteStokesUV = {0,0};
+                            float[][] localSigLev = Mesh.findNearestSigmas(d, meshes.get(m).getSiglev(), meshes.get(m).getDepthUvnode()[siteElem]);
+                            float[][] localSigLay = Mesh.findNearestSigmas(d, meshes.get(m).getSiglay(), meshes.get(m).getDepthUvnode()[siteElem]);
+                            localEnv[0] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "u", rp, localSigLay);
+                            localEnv[1] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "v", rp, localSigLay);
+                            localEnv[2] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "w", rp, localSigLay);
+                            localEnv[3] = Math.sqrt(localEnv[0] * localEnv[0] + localEnv[1] * localEnv[1]);
+                            if (rp.needS) localEnv[4] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "salinity", rp, localSigLay);
+                            if (rp.needT) localEnv[5] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "temp", rp, localSigLay);
+                            if (rp.needLight) localEnv[6] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "short_wave", rp);
+                            if (rp.needVh) localEnv[7] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "vh", rp, localSigLay);
+                            if (rp.needK) localEnv[8] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "kh", rp, localSigLev);
                             if (rp.needStokes) {
                                 double[] siteNodeDist = Particle.distanceToNodes(siteLoc, siteElem, meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), rp.coordOS);
                                 siteStokesUV = hydroFields.get(2).getAvgFromTrinodes(siteElem, meshes.get(0).getTrinodes(), siteNodeDist, currentHour, 0);
+                                localEnv[9] = siteStokesUV[0];
+                                localEnv[10] = siteStokesUV[1];
+                                localEnv[11] = Math.sqrt(siteStokesUV[0]*siteStokesUV[0] + siteStokesUV[1]*siteStokesUV[1]);
+                                localEnv[12] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Hsig", rp);
+                                localEnv[13] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Dir", rp);
+                                localEnv[14] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Tm", rp);
                             }
-                            currentConditions[j][9] = rp.needStokes ? siteStokesUV[0] : -9999;
-                            currentConditions[j][10] = rp.needStokes ? siteStokesUV[1] : -9999;
-                            currentConditions[j][11] = rp.needStokes ? Math.sqrt(siteStokesUV[0]*siteStokesUV[0] + siteStokesUV[1]*siteStokesUV[1]) : -9999;
-                            currentConditions[j][12] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Hsig", rp) : -9999;
-                            currentConditions[j][13] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Dir", rp) : -9999;
-                            currentConditions[j][14] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Tm", rp) : -9999;
-                            habitat.get(i).addEnvCondition(currentConditions[j]);
+                            habitat.get(i).addEnvCondition(localEnv);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
                         // These are nearly identical under the temperatures in Scotland (r = 0.998)

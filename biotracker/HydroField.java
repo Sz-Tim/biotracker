@@ -265,7 +265,7 @@ public class HydroField {
                 case "temp" -> sum += getT()[hour][depthLayer][particleNodes[i]] * weights[i];
                 case "salinity" -> sum += getS()[hour][depthLayer][particleNodes[i]] * weights[i];
                 case "short_wave" -> sum += getLight()[hour][particleNodes[i]] * weights[i];
-                case "k" -> sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
+                case "kh" -> sum += getK()[hour][depthLayer][particleNodes[i]] * weights[i];
                 case "vh" -> sum += getVh()[hour][depthLayer][particleNodes[i]] * weights[i];
                 case "zeta" -> sum += getZeta()[hour][particleNodes[i]] * weights[i];
                 case "Hsig" -> sum += getHsig()[hour][particleNodes[i]] * weights[i];
@@ -298,8 +298,19 @@ public class HydroField {
         float sigmaHeight = nearestSigmas[0][1] - nearestSigmas[1][1];
         double dzPartVsAbove = depth - nearestSigmas[1][1];
 
-        double varBelow = getAvgFromTrinodes(m, location, (int) nearestSigmas[0][0], elem, hour, varName, rp);
-        double varAbove = getAvgFromTrinodes(m, location, (int) nearestSigmas[1][0], elem, hour, varName, rp);
+        double varBelow = switch(varName) {
+            case "u" -> getU()[hour][(int) nearestSigmas[0][0]][elem];
+            case "v" -> getV()[hour][(int) nearestSigmas[0][0]][elem];
+            case "w" -> getW()[hour][(int) nearestSigmas[0][0]][elem];
+            default -> getAvgFromTrinodes(m, location, (int) nearestSigmas[0][0], elem, hour, varName, rp);
+        };
+        double varAbove = switch (varName) {
+            case "u" -> getU()[hour][(int) nearestSigmas[1][0]][elem];
+            case "v" -> getV()[hour][(int) nearestSigmas[1][0]][elem];
+            case "w" -> getW()[hour][(int) nearestSigmas[1][0]][elem];
+            default -> getAvgFromTrinodes(m, location, (int) nearestSigmas[1][0], elem, hour, varName, rp);
+        };
+
         if (sigmaHeight != 0) {
             return varAbove + dzPartVsAbove * (varBelow - varAbove) / sigmaHeight;
         } else {
