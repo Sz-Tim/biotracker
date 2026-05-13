@@ -52,13 +52,14 @@ public class Particle_track {
         meshes.add(new Mesh(rp.mesh0, rp.meshType0, rp.coordOS));
         if (!rp.mesh1.isEmpty()) {
             meshes.add(new Mesh(rp.mesh1, rp.meshType1, rp.coordOS));
-            if (rp.hfFilePrefix1.equalsIgnoreCase("westcoms2")) {
-                int adjElem1 = switch (rp.hfFilePrefix0) {
-                    case "etive28" -> 69784;
-                    default -> 69784;
+            if (rp.hfFilePrefix1.matches("(?i).*westcoms.*")) { // high res mesh nested within WeStCOMS
+                int adjElem1 = switch (rp.hfFilePrefix0 + "_" + rp.hfFilePrefix1) {
+                    case "etive28_westcoms2" -> 69784; // westcoms2 element id at etive28 element 16
+                    case "etive28_westcoms3" -> 74813; // westcoms3 element id at etive28 element 16
+                    default -> 74813;
                 };
                 int adjElem0 = switch (rp.hfFilePrefix0) {
-                    case "etive28" -> 16;
+                    case "etive28" -> 16; // etive28 element id
                     default -> 16;
                 };
                 meshes.get(0).setAdjoiningElement(adjElem0);
@@ -211,6 +212,14 @@ public class Particle_track {
 
         String particleRestartHeader = "hour,ID,startDate,age,startLocation,x,y,elem,status,density,mesh,depth,depthLayer,degreeDays,xTot,yTot,xyTot,zTot";
         String arrivalHeader = "ID,startDate,startTime,startLocation,endDate,endTime,endLocation,age,density";
+        String siteEnvIntervalHeader = "site,u,v,w,uv" +
+                (rp.needS ? ",salinity" : "") + (rp.needT ? ",temperature" : "") + (rp.needLight ? ",light" : "") +
+                (rp.needVh ? ",Vh" : "") + (rp.needK ? ",k" : "") +
+                (rp.needStokes ? ",stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT" : "");
+        String siteEnvOverallHeader = "site,x,y,depth,mesh,centroid,elem,MeshType,u,v,w,uv" +
+                (rp.needS ? ",salinity" : "") + (rp.needT ? ",temperature" : "") + (rp.needLight ? ",light" : "") +
+                (rp.needVh ? ",Vh" : "") + (rp.needK ? ",k" : "") +
+                (rp.needStokes ? ",stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT" : "");
 
         if (rp.recordMovement) {
             IOUtils.writeMovementsHeader("ID,date,hour,step,startDate,age,density,x,y,z,layer,mesh,status,degreeDays,sink,swim,temp,salinity,mortality,tempSurface,dX,dY,dZ",
@@ -291,32 +300,38 @@ public class Particle_track {
 
                     for (int i=0; i < habitat.size(); i++) {
                         int siteElem = habitat.get(i).getContainingFVCOMElem();
-                        int m = habitat.get(i).getContainingMesh();
-                        int nLayers = (int) Mesh.findNearestSigmas(20.0, meshes.get(m).getSiglay(), (float) habitat.get(i).getDepth())[0][0];
-                        double[][] currentConditions = new double[nLayers][13];
                         double[] siteLoc = new double[2];
                         siteLoc[0] = habitat.get(i).getLocation()[0];
                         siteLoc[1] = habitat.get(i).getLocation()[1];
-                        double[] siteStokesUV = {0,0};
-                        for (int j = 0; j < nLayers; j++) {
-                            currentConditions[j][0] = hydroFields.get(m).getU()[currentHour][j][siteElem];
-                            currentConditions[j][1] = hydroFields.get(m).getV()[currentHour][j][siteElem];
-                            currentConditions[j][2] = hydroFields.get(m).getW()[currentHour][j][siteElem];
-                            currentConditions[j][3] = Math.sqrt(currentConditions[j][0]*currentConditions[j][0] + currentConditions[j][1]*currentConditions[j][1]);
-                            currentConditions[j][4] = rp.needS ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "salinity", rp) : -9999;
-                            currentConditions[j][5] = rp.needT ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "temp", rp) : -9999;
-                            currentConditions[j][6] = rp.needK ? hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, j, siteElem, currentHour, "km", rp) : -9999;
+                        int m = habitat.get(i).getContainingMesh();
+                        // get environmental conditions at each depth from surface to siteEnvMaxDepth (or bed) every siteEnvInterval meters
+                        int maxEnvDepth = (int) Math.floor(Math.min(rp.siteEnvMaxDepth, habitat.get(i).getDepth()));
+                        for (int d = 0; d <= maxEnvDepth; d+=rp.siteEnvInterval) {
+                            double[] localEnv = new double[15];
+                            Arrays.fill(localEnv, -9999);
+                            double[] siteStokesUV = {0,0};
+                            float[][] localSigLev = Mesh.findNearestSigmas(d, meshes.get(m).getSiglev(), meshes.get(m).getDepthUvnode()[siteElem]);
+                            float[][] localSigLay = Mesh.findNearestSigmas(d, meshes.get(m).getSiglay(), meshes.get(m).getDepthUvnode()[siteElem]);
+                            localEnv[0] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "u", rp, localSigLay);
+                            localEnv[1] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "v", rp, localSigLay);
+                            localEnv[2] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "w", rp, localSigLay);
+                            localEnv[3] = Math.sqrt(localEnv[0] * localEnv[0] + localEnv[1] * localEnv[1]);
+                            if (rp.needS) localEnv[4] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "salinity", rp, localSigLay);
+                            if (rp.needT) localEnv[5] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "temp", rp, localSigLay);
+                            if (rp.needLight) localEnv[6] = hydroFields.get(m).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "short_wave", rp);
+                            if (rp.needVh) localEnv[7] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "vh", rp, localSigLay);
+                            if (rp.needK) localEnv[8] = hydroFields.get(m).getValueAtDepth(meshes.get(m), siteElem, siteLoc, d, currentHour, "kh", rp, localSigLev);
                             if (rp.needStokes) {
                                 double[] siteNodeDist = Particle.distanceToNodes(siteLoc, siteElem, meshes.get(0).getNodexy(), meshes.get(0).getTrinodes(), rp.coordOS);
                                 siteStokesUV = hydroFields.get(2).getAvgFromTrinodes(siteElem, meshes.get(0).getTrinodes(), siteNodeDist, currentHour, 0);
+                                localEnv[9] = siteStokesUV[0];
+                                localEnv[10] = siteStokesUV[1];
+                                localEnv[11] = Math.sqrt(siteStokesUV[0]*siteStokesUV[0] + siteStokesUV[1]*siteStokesUV[1]);
+                                localEnv[12] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Hsig", rp);
+                                localEnv[13] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Dir", rp);
+                                localEnv[14] = hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Tm", rp);
                             }
-                            currentConditions[j][7] = rp.needStokes ? siteStokesUV[0] : -9999;
-                            currentConditions[j][8] = rp.needStokes ? siteStokesUV[1] : -9999;
-                            currentConditions[j][9] = rp.needStokes ? Math.sqrt(siteStokesUV[0]*siteStokesUV[0] + siteStokesUV[1]*siteStokesUV[1]) : -9999;
-                            currentConditions[j][10] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Hsig", rp) : -9999;
-                            currentConditions[j][11] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Dir", rp) : -9999;
-                            currentConditions[j][12] = rp.needStokes ? hydroFields.get(2).getAvgFromTrinodes(meshes.get(m), siteLoc, 0, siteElem, currentHour, "Tm", rp) : -9999;
-                            habitat.get(i).addEnvCondition(currentConditions[j]);
+                            habitat.get(i).addEnvCondition(localEnv);
                         }
                         // calculate eggs per female per timestep based on temperature and scale initial particle densities
                         // These are nearly identical under the temperatures in Scotland (r = 0.998)
@@ -502,6 +517,19 @@ public class Particle_track {
 
                     // Clean up "dead" (666) and "exited" (66) particles
                     particles.removeIf(part -> part.getStatus() == 666 || part.getStatus() == 66);
+
+                    // Write site conditions
+                    if (rp.recordSiteEnv && stepcount % (rp.siteEnvInterval * rp.stepsPerStep) == 0) {
+                        FileWriter fstream = new FileWriter("siteEnv_" + today + "_" + Math.round(elapsedHours) + ".csv", false);
+                        PrintWriter out = new PrintWriter(fstream);
+                        out.println(siteEnvIntervalHeader);
+                        for (HabitatSite habitatSite : habitat) {
+                            out.println(habitatSite.getID() + habitatSite.avgIntervalToString());
+                            habitatSite.setEnvConditionDay(new double[15]);
+                            habitatSite.setEnvConditionCountDay(new int[15]);
+                        }
+                        out.close();
+                    }
                 }
                 System.out.println();
                 System.out.println("-------------------");
@@ -511,19 +539,6 @@ public class Particle_track {
                 System.out.printf("Exited domain:    %,d\n", particleStatus[4]);
                 System.out.printf("Dead:             %,d\n", particleStatus[5]);
                 System.out.println("-------------------");
-
-                FileWriter fstream = new FileWriter("siteConditions_" + today + "_" + Math.round(elapsedHours) + ".csv", false);
-                PrintWriter out = new PrintWriter(fstream);
-                out.println("site,x,y,depth,mesh,centroid,elem,MeshType," +
-                        "u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,stokesU0_Avg,stokesV0_Avg,stokesUV0_Avg,Hsig_Avg,waveDir_Avg,waveT_Avg," +
-                        "u,v,w,uv,salinity,temperature,k,stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT");
-                for (HabitatSite habitatSite : habitat) {
-                    out.println(habitatSite);
-                    habitatSite.setEnvConditionDay(new double[13]);
-                    habitatSite.setEnvConditionCountDay(new int[13]);
-                }
-                out.close();
-
                 System.out.println();
 
                 if (rp.backwards) {
@@ -533,6 +548,13 @@ public class Particle_track {
                 }
             }
 
+            FileWriter fstream = new FileWriter("siteEnv_Average_" + Math.round(elapsedHours) + ".csv", false);
+            PrintWriter out = new PrintWriter(fstream);
+            out.println(siteEnvOverallHeader);
+            for (HabitatSite habitatSite : habitat) {
+                out.println(habitatSite.toString() + habitatSite.avgOverallToString());
+            }
+            out.close();
             // Write out the final locations of the particles.
             // Note that the last hour of the last day has by now been iterated over, and the day has been advanced
             // to the day after the simulation finished.
@@ -551,16 +573,6 @@ public class Particle_track {
         } finally {
             executorService.shutdownNow();
         }
-
-        FileWriter fstream = new FileWriter("startSitesUsed.csv", false);
-        PrintWriter out = new PrintWriter(fstream);
-        out.println("site,x,y,depth,mesh,centroid,elem,MeshType," +
-                "u_Avg,v_Avg,w_Avg,uv_Avg,salinity_Avg,temperature_Avg,k_Avg,stokesU0_Avg,stokesV0_Avg,stokesUV0_Avg,Hsig_Avg,waveDir_Avg,waveT_Avg," +
-                "u,v,w,uv,salinity,temperature,k,stokesU0,stokesV0,stokesUV0,Hsig,waveDir,waveT");
-        for (HabitatSite habitatSite : habitat) {
-            out.println(habitatSite);
-        }
-        out.close();
 
         long endTime = System.currentTimeMillis();
         System.out.println("Elapsed time = " + (endTime - startTime) / 1000.0);

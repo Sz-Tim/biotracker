@@ -144,17 +144,17 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                 part.setLayerFromDepth(m.getDepthUvnode()[part.getElem()], m.getSiglay());
             } else if (rp.FVCOM || meshes.get(part.getMesh()).getType().equals("ROMS_TRI")) {
                 if (rp.variableDhV) {
-                    K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "k", rp);
-                    K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "k", rp);
+                    K_below = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[0][0], part.getElem(), hour, "kh", rp);
+                    K_above = hf.getAvgFromTrinodes(m, part.getLocation(), (int) nearestLevels[1][0], part.getElem(), hour, "kh", rp);
                     if (nearestLevels[0][1] == nearestLevels[1][1]) {
                         K_gradient = 0;
                     } else {
                         K_gradient = (K_below - K_above) / (nearestLevels[0][1] - nearestLevels[1][1]); // positive gradient = more turbulent below = particle gets pushed deeper
                     }
-                    K_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "k", rp, nearestLevels);
+                    K_z = hf.getValueAtDepth(m, part, part.getLocation(), part.getDepth(), hour, "kh", rp, nearestLevels);
                     depthAdj = part.getDepth() + subStepDt * K_gradient / 2; // = (z + K_gradient/2 * dt) following Visser 1997
                     nearestLevelsAdj = Mesh.findNearestSigmas(depthAdj, m.getSiglev(), m.getDepthUvnode()[part.getElem()]);
-                    K_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "k", rp, nearestLevelsAdj);
+                    K_zAdj = hf.getValueAtDepth(m, part, part.getLocation(), depthAdj, hour, "kh", rp, nearestLevelsAdj);
                     if (K_z > 0.1) { // following Johnsen et al 2016
                         K_z = 0.1;
                     }
