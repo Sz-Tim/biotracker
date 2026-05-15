@@ -175,7 +175,11 @@ public class ParallelParticleMover implements Callable<List<Particle>> {
                         activity = 0;
                     }
                     // if not, does the particle actively swim upward?
-                    if (activity == 2 && (part.isInfectious() || !rp.swimColdNauplius || (tempSurface < localTemperature) )) {
+                    if (activity == 2 &&
+                            (part.isInfectious() || // copepodid
+                             rp.tempPrefNauplius.equalsIgnoreCase("none") || // nauplius: no temp preference
+                             (rp.tempPrefNauplius.equalsIgnoreCase("warm") && (tempSurface > localTemperature)) || // nauplius: up is warmer and nauplii like it
+                             (rp.tempPrefNauplius.equalsIgnoreCase("cold") && (tempSurface < localTemperature)))) { // nauplius: up is colder and nauplii like it
                         // depth trigger: independent of light
                         if (part.getDepth() > rp.maxDepth) {
                             activeMovement[2] = part.swim(rp, subStepDt);

@@ -26,7 +26,8 @@ public class RunProperties {
             siteDensityPath, // Path + filename for daily start densities for each site; defaults to "" = 1 for all particles; col1 = siteNames, col2:N = dates
             daylightPath, // Path + filename for sunrise / sunset hours; defaults to "" = ignore
             eggTemp_fn, // Function to relate egg production to temperature; "constant" (default), "linear", "quadratic", or "logistic"
-            mortSal_fn; // Function to relate mortality to salinity; "constant" (default), "linear", or "quadratic"
+            mortSal_fn, // Function to relate mortality to salinity; "constant" (default), "linear", or "quadratic"
+            tempPrefNauplius; // Temperature preference of nauplii; "none" (default), "warm", or "cold"
 
     boolean backwards, // run model backwards? Needs some work on loops to make this work correctly
             rk4, // use RK4 numerical integration (alternative is Euler; need about 10 times as many steps)
@@ -34,7 +35,6 @@ public class RunProperties {
             endOnArrival, // stop at first suitable habitat site, or simply note arrival and move on?
             fixDepth,
             swimLightLevel,
-            swimColdNauplius,
             readHydroVelocityOnly, // read only u,v from hydro files (saves RAM, ignores random extra variables)
             stokesDrift,
             recordImmature,
@@ -201,7 +201,7 @@ public class RunProperties {
         swimLightLevel = Boolean.parseBoolean(properties.getProperty("swimLightLevel", "false"));
         lightThreshCopepodid = Double.parseDouble(properties.getProperty("lightThreshCopepodid", "2.06e-5"));
         lightThreshNauplius = Double.parseDouble(properties.getProperty("lightThreshNauplius", "0.392"));
-        swimColdNauplius = Boolean.parseBoolean(properties.getProperty("swimColdNauplius", "false"));
+        tempPrefNauplius = properties.getProperty("tempPrefNauplius", "none"); // Crosbie et al 2020: 10.3354/aei00344; á Norði et al 2015: 10.3354/aei00134
         swimUpSpeedMean = Double.parseDouble(properties.getProperty("swimUpSpeedMean", "0"));
         swimUpSpeedStd = Double.parseDouble(properties.getProperty("swimUpSpeedStd", "0"));
         swimUpSpeedCopepodidMean = Double.parseDouble(properties.getProperty("swimUpSpeedCopepodidMean", "" + swimUpSpeedMean));
@@ -415,7 +415,7 @@ public class RunProperties {
                 "Swim up based on shortwave: " + this.swimLightLevel + "\n" +
                 "Nauplius light threshold (umol/m2/s): " + this.lightThreshNauplius + "\n" +
                 "Copepodid light threshold (umol/m2/s): " + this.lightThreshCopepodid + "\n" +
-                "Nauplius swim up only toward colder water: " + this.swimColdNauplius + "\n" +
+                "Nauplius temperature preference: " + this.tempPrefNauplius + "\n" +
                 "Nauplius swim up speed (m/s) ~ Norm(" + this.swimUpSpeedNaupliusMean + ", " + this.swimUpSpeedNaupliusStd + ")" + "\n" +
                 "Copepodid swim up speed (m/s) ~ Norm(" + this.swimUpSpeedCopepodidMean + ", " + this.swimUpSpeedCopepodidStd + ")" + "\n" +
                 "Egg production function: " + this.eggTemp_fn + "\n" +
